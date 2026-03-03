@@ -1,17 +1,308 @@
-@import './code-block.css';
-@import '../ui/toolbar/color-picker/styles.css';
+@import "./code-block.css";
 
 :root {
+  /* Core Colors */
+  --primary-color: oklch(62.3% 0.214 259.815); /* Blue-500 equivalent */
+  --primary-hover: oklch(55% 0.2 260); /* Slightly darker blue */
+  --text-color: var(--color-gray-900); /* Gray-700 equivalent */
+  --bg-color: #f9fafb; /* Gray-50 */
+  --border-color: #e5e7eb; /* Gray-200 */
+  --paper-bg: #ffffff;
+
+  /* Color Palette */
+  --color-blue-500: oklch(62.3% 0.214 259.815);
+  --color-gray-100: oklch(96.7% 0.003 264.542);
+  --color-gray-900: oklch(20.5% 0.021 264.3); /* Dark gray/black for text */
+
+  /* Toolbar Button Colors */
+  --btn-hover-bg: var(--color-gray-100);
+  --btn-active-bg: var(--color-blue-500);
+  --btn-active-color: #ffffff;
+  --btn-text-color: var(--color-gray-900); /* Default text color */
+
+  /* Layout */
+  --toolbar-height: 48px;
+  --sidebar-width: 240px;
+}
+
+/* Color Picker Styles Inlined */
+.color-picker-trigger {
+  padding: 4px; /* Reduced padding */
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  height: 32px; /* Slightly smaller height */
+  width: auto;
+  box-sizing: border-box;
+}
+
+.color-picker-trigger:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.color-preview-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: #000;
+  /* Removed border, just color block */
+}
+
+.color-picker-icon-lucide {
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+}
+
+.color-picker-icon-lucide svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Dropdown */
+.color-picker-dropdown {
+  background: white;
+  border-radius: 12px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Softer shadow */
+  border: 1px solid #e5e7eb;
+  width: 240px; /* Slightly narrower */
+  display: none;
+  flex-direction: column;
+  z-index: 10000;
+  user-select: none;
+  padding: 16px;
+}
+
+.color-picker-dropdown.open {
+  display: flex;
+}
+
+.color-picker-title {
+  font-size: 13px; /* Slightly larger text */
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 12px; /* More spacing */
+  display: block;
+}
+
+/* Sections */
+.color-picker-section {
+  /* Removed border and padding hacks, handled by flex gap or margin */
+  margin-bottom: 0;
+}
+
+/* Grid */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 0; /* No side padding */
+}
+
+.color-item {
+  width: 32px; /* Slightly smaller to fit 6 in row comfortably */
+  height: 32px;
+  border-radius: 6px; /* Slightly less rounded */
+  cursor: pointer;
+  border: none; /* No default border */
+  position: relative;
+  transition: transform 0.1s;
+}
+
+.color-item:hover {
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.color-item.active {
+  /* Active state logic: ring or border? React code used border-color logic but design shows ring/outline feel */
+  /* Let's use a box-shadow ring to match modern look or border */
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px var(--color-blue-500); /* Double ring effect for selection */
+  /* Reset border */
+  border: none;
+}
+
+.color-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-item.active .color-check {
+  opacity: 1;
+}
+
+.color-check svg {
+  width: 14px; /* Smaller check */
+  height: 14px;
+}
+
+/* Custom Color Inputs */
+.custom-color-wrapper {
+  width: 40px; /* Matches height */
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background-color: #000;
+  flex-shrink: 0;
+}
+
+.native-color-input {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 100px;
+  height: 100px;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.custom-color-text-input {
+  flex: 1;
+  padding: 0 12px;
+  height: 40px; /* Match color box height */
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  color: #374151;
+  font-family: monospace; /* For hex code */
+  transition: border-color 0.2s;
+}
+
+.custom-color-text-input:focus {
+  border-color: var(--color-blue-500);
+}
+
+/* Grid */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr); /* grid-cols-6 */
+  gap: 8px; /* gap-2 */
+  padding: 0 4px;
+}
+
+.color-item {
+  width: 36px; /* w-9 */
+  height: 36px; /* h-9 */
+  border-radius: 8px; /* rounded-lg */
+  cursor: pointer;
+  border: 2px solid transparent; /* border-2, default transparent to show hover properly or default border */
+  /* React code has: border-2 hover:scale-110 transition-transform */
+  /* And style={{ borderColor: value === color.value ? '#3B82F6' : '#E5E7EB' }} */
+  /* So default border is #E5E7EB (gray-200) */
+  border-color: #e5e7eb;
+  position: relative;
+  transition: transform 0.2s; /* duration-200 usually, React code just says transition-transform */
+}
+
+.color-item:hover {
+  transform: scale(1.1); /* hover:scale-110 */
+  z-index: 10;
+}
+
+.color-item.active {
+  border-color: var(--color-blue-500); /* border-blue-500 */
+}
+
+.color-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-item.active .color-check {
+  opacity: 1;
+}
+
+.color-check svg {
+  width: 16px; /* size={16} */
+  height: 16px;
+}
+
+/* Actions */
+.color-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #262626;
+  transition: all 0.2s;
+}
+
+.color-action-item:hover {
+  background: #f5f5f5;
+}
+
+.color-action-item.active {
+  background: #e6f7ff;
+  color: var(--color-blue-500);
+}
+
+.no-color-icon {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 1px),
+    #ff4d4f calc(50% - 1px),
+    #ff4d4f calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+  background-color: white;
+}
+
+/* More Colors Trigger */
+.more-colors-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* :root {
   --primary-color: #00b96b;
   --bg-color: #f4f5f7;
   --text-color: #262626;
   --border-color: #e8e8e8;
   --paper-bg: #ffffff;
-}
+} */
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
@@ -85,6 +376,7 @@ body {
   margin: 0 auto 40px auto;
   border-radius: 2px;
   min-height: 1123px; /* A4 height approx */
+  position: relative;
 }
 
 .ProseMirror {
@@ -95,11 +387,13 @@ body {
   min-height: 500px;
 }
 
-.ProseMirror p {
+/* .ProseMirror p {
   margin-bottom: 1em;
-}
+} */
 
-.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
@@ -134,7 +428,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.02);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.02);
   z-index: 10;
 }
 
@@ -191,7 +485,7 @@ ul[data-type="taskList"] li > div {
 }
 
 .ProseMirror img.ProseMirror-selectednode {
-  outline: 3px solid #68CEF8;
+  outline: 3px solid #68cef8;
 }
 
 /* Table - Yuque Style Refined */
@@ -226,7 +520,10 @@ ul[data-type="taskList"] li > div {
   z-index: 2;
   position: absolute;
   content: "";
-  left: 0; right: 0; top: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   background: rgba(0, 185, 107, 0.1); /* 语雀绿选中态 */
   pointer-events: none;
   border: 1px solid #00b96b;
@@ -336,44 +633,46 @@ ul[data-type="taskList"] li > div {
 .icon-btn {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
-  width: 28px;
-  height: 28px;
+  border-radius: 8px; /* Rounded-lg */
+  width: 32px; /* Slightly larger */
+  height: 32px;
   flex-shrink: 0;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #595959;
+  color: var(--btn-text-color);
   transition: all 0.2s;
   position: relative; /* For tooltip */
   font-size: 14px;
   font-weight: 500;
+  margin: 0 2px;
 }
 
 .icon-btn i {
-  color: #595959;
-  width: 16px;
-  height: 16px;
+  color: currentColor;
+  width: 18px; /* Slightly larger icons */
+  height: 18px;
 }
 
 .icon-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: #262626;
+  background: var(--btn-hover-bg);
+  color: var(--text-color);
 }
 
 .icon-btn:hover i {
-  color: #262626;
+  color: var(--text-color);
 }
 
 .icon-btn.active {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: var(--btn-active-bg);
+  color: var(--btn-active-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .icon-btn.active i {
-  color: #1890ff;
+  color: var(--btn-active-color);
 }
 
 /* Global Tooltip */
@@ -390,8 +689,13 @@ ul[data-type="taskList"] li > div {
   z-index: 10000;
   opacity: 0;
   transform: translateY(4px) scale(0.96); /* Subtle initial state for animation */
-  transition: opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05); /* Soft deep shadow */
+  transition:
+    opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow:
+    0 3px 6px -4px rgba(0, 0, 0, 0.12),
+    0 6px 16px 0 rgba(0, 0, 0, 0.08),
+    0 9px 28px 8px rgba(0, 0, 0, 0.05); /* Soft deep shadow */
 }
 
 .global-tooltip.visible {
@@ -414,7 +718,9 @@ ul[data-type="taskList"] li > div {
 .tooltip-shortcut {
   color: rgba(255, 255, 255, 0.65);
   font-size: 11px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -429,7 +735,7 @@ ul[data-type="taskList"] li > div {
 /* Custom Dropdown */
 .toolbar-dropdown-wrapper {
   position: relative;
-  height: 28px;
+  height: 32px; /* Match button height */
   flex-shrink: 0;
 }
 
@@ -437,10 +743,10 @@ ul[data-type="taskList"] li > div {
   width: 100%;
   height: 100%;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: 8px; /* Match button radius */
   border: 1px solid transparent;
   background: transparent;
-  color: #595959;
+  color: var(--btn-text-color);
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -448,16 +754,19 @@ ul[data-type="taskList"] li > div {
   justify-content: space-between;
   transition: all 0.2s;
   min-width: 60px;
+  margin: 0 4px; /* Added margin */
 }
 
 .toolbar-dropdown-trigger:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: #262626;
+  background: var(--btn-hover-bg);
+  color: var(--text-color);
 }
 
 .toolbar-dropdown-wrapper.open .toolbar-dropdown-trigger {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: var(
+    --primary-color
+  ); /* Keep hover style when open, or use active style? Usually subtle */
+  color: var(--btn-active-color);
 }
 
 /* Floating menu styles are applied via inline styles by floating-ui, but basic look: */
@@ -473,17 +782,18 @@ ul[data-type="taskList"] li > div {
 }
 
 .dropdown-item {
-  padding: 6px 12px;
+  padding: 8px 12px; /* Increased padding */
   font-size: 14px;
-  color: #595959;
+  color: var(--btn-text-color);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .dropdown-item:hover {
-  background: #f5f5f5;
-  color: #262626;
+  background: var(--btn-hover-bg);
+  color: var(--text-color);
 }
 
 .color-picker-wrapper {
@@ -577,19 +887,19 @@ ul[data-type="taskList"] li > div {
   }
 
   /* Hide UI elements */
-  .toolbar, 
+  .toolbar,
   .sidebar,
   .doc-title-input::placeholder,
   .table-bubble-menu,
   .global-tooltip,
   .comment-panel,
-  .outline-sidebar { 
-    display: none !important; 
+  .outline-sidebar {
+    display: none !important;
   }
 
   /* Reset layout for print */
-  .layout, 
-  .main-content, 
+  .layout,
+  .main-content,
   .editor-scroll-area {
     display: block !important;
     height: auto !important;
@@ -608,13 +918,13 @@ ul[data-type="taskList"] li > div {
     min-height: auto !important;
     border: none !important;
   }
-  
+
   /* Ensure fonts look good */
   .ProseMirror {
     font-family: "Microsoft YaHei", "SimSun", sans-serif; /* 强制指定中文字体 */
     color: #000;
   }
-  
+
   /* Optimize Table for print */
   .ProseMirror table {
     page-break-inside: auto;

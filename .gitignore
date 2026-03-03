@@ -44,3 +44,5 @@ coverage
 
 # Dist
 packages/editor/dist
+
+apps/src

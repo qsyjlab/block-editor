@@ -1,4 +1,4 @@
-import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+import { computePosition, flip, shift, offset, autoUpdate, hide } from '@floating-ui/dom';
 import { EditorCore } from '../../core/EditorCore'
 import { icons } from './icons'
 import { ToolbarDropdownConfig, DropdownOptionConfig } from './ToolbarRegistry'
@@ -99,21 +99,65 @@ export class ToolbarDropdown {
     this.props.options.forEach(opt => {
       const item = document.createElement('div')
       item.className = 'dropdown-item'
+      item.style.display = 'flex'
+      item.style.alignItems = 'center'
+      item.style.justifyContent = 'space-between'
       
+      const content = document.createElement('div')
+      content.style.display = 'flex'
+      content.style.alignItems = 'center'
+      content.style.gap = '8px'
+
       // If icon is present, show icon
       if (opt.icon && icons[opt.icon]) {
-        item.innerHTML = icons[opt.icon]
-        item.classList.add('icon-item')
-        item.title = opt.label // Add tooltip
-        item.dataset.tooltip = opt.label // Use TooltipManager
-        item.style.display = 'flex'
-        item.style.alignItems = 'center'
-        item.style.justifyContent = 'center'
-        item.style.padding = '4px'
-        item.style.minWidth = '28px'
-        item.style.minHeight = '28px'
+        const iconSpan = document.createElement('span')
+        iconSpan.innerHTML = icons[opt.icon]
+        iconSpan.style.display = 'flex'
+        content.appendChild(iconSpan)
+        
+        if (this.props.layout !== 'row') {
+            const textSpan = document.createElement('span')
+            textSpan.textContent = opt.label
+            content.appendChild(textSpan)
+        } else {
+             // Tooltip for icon-only mode
+             item.title = opt.label
+             item.dataset.tooltip = opt.label
+        }
       } else {
-        item.textContent = opt.label
+        content.textContent = opt.label
+      }
+      
+      item.appendChild(content)
+
+      // Check active state
+      let isActive = false
+      if (opt.isActive) {
+          isActive = opt.isActive(this.editorCore.editor)
+      } else {
+          const command = opt.command
+          const name = command.replace('toggle', '').replace('set', '').toLowerCase()
+          isActive = this.editorCore.editor.isActive(name, opt.args)
+      }
+
+      if (isActive && this.props.layout !== 'row') {
+          // Highlight active item with background color and text color
+          item.style.backgroundColor = '#e6f7ff' // Light blue
+          item.style.color = 'var(--color-blue-500)' // Blue
+          item.style.fontWeight = '500'
+      }
+      
+      if (this.props.layout === 'row') {
+           item.style.justifyContent = 'center'
+           item.style.padding = '4px'
+           item.style.minWidth = '32px'
+           item.style.minHeight = '32px'
+           item.style.borderRadius = '8px'
+           if (isActive) {
+               item.classList.add('active')
+               item.style.backgroundColor = 'var(--btn-active-bg)'
+               item.style.color = 'var(--btn-active-color)'
+           }
       }
 
       // Check option disabled state
@@ -178,21 +222,64 @@ export class ToolbarDropdown {
     this.props.options.forEach(opt => {
       const item = document.createElement('div')
       item.className = 'dropdown-item'
+      item.style.display = 'flex'
+      item.style.alignItems = 'center'
+      item.style.justifyContent = 'space-between'
+      
+      const content = document.createElement('div')
+      content.style.display = 'flex'
+      content.style.alignItems = 'center'
+      content.style.gap = '8px'
       
       // If icon is present, show icon
       if (opt.icon && icons[opt.icon]) {
-        item.innerHTML = icons[opt.icon]
-        item.classList.add('icon-item')
-        item.title = opt.label // Add tooltip
-        item.dataset.tooltip = opt.label // Use TooltipManager
-        item.style.display = 'flex'
-        item.style.alignItems = 'center'
-        item.style.justifyContent = 'center'
-        item.style.padding = '4px'
-        item.style.minWidth = '28px'
-        item.style.minHeight = '28px'
+        const iconSpan = document.createElement('span')
+        iconSpan.innerHTML = icons[opt.icon]
+        iconSpan.style.display = 'flex'
+        content.appendChild(iconSpan)
+        
+        if (this.props.layout !== 'row') {
+            const textSpan = document.createElement('span')
+            textSpan.textContent = opt.label
+            content.appendChild(textSpan)
+        } else {
+             // Tooltip for icon-only mode
+             item.title = opt.label
+             item.dataset.tooltip = opt.label
+        }
       } else {
-        item.textContent = opt.label
+        content.textContent = opt.label
+      }
+      
+      item.appendChild(content)
+
+      // Check active state
+      let isActive = false
+      if (opt.isActive) {
+          isActive = opt.isActive(this.editorCore.editor)
+      } else {
+          const command = opt.command
+          const name = command.replace('toggle', '').replace('set', '').toLowerCase()
+          isActive = this.editorCore.editor.isActive(name, opt.args)
+      }
+
+      if (isActive && this.props.layout !== 'row') {
+          // Highlight active item with background color and text color
+          item.style.backgroundColor = 'var(--btn-active-bg)' // Solid Blue
+          item.style.color = 'var(--btn-active-color)' // White
+          item.style.fontWeight = '500'
+      }
+      
+      if (this.props.layout === 'row') {
+           item.style.justifyContent = 'center'
+           item.style.padding = '4px'
+           item.style.minWidth = '28px'
+           item.style.minHeight = '28px'
+           if (isActive) {
+               item.classList.add('active')
+               item.style.backgroundColor = '#e6ffec'
+               item.style.color = 'var(--primary-color)'
+           }
       }
 
       // Check option disabled state
@@ -224,15 +311,27 @@ export class ToolbarDropdown {
     
     // Floating UI setup
     this.cleanupFloating = autoUpdate(this.trigger, this.menu, () => {
+        // Check if trigger is visible/attached
+        if (!this.trigger.isConnected || this.trigger.offsetParent === null) {
+            this.close();
+            return;
+        }
+
         computePosition(this.trigger, this.menu, {
             placement: 'bottom-start',
             strategy: 'fixed',
             middleware: [
                 offset(4),
                 flip(),
-                shift({ padding: 5 })
+                shift({ padding: 5 }),
+                hide()
             ]
-        }).then(({ x, y }) => {
+        }).then(({ x, y, middlewareData }) => {
+            if (middlewareData.hide?.referenceHidden) {
+                this.close();
+                return;
+            }
+
             Object.assign(this.menu.style, {
                 left: `${x}px`,
                 top: `${y}px`,

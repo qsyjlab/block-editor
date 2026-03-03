@@ -1,0 +1,35 @@
+@import "./index.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for Block Handle */
+.be-block-handle {
+  @apply be-absolute be-flex be-items-center be-justify-center be-cursor-pointer be-text-gray-400 be-transition-colors be-bg-white;
+  width: 1.5rem;
+  height: 1.5rem;
+  /* left is set by JS */
+  border-radius: 0.25rem;
+  z-index: 50;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.be-block-handle:hover {
+  @apply be-bg-gray-100 be-text-gray-600;
+}
+
+/* Current Line Highlight */
+.be-active-block {
+  @apply be-bg-blue-50/30; /* Very subtle highlight */
+  border-radius: 4px;
+}
+
+/* Ensure the editor has relative positioning for the handle */
+.ProseMirror {
+  @apply be-relative;
+}
+
+/* Gutter area */
+.be-editor-gutter {
+  @apply be-absolute be-top-0 be-left-0 be-h-full be-w-8;
+}

@@ -1,4 +1,4 @@
-import { EditorCore } from '../../core/EditorCore'
+import type { EditorCore } from '../../core/EditorCore'
 import { icons } from './icons'
 import { ToolbarItemConfig } from './ToolbarRegistry'
 

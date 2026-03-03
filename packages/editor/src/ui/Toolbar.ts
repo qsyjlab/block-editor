@@ -1,229 +1,282 @@
-import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
-import { EditorCore } from '../core/EditorCore'
-import { ToolbarItem } from './toolbar/ToolbarItem'
-import { ToolbarDropdown } from './toolbar/ToolbarDropdown'
-import { ColorPicker } from './toolbar/color-picker/color-picker'
-import { TooltipManager } from './toolbar/TooltipManager'
-import { ToolbarRegistry, ToolbarItemType } from './toolbar/ToolbarRegistry'
-import { defaultToolbarItems } from './toolbar/defaultToolbarItems'
-import { icons } from './toolbar/icons'
+import {
+  computePosition,
+  flip,
+  shift,
+  offset,
+  autoUpdate,
+  hide,
+} from "@floating-ui/dom";
+import { EditorCore } from "../core/EditorCore";
+import { ToolbarItem } from "./toolbar/ToolbarItem";
+import { ToolbarDropdown } from "./toolbar/ToolbarDropdown";
+import { ColorPicker } from "./toolbar/color-picker/color-picker";
+import { TooltipManager } from "./toolbar/TooltipManager";
+import { ToolbarRegistry, ToolbarItemType } from "./toolbar/ToolbarRegistry";
+import { defaultToolbarItems } from "./toolbar/defaultToolbarItems";
+import { icons } from "./toolbar/icons";
 
 export class Toolbar {
-  private container: HTMLElement
-  private editorCore: EditorCore
+  private container: HTMLElement;
+  private editorCore: EditorCore;
   // @ts-ignore
-  private tooltipManager: TooltipManager
-  
-  private items: HTMLElement[] = []
-  private moreBtn!: HTMLElement
-  private moreMenu!: HTMLElement
-  private resizeObserver!: ResizeObserver
-  
-  private isMoreMenuOpen = false
-  private cleanupFloating: (() => void) | null = null
-  private moreMenuTimer: any = null
+  private tooltipManager: TooltipManager;
+
+  private items: HTMLElement[] = [];
+  private moreBtn!: HTMLElement;
+  private moreMenu!: HTMLElement;
+  private resizeObserver!: ResizeObserver;
+
+  private isMoreMenuOpen = false;
+  private cleanupFloating: (() => void) | null = null;
+  private moreMenuTimer: any = null;
 
   constructor(container: HTMLElement, editorCore: EditorCore) {
-    this.container = container
-    this.editorCore = editorCore
-    this.tooltipManager = new TooltipManager() // Initialize TooltipManager
-    
+    this.container = container;
+    this.editorCore = editorCore;
+    this.tooltipManager = new TooltipManager(); // Initialize TooltipManager
+
     // Initialize default items if registry is empty
     if (ToolbarRegistry.getItems().length === 0) {
-      defaultToolbarItems.forEach(group => ToolbarRegistry.registerGroup(group))
+      defaultToolbarItems.forEach((group) =>
+        ToolbarRegistry.registerGroup(group),
+      );
     }
 
-    this.render()
+    this.render();
   }
 
   private render() {
-    this.container.innerHTML = ''
-    this.container.className = 'toolbar'
+    this.container.innerHTML = "";
+    this.container.className = "toolbar";
     // Ensure container handles overflow manually
-    this.container.style.overflow = 'hidden' 
-    this.container.style.flexWrap = 'nowrap'
+    this.container.style.overflow = "hidden";
+    this.container.style.flexWrap = "nowrap";
 
-    const groups = ToolbarRegistry.getItems()
-    const allItems: ToolbarItemType[] = []
-    
+    const groups = ToolbarRegistry.getItems();
+    const allItems: ToolbarItemType[] = [];
+
     groups.forEach((group, index) => {
-      allItems.push(...group)
+      allItems.push(...group);
       if (index < groups.length - 1) {
-        allItems.push({ type: 'divider' })
+        allItems.push({ type: "divider" });
       }
-    })
+    });
 
     // Create all item elements
-    allItems.forEach(item => {
-      let element: HTMLElement | null = null
-      
-      if (item.type === 'button') {
-        const component = new ToolbarItem(item, this.editorCore)
-        element = component.getElement()
-      } else if (item.type === 'dropdown') {
-        const component = new ToolbarDropdown(item, this.editorCore)
-        element = component.getElement()
-      } else if (item.type === 'color') {
-        const component = new ColorPicker(item.label, this.editorCore)
-        element = component.getElement()
-      } else if (item.type === 'divider') {
-        element = document.createElement('div')
-        element.className = 'divider'
+    allItems.forEach((item) => {
+      let element: HTMLElement | null = null;
+
+      if (item.type === "button") {
+        const component = new ToolbarItem(item, this.editorCore);
+        element = component.getElement();
+      } else if (item.type === "dropdown") {
+        const component = new ToolbarDropdown(item, this.editorCore);
+        element = component.getElement();
+      } else if (item.type === "color") {
+        const component = new ColorPicker(item.label, this.editorCore);
+        element = component.getElement();
+      } else if (item.type === "divider") {
+        element = document.createElement("div");
+        element.className = "divider";
       }
 
       if (element) {
-        this.items.push(element)
-        this.container.appendChild(element)
+        this.items.push(element);
+        this.container.appendChild(element);
       }
-    })
+    });
 
     // Create More Button
-    this.createMoreButton()
-    
+    this.createMoreButton();
+
     // Create More Menu
-    this.createMoreMenu()
+    this.createMoreMenu();
 
     // Initialize ResizeObserver
     this.resizeObserver = new ResizeObserver(() => {
-        // Debounce or requestAnimationFrame could be used, but for now direct call
-        requestAnimationFrame(() => this.checkOverflow())
-    })
-    this.resizeObserver.observe(this.container)
-    
+      // Debounce or requestAnimationFrame could be used, but for now direct call
+      requestAnimationFrame(() => this.checkOverflow());
+    });
+    this.resizeObserver.observe(this.container);
+
     // Initial check
-    requestAnimationFrame(() => this.checkOverflow())
+    requestAnimationFrame(() => this.checkOverflow());
   }
 
   private createMoreButton() {
-    this.moreBtn = document.createElement('button')
-    this.moreBtn.className = 'icon-btn'
-    this.moreBtn.innerHTML = icons.more || '...'
-    this.moreBtn.style.marginLeft = 'auto' // Push to end if possible, though we handle position manually
-    this.moreBtn.style.display = 'none' // Hidden by default
-    this.moreBtn.dataset.tooltip = 'More'
-    
+    this.moreBtn = document.createElement("button");
+    this.moreBtn.className = "icon-btn more-btn";
+    this.moreBtn.innerHTML = icons.more || "...";
+    // this.moreBtn.style.marginLeft = "auto"; // Push to end if possible, though we handle position manually
+    this.moreBtn.style.display = "none"; // Hidden by default
+    this.moreBtn.dataset.tooltip = "More";
+
     // Hover logic
-    this.moreBtn.addEventListener('mouseenter', () => this.openMoreMenu())
-    this.moreBtn.addEventListener('mouseleave', () => this.scheduleCloseMoreMenu())
-    
-    this.container.appendChild(this.moreBtn)
+    this.moreBtn.addEventListener("mouseenter", () => this.openMoreMenu());
+    this.moreBtn.addEventListener("mouseleave", () =>
+      this.scheduleCloseMoreMenu(),
+    );
+
+    this.container.appendChild(this.moreBtn);
   }
 
   private createMoreMenu() {
-    this.moreMenu = document.createElement('div')
-    this.moreMenu.className = 'toolbar-dropdown-menu' // Reuse dropdown styles
-    this.moreMenu.style.display = 'none'
-    this.moreMenu.style.flexDirection = 'column'
-    this.moreMenu.style.padding = '8px'
-    this.moreMenu.style.gap = '4px'
-    this.moreMenu.style.maxHeight = '400px'
-    this.moreMenu.style.overflowY = 'auto'
-    
+    this.moreMenu = document.createElement("div");
+    this.moreMenu.className = "toolbar-dropdown-menu"; // Reuse dropdown styles
+    this.moreMenu.style.display = "none";
+    this.moreMenu.style.flexDirection = "row"; // Horizontal layout
+    this.moreMenu.style.flexWrap = "wrap"; // Allow wrapping if needed, but horizontal is key
+    this.moreMenu.style.alignItems = "center";
+    this.moreMenu.style.padding = "8px";
+    this.moreMenu.style.gap = "4px";
+    // this.moreMenu.style.maxWidth = '300px' // Removed static limit
+    this.moreMenu.style.maxHeight = "400px";
+    this.moreMenu.style.overflowY = "auto";
+
     // Keep open when hovering menu
-    this.moreMenu.addEventListener('mouseenter', () => this.cancelCloseMoreMenu())
-    this.moreMenu.addEventListener('mouseleave', () => this.scheduleCloseMoreMenu())
+    this.moreMenu.addEventListener("mouseenter", () =>
+      this.cancelCloseMoreMenu(),
+    );
+    this.moreMenu.addEventListener("mouseleave", () => {
+      this.scheduleCloseMoreMenu();
+    });
   }
 
   private openMoreMenu() {
-    this.cancelCloseMoreMenu()
-    if (this.isMoreMenuOpen) return
+    this.cancelCloseMoreMenu();
+    if (this.isMoreMenuOpen) return;
 
-    this.isMoreMenuOpen = true
-    this.moreBtn.classList.add('active')
-    document.body.appendChild(this.moreMenu)
-    this.moreMenu.style.display = 'flex'
-    
+    this.isMoreMenuOpen = true;
+    this.moreBtn.classList.add("active");
+    document.body.appendChild(this.moreMenu);
+    this.moreMenu.style.display = "flex";
+
+    // Update maxWidth dynamically based on container width
+    const toolbarWidth = this.container.getBoundingClientRect().width;
+    this.moreMenu.style.maxWidth = `${Math.min(toolbarWidth, window.innerWidth - 20)}px`; // Safe margin
+
     this.cleanupFloating = autoUpdate(this.moreBtn, this.moreMenu, () => {
-        computePosition(this.moreBtn, this.moreMenu, {
-            placement: 'bottom-end',
-            strategy: 'fixed',
-            middleware: [
-                offset(4),
-                flip(),
-                shift({ padding: 5 })
-            ]
-        }).then(({ x, y }) => {
-            Object.assign(this.moreMenu.style, {
-                left: `${x}px`,
-                top: `${y}px`,
-                position: 'fixed',
-                zIndex: '10000'
-            });
+      // Check visibility
+      if (!this.moreBtn.isConnected || this.moreBtn.offsetParent === null) {
+        this.closeMoreMenu();
+        return;
+      }
+
+      computePosition(this.moreBtn, this.moreMenu, {
+        placement: "bottom-end",
+        strategy: "fixed",
+        middleware: [
+          offset(8), // Increased offset
+          flip(),
+          shift({ padding: 5 }),
+          hide(),
+        ],
+      }).then(({ x, y, middlewareData }) => {
+        if (middlewareData.hide?.referenceHidden) {
+          this.closeMoreMenu();
+          return;
+        }
+
+        Object.assign(this.moreMenu.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+          position: "fixed",
+          zIndex: "10000",
+          display: "flex", // Ensure display flex is kept
         });
+      });
     });
   }
 
   private scheduleCloseMoreMenu() {
-      this.moreMenuTimer = setTimeout(() => this.closeMoreMenu(), 200)
+    this.moreMenuTimer = setTimeout(() => this.closeMoreMenu(), 200);
   }
 
   private cancelCloseMoreMenu() {
-      if (this.moreMenuTimer) {
-          clearTimeout(this.moreMenuTimer)
-          this.moreMenuTimer = null
-      }
+    if (this.moreMenuTimer) {
+      clearTimeout(this.moreMenuTimer);
+      this.moreMenuTimer = null;
+    }
   }
 
   private closeMoreMenu() {
-    this.isMoreMenuOpen = false
-    this.moreBtn.classList.remove('active')
-    
+    this.isMoreMenuOpen = false;
+    this.moreBtn.classList.remove("active");
+
     if (this.cleanupFloating) {
-        this.cleanupFloating()
-        this.cleanupFloating = null
+      this.cleanupFloating();
+      this.cleanupFloating = null;
     }
-    
+
     if (this.moreMenu.parentElement === document.body) {
-        document.body.removeChild(this.moreMenu)
+      document.body.removeChild(this.moreMenu);
     }
-    this.moreMenu.style.display = 'none'
+    this.moreMenu.style.display = "none";
   }
 
   private checkOverflow() {
     // Reset: Move everything back to container to measure
-    this.items.forEach(item => {
-        this.container.insertBefore(item, this.moreBtn)
-    })
-    this.moreBtn.style.display = 'none'
-    
-    const containerWidth = this.container.clientWidth
-    // If containerWidth is 0 (hidden), do nothing
-    if (containerWidth === 0) return
+    this.items.forEach((item) => {
+      this.container.insertBefore(item, this.moreBtn);
+    });
+    this.moreBtn.style.display = "none";
 
-    let currentWidth = 0
-    let overflowIndex = -1
-    const moreBtnWidth = 32 // Approximate width of more button + margin
-    const gap = 8 // Gap between items
+    // Get container computed style for accurate measurements
+    const containerStyle = window.getComputedStyle(this.container);
+    const paddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(containerStyle.paddingRight) || 0;
+    const gap = parseFloat(containerStyle.gap) || 0;
+
+    // Available width for items is clientWidth minus padding
+    const availableContainerWidth =
+      this.container.clientWidth - paddingLeft - paddingRight;
+
+    // If containerWidth is 0 (hidden), do nothing
+    if (this.container.clientWidth === 0) return;
+
+    let currentWidth = 0;
+    let overflowIndex = -1;
+    const moreBtnWidth = 32; // Approximate width of more button + margin
 
     // Measure loop
     for (let i = 0; i < this.items.length; i++) {
-        const item = this.items[i]
-        // Get element width including margin
-        const style = window.getComputedStyle(item)
-        const margin = parseFloat(style.marginLeft) + parseFloat(style.marginRight)
-        const itemWidth = item.offsetWidth + margin + gap
-        
-        // Check if adding this item would overflow
-        // If it's the last item, we compare against containerWidth
-        // If not last, we need to reserve space for moreBtn in case subsequent items overflow
-        const isLast = i === this.items.length - 1
-        const availableWidth = isLast ? containerWidth : containerWidth - moreBtnWidth
+      const item = this.items[i];
+      // Get element width including margin
+      const style = window.getComputedStyle(item);
+      const margin =
+        parseFloat(style.marginLeft) + parseFloat(style.marginRight);
+      // Item takes up its width + margin
+      let itemSpace = item.offsetWidth + margin;
 
-        if (currentWidth + itemWidth > availableWidth) {
-            overflowIndex = i
-            break
-        }
-        currentWidth += itemWidth
+      // Add gap if it's not the first item
+      if (i > 0) {
+        itemSpace += gap;
+      }
+
+      // Check if adding this item would overflow
+      // If it's the last item, we compare against availableContainerWidth
+      // If not last, we need to reserve space for moreBtn (plus a gap before it)
+      const isLast = i === this.items.length - 1;
+      const spaceNeededForMoreBtn = moreBtnWidth + gap;
+      const maxAllowedWidth = isLast
+        ? availableContainerWidth
+        : availableContainerWidth - spaceNeededForMoreBtn;
+
+      if (currentWidth + itemSpace > maxAllowedWidth) {
+        overflowIndex = i;
+        break;
+      }
+      currentWidth += itemSpace;
     }
 
     if (overflowIndex !== -1) {
-        this.moreBtn.style.display = 'flex'
-        // Move overflowing items to moreMenu
-        for (let i = overflowIndex; i < this.items.length; i++) {
-            this.moreMenu.appendChild(this.items[i])
-        }
+      this.moreBtn.style.display = "flex";
+      // Move overflowing items to moreMenu
+      for (let i = overflowIndex; i < this.items.length; i++) {
+        this.moreMenu.appendChild(this.items[i]);
+      }
     } else {
-        this.moreBtn.style.display = 'none'
+      this.moreBtn.style.display = "none";
     }
   }
 }

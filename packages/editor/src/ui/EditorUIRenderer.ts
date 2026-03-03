@@ -10,7 +10,6 @@ export class EditorUIRenderer {
   private toolbarContainer: HTMLElement
   private mainContentArea: HTMLElement
   private editorPaper: HTMLElement
-  private leftSidebar: HTMLElement
   private rightSidebar: HTMLElement
 
   constructor(editorCore: EditorCore, container: HTMLElement) {
@@ -79,7 +78,7 @@ export class EditorUIRenderer {
     this.renderMenus()
     
     // Re-mount editor element to our new container
-    const tiptapElement = this.editorCore.editor.options.element
+    const tiptapElement = this.editorCore.editor.options.element as HTMLElement
     this.editorPaper.appendChild(tiptapElement)
   }
 

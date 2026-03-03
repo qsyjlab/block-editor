@@ -21,6 +21,9 @@ import { CustomCodeBlock } from '../extensions/CodeBlock'
 import FontFamily from '@tiptap/extension-font-family'
 import { FontSize } from '../extensions/FontSize'
 import { LineHeight } from '../extensions/LineHeight'
+import { BlockHandle } from '../extensions/block-handle'
+import { CurrentLineHighlight } from '../extensions/CurrentLineHighlight'
+import { SelectionTooltip } from '../extensions/SelectionTooltip'
 import { Exporter } from '../export/Exporter'
 import { DocxImporter } from '../import/DocxImporter'
 
@@ -99,6 +102,9 @@ export class EditorCore {
         Underline,
         Subscript,
         Superscript,
+        BlockHandle,
+        CurrentLineHighlight,
+        SelectionTooltip,
       ],
       content: options.content,
       onUpdate: ({ editor }) => {

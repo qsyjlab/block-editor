@@ -1,6 +1,11 @@
-export * from './core/EditorCore'
-export * from './ui/EditorUIRenderer'
-export * from './utils/text'
-export * from './utils/async'
-export * from './utils/serializer'
-export { Editor } from '@tiptap/core'
+import "tippy.js/dist/tippy.css";
+export * from "./core/EditorCore";
+export * from "./ui/EditorUIRenderer";
+export * from "./utils/text";
+export * from "./utils/async";
+export * from "./utils/serializer";
+export * from "./export/Exporter";
+export * from "./import/DocxImporter";
+export * from "./extensions/block-handle";
+export * from "./extensions/CurrentLineHighlight";
+export * from "./extensions/SelectionTooltip";

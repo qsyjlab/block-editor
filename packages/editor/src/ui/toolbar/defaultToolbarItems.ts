@@ -1,5 +1,7 @@
 import { ToolbarItemType } from './ToolbarRegistry'
 import { EditorCore } from '../../core/EditorCore'
+import { InsertImageDialog } from './dialogs/insert-image-dialog'
+import { InsertLinkDialog } from './dialogs/insert-link-dialog'
 
 const FONT_FAMILIES = [
   { label: 'Default', value: '' },
@@ -140,13 +142,34 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
     { 
       type: 'button', 
       label: 'Insert Image', 
-      icon: 'upload', 
-      command: 'addImage', // Note: Need to implement addImage handler or assume default behavior
+      icon: 'image', 
+      command: 'addImage', 
       onExecute: (core: EditorCore) => {
-          const url = window.prompt('Image URL')
-          if (url) {
+          new InsertImageDialog((url) => {
               core.editor.chain().focus().setImage({ src: url }).run()
-          }
+          }).show()
+      }
+    },
+    {
+      type: 'button',
+      label: 'Insert Link',
+      icon: 'link',
+      command: 'addLink',
+      isActive: (editor) => editor.isActive('link'),
+      onExecute: (core: EditorCore) => {
+          const { from, to } = core.editor.state.selection
+          const text = core.editor.state.doc.textBetween(from, to, ' ')
+          
+          new InsertLinkDialog((url, linkText) => {
+              core.editor.chain().focus()
+                  .extendMarkRange('link')
+                  .insertContent({
+                      type: 'text',
+                      text: linkText,
+                      marks: [{ type: 'link', attrs: { href: url } }]
+                  })
+                  .run()
+          }, text).show()
       }
     },
   ],
