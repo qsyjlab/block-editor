@@ -4,6 +4,46 @@ import { saveAs } from 'file-saver'
 // @ts-ignore
 import html2pdf from 'html2pdf.js'
 import { DocxSerializer } from './DocxSerializer'
+import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
+
+function normalizeCalloutLabel(type: string): 'INFO' | 'SUCCESS' | 'WARNING' | 'DANGER' {
+  if (type === 'success') return 'SUCCESS'
+  if (type === 'warning') return 'WARNING'
+  if (type === 'danger') return 'DANGER'
+  return 'INFO'
+}
+
+function transformCalloutToMarkdownFriendlyHtml(sourceHtml: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(sourceHtml, 'text/html')
+
+  doc.querySelectorAll('div[data-callout-type]').forEach((callout) => {
+    const calloutType = normalizeCalloutLabel(callout.getAttribute('data-callout-type') || 'info')
+    const blockquote = doc.createElement('blockquote')
+
+    const marker = doc.createElement('p')
+    marker.textContent = `[!${calloutType}]`
+    blockquote.appendChild(marker)
+
+    const contentEl = callout.querySelector('.be-callout-content') as HTMLElement | null
+    const source = contentEl || callout
+
+    Array.from(source.children).forEach((child) => {
+      blockquote.appendChild(child.cloneNode(true))
+    })
+
+    if (blockquote.children.length === 1) {
+      const empty = doc.createElement('p')
+      empty.textContent = ''
+      blockquote.appendChild(empty)
+    }
+
+    callout.replaceWith(blockquote)
+  })
+
+  return doc.body.innerHTML
+}
 
 export class Exporter {
   constructor(private editor: Editor) {}
@@ -78,6 +118,28 @@ export class Exporter {
     } catch (error) {
       console.error('DOCX export failed:', error)
       alert('导出 Word 文档失败，请查看控制台错误信息。')
+    }
+  }
+
+  public exportToMarkdown(filename: string = 'document.md'): void {
+    try {
+      const html = this.editor.getHTML()
+      const normalizedHtml = transformCalloutToMarkdownFriendlyHtml(html)
+
+      const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        codeBlockStyle: 'fenced',
+        bulletListMarker: '-',
+      })
+      turndownService.use(gfm)
+
+      const markdown = turndownService.turndown(normalizedHtml)
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+      const finalFilename = filename.endsWith('.md') ? filename : `${filename}.md`
+      saveAs(blob, finalFilename)
+    } catch (error) {
+      console.error('Markdown export failed:', error)
+      alert('导出 Markdown 失败，请查看控制台错误信息。')
     }
   }
 }

@@ -32,6 +32,13 @@ export class ToolbarItem {
     if (this.props.shortcut) {
       btn.dataset.shortcut = this.props.shortcut
     }
+
+    // Accessibility
+    const ariaLabel = this.props.shortcut
+      ? `${this.props.label} (${this.props.shortcut})`
+      : this.props.label
+    btn.setAttribute('aria-label', ariaLabel)
+    btn.setAttribute('type', 'button')
     
     // Icon
     if (this.props.icon && icons[this.props.icon]) {
@@ -128,8 +135,10 @@ export class ToolbarItem {
 
     if (isActive) {
       this.element.classList.add('active')
+      this.element.setAttribute('aria-pressed', 'true')
     } else {
       this.element.classList.remove('active')
+      this.element.setAttribute('aria-pressed', 'false')
     }
   }
 }

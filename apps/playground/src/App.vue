@@ -6,13 +6,27 @@ import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
 const editorContainer = ref<HTMLElement | null>(null);
 let editor: EditorCore | null = null;
 
+const params = new URLSearchParams(window.location.search)
+const room = params.get('room') || 'block-editor-demo-room'
+const userName = params.get('user') || `用户-${Math.random().toString(36).slice(2, 6)}`
+const userColor = `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`
+
 onMounted(() => {
   if (editorContainer.value) {
     // 1. Initialize Core
     const core = new EditorCore({
       element: document.createElement("div"), // Internal element for Tiptap
       content:
-        "<p>Welcome to the <strong>Block Editor</strong> (Vue Version)! Try selecting text to add a comment.</p>",
+        "<p>Welcome to the <strong>Block Editor</strong> (Vue Version)! Open this page in multiple tabs with same ?room=xxx to test collaboration.</p>",
+      collaboration: {
+        enabled: true,
+        roomName: room,
+        websocketUrl: 'wss://demos.yjs.dev',
+        user: {
+          name: userName,
+          color: userColor,
+        },
+      },
     });
 
     // 2. Initialize UI Renderer

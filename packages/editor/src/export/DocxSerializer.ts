@@ -72,7 +72,6 @@ export class DocxSerializer {
 
   public async serialize(): Promise<Document> {
     const json = this.editor.getJSON()
-    debugger
     const children = await this.parseNodes(json.content || [])
 
     return new Document({
@@ -178,6 +177,12 @@ export class DocxSerializer {
            // Basic support for code blocks as paragraphs with monospace font
            children.push(this.parseCodeBlock(node))
            break
+        case 'callout':
+           children.push(...(await this.parseCallout(node)))
+           break
+        case 'horizontalRule':
+           children.push(this.parseHorizontalRule())
+           break
       }
     }
 
@@ -188,11 +193,14 @@ export class DocxSerializer {
     const runs = this.parseInline(node.content || [])
     const alignment = this.getAlignment(node.attrs?.textAlign)
     const spacing = node.attrs?.lineHeight ? convertLineHeight(node.attrs.lineHeight) : undefined
+    // Indent extension stores indent level (0-7) as `indent` attribute
+    const indentLevel: number = node.attrs?.indent || 0
     
     return new Paragraph({
       children: runs,
       alignment: alignment,
       spacing: spacing,
+      indent: indentLevel > 0 ? { left: convertInchesToTwip(0.5 * indentLevel) } : undefined,
     })
   }
 
@@ -375,6 +383,92 @@ export class DocxSerializer {
               after: 240
           }
       })
+  }
+
+  private async parseCallout(node: any): Promise<Paragraph[]> {
+    const calloutType: string = node.attrs?.calloutType || 'info'
+    const labelMap: Record<string, string> = {
+      info: '📘 信息',
+      success: '✅ 成功',
+      warning: '⚠️ 警告',
+      danger: '❌ 危险',
+    }
+    const borderColorMap: Record<string, string> = {
+      info: '3B82F6',
+      success: '22C55E',
+      warning: 'F59E0B',
+      danger: 'EF4444',
+    }
+    const bgMap: Record<string, string> = {
+      info: 'EFF6FF',
+      success: 'F0FDF4',
+      warning: 'FFFBEB',
+      danger: 'FEF2F2',
+    }
+    const borderColor = borderColorMap[calloutType] || '3B82F6'
+    const bg = bgMap[calloutType] || 'EFF6FF'
+    const label = labelMap[calloutType] || 'ℹ️ 信息'
+
+    const result: Paragraph[] = []
+
+    // Header row with type label
+    result.push(new Paragraph({
+      children: [new TextRun({ text: label, bold: true, size: 22 })],
+      shading: { fill: bg },
+      border: {
+        left: { style: BorderStyle.SINGLE, size: 12, color: borderColor },
+        top: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+      },
+      spacing: { before: 120, after: 0 },
+      indent: { left: 180 },
+    }))
+
+    // Content paragraphs
+    for (const child of node.content || []) {
+      if (child.type === 'paragraph') {
+        const runs = this.parseInline(child.content || [])
+        result.push(new Paragraph({
+          children: runs,
+          shading: { fill: bg },
+          border: {
+            left: { style: BorderStyle.SINGLE, size: 12, color: borderColor },
+            top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+            right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+          },
+          spacing: { before: 0, after: 0 },
+          indent: { left: 180 },
+        }))
+      }
+    }
+
+    // Closing spacer with bottom border
+    result.push(new Paragraph({
+      children: [],
+      shading: { fill: bg },
+      border: {
+        left: { style: BorderStyle.SINGLE, size: 12, color: borderColor },
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: borderColor },
+      },
+      spacing: { before: 0, after: 120 },
+      indent: { left: 180 },
+    }))
+
+    return result
+  }
+
+  private parseHorizontalRule(): Paragraph {
+    return new Paragraph({
+      children: [],
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 6, color: 'D1D5DB' },
+      },
+      spacing: { before: 240, after: 240 },
+    })
   }
 
   private async parseImage(node: any): Promise<Paragraph | null> {

@@ -2,6 +2,7 @@ import { ToolbarItemType } from './ToolbarRegistry'
 import { EditorCore } from '../../core/EditorCore'
 import { InsertImageDialog } from './dialogs/insert-image-dialog'
 import { InsertLinkDialog } from './dialogs/insert-link-dialog'
+import { VersionHistoryDialog } from './dialogs/version-history-dialog'
 
 const FONT_FAMILIES = [
   { label: 'Default', value: '' },
@@ -43,6 +44,14 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
   [
     { type: 'button', label: 'Undo', icon: 'undo', command: 'undo', shortcut: '⌘Z' },
     { type: 'button', label: 'Redo', icon: 'redo', command: 'redo', shortcut: '⇧⌘Z' },
+    {
+      type: 'button',
+      label: '版本历史',
+      icon: 'fileText',
+      onExecute: (core: EditorCore) => {
+        new VersionHistoryDialog(core).show()
+      }
+    },
   ],
   // Typography Group 1: Headings & Fonts
   [
@@ -96,6 +105,15 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
     { type: 'button', label: 'Highlight', icon: 'highlighter', command: 'toggleHighlight', activeName: 'highlight', shortcut: '⇧⌘H' },
     { type: 'button', label: 'Code', icon: 'code', command: 'toggleCode', activeName: 'code', shortcut: '⌘E' },
     { type: 'button', label: 'Code Block', icon: 'code', command: 'toggleCodeBlock', activeName: 'codeBlock', shortcut: '⌥⌘C' },
+    {
+      type: 'button',
+      label: '清除格式',
+      icon: 'clearFormatting',
+      shortcut: '⌥⌘0',
+      onExecute: (core: EditorCore) => {
+        core.editor.chain().focus().unsetAllMarks().clearNodes().run()
+      }
+    },
   ],
   // Paragraph Group: Alignment & Line Height & Lists
   [
@@ -125,6 +143,8 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
         isActive: (editor) => editor.isActive({ lineHeight: lh.value })
       }))
     },
+    { type: 'button', label: '缩进', icon: 'indent', command: 'indent', shortcut: '⌘]' },
+    { type: 'button', label: '减少缩进', icon: 'outdent', command: 'outdent', shortcut: '⌘[' },
     { type: 'button', label: 'Bullet List', icon: 'list', command: 'toggleBulletList', activeName: 'bulletList', shortcut: '⇧⌘8' },
     { type: 'button', label: 'Ordered List', icon: 'listOrdered', command: 'toggleOrderedList', activeName: 'orderedList', shortcut: '⇧⌘7' },
     { type: 'button', label: 'Task List', icon: 'task', command: 'toggleTaskList', activeName: 'taskList', shortcut: '⇧⌘9' },
@@ -172,6 +192,20 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
           }, text).show()
       }
     },
+    {
+      type: 'button',
+      label: '分割线',
+      icon: 'minus',
+      command: 'setHorizontalRule',
+    },
+    {
+      type: 'button',
+      label: 'Callout',
+      icon: 'info',
+      onExecute: (core: EditorCore) => {
+        core.editor.commands.insertCallout('info')
+      }
+    },
   ],
   // Export Group
   [
@@ -181,6 +215,13 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
       icon: 'upload', 
       command: 'importDocx',
       onExecute: (core: EditorCore) => core.importer.triggerImport()
+    },
+    {
+      type: 'button',
+      label: 'Import Markdown',
+      icon: 'upload',
+      command: 'importMarkdown',
+      onExecute: (core: EditorCore) => core.markdownImporter.triggerImport()
     },
     { 
       type: 'button', 
@@ -196,5 +237,25 @@ export const defaultToolbarItems: ToolbarItemType[][] = [
       command: 'exportPdf',
       onExecute: (core: EditorCore) => core.exporter.exportToPdf()
     },
-  ]
+    {
+      type: 'button',
+      label: 'Export to Markdown',
+      icon: 'fileText',
+      command: 'exportMarkdown',
+      onExecute: (core: EditorCore) => core.exporter.exportToMarkdown()
+    },
+  ],
+  // Comment Group
+  [
+    {
+      type: 'button',
+      label: '添加评论',
+      icon: 'comment',
+      command: 'addComment',
+      shortcut: '⌥⌘M',
+      onExecute: (core: EditorCore) => {
+        core.events.emit('toggleCommentPanel')
+      },
+    },
+  ],
 ]

@@ -362,21 +362,18 @@ body {
 .editor-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 0;
+  padding: 20px;
   display: block;
 }
 
 /* Tiptap/ProseMirror Container */
 .editor-container {
-  max-width: 794px; /* A4 width approx */
   background: var(--paper-bg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 60px 80px;
   box-sizing: border-box;
-  margin: 0 auto 40px auto;
   border-radius: 2px;
-  min-height: 1123px; /* A4 height approx */
   position: relative;
+  padding: 40px;
 }
 
 .ProseMirror {
@@ -555,12 +552,45 @@ ul[data-type="taskList"] li > div {
 /* Blockquote */
 .ProseMirror blockquote {
   border-left: 3px solid #00b96b;
+  margin: 0.5em 0;
   margin-left: 0;
-  padding-left: 1rem;
+  padding: 8px 16px;
   color: #666;
   font-style: italic;
   background: #f9f9f9;
-  padding: 8px 16px;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Selection Tooltip */
+.tippy-box[data-theme~="be-selection-toolbar"] {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.tippy-box[data-theme~="be-selection-toolbar"] > .tippy-content {
+  padding: 0;
+}
+
+.be-selection-tooltip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.be-selection-tooltip .icon-btn {
+  margin: 0;
+  flex: 0 0 auto;
 }
 
 /* Table Bubble Menu */
@@ -735,7 +765,7 @@ ul[data-type="taskList"] li > div {
 /* Custom Dropdown */
 .toolbar-dropdown-wrapper {
   position: relative;
-  height: 32px; /* Match button height */
+  height: 32px;
   flex-shrink: 0;
 }
 
@@ -743,7 +773,7 @@ ul[data-type="taskList"] li > div {
   width: 100%;
   height: 100%;
   padding: 0 8px;
-  border-radius: 8px; /* Match button radius */
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--btn-text-color);
@@ -752,9 +782,10 @@ ul[data-type="taskList"] li > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.2s;
+  transition: background 0.15s, color 0.15s;
   min-width: 60px;
-  margin: 0 4px; /* Added margin */
+  margin: 0 4px;
+  outline: none;
 }
 
 .toolbar-dropdown-trigger:hover {
@@ -762,38 +793,64 @@ ul[data-type="taskList"] li > div {
   color: var(--text-color);
 }
 
+.toolbar-dropdown-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
 .toolbar-dropdown-wrapper.open .toolbar-dropdown-trigger {
-  background: var(
-    --primary-color
-  ); /* Keep hover style when open, or use active style? Usually subtle */
+  background: var(--primary-color);
   color: var(--btn-active-color);
 }
 
-/* Floating menu styles are applied via inline styles by floating-ui, but basic look: */
+/* Floating menu – base styles; position/display controlled by JS */
 .toolbar-dropdown-menu {
   background: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 10px 24px -4px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
   padding: 4px;
   min-width: 120px;
-  display: none; /* Controlled by JS */
+  display: none; /* toggled by JS */
   z-index: 10000;
+  /* transform-origin set from top to match the slide-down animation */
+  transform-origin: top left;
+  will-change: opacity, transform;
 }
 
 .dropdown-item {
-  padding: 8px 12px; /* Increased padding */
-  font-size: 14px;
+  padding: 7px 12px;
+  font-size: 13px;
   color: var(--btn-text-color);
   cursor: pointer;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: background 0.1s, color 0.1s;
   font-weight: 500;
+  outline: none;
+  /* smooth touch tap */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dropdown-item:hover {
   background: var(--btn-hover-bg);
   color: var(--text-color);
+}
+
+/* Keyboard-focus highlight (set via JS) */
+.dropdown-item.keyboard-focus {
+  background: var(--btn-hover-bg);
+  color: var(--text-color);
+  box-shadow: inset 0 0 0 1.5px var(--primary-color);
+}
+
+.dropdown-item.active {
+  background: var(--btn-active-bg);
+  color: var(--btn-active-color);
+}
+
+.dropdown-item.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 .color-picker-wrapper {
@@ -933,4 +990,169 @@ ul[data-type="taskList"] li > div {
     page-break-inside: avoid;
     page-break-after: auto;
   }
+}
+
+/* =========================================================
+   Image Enhanced
+   ========================================================= */
+.be-image-figure {
+  display: block;
+  margin: 8px auto;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.be-image-figure[data-align="left"]  { margin: 8px auto 8px 0; }
+.be-image-figure[data-align="center"]{ margin: 8px auto; }
+.be-image-figure[data-align="right"] { margin: 8px 0 8px auto; }
+.be-image-figure[data-align="full"]  { width: 100%; }
+.be-image-figure[data-align="full"] img { width: 100%; height: auto; }
+
+.be-image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.be-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  transition: box-shadow 0.15s;
+}
+
+.be-image-wrapper img:hover {
+  box-shadow: 0 0 0 2px var(--primary-color, #4f46e5);
+}
+
+.be-resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.9);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.be-image-caption {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+  min-height: 1em;
+  outline: none;
+  caret-color: var(--primary-color, #4f46e5);
+}
+
+.be-image-caption:empty::before {
+  content: attr(data-placeholder);
+  color: #d1d5db;
+  pointer-events: none;
+}
+
+/* =========================================================
+   Callout hover highlight on icon
+   ========================================================= */
+.be-callout-icon:hover {
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 4px;
+}
+
+/* =========================================================
+   Block Multi-Select
+   ========================================================= */
+.be-multiselect-bar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: #1f2937;
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.be-multiselect-bar__count {
+  font-weight: 600;
+  color: #93c5fd;
+  padding-right: 8px;
+}
+
+.be-multiselect-bar__divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.be-multiselect-bar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.be-multiselect-bar__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.be-multiselect-bar__btn.danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+/* =========================================================
+   Collaboration Cursor
+   ========================================================= */
+.collaboration-cursor__caret {
+  border-left: 2px solid currentColor;
+  border-right: none;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+.collaboration-cursor__label {
+  border-radius: 4px 4px 4px 0;
+  color: #fff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 2px 6px;
+  position: absolute;
+  top: -1.4em;
+  user-select: none;
+  white-space: nowrap;
 }

@@ -5,34 +5,72 @@ import { ToolbarDropdownConfig, DropdownOptionConfig } from './ToolbarRegistry'
 
 export type ToolbarDropdownProps = ToolbarDropdownConfig
 
+// ── Global Dropdown Manager ────────────────────────────────────────────────────
+// Ensures only one dropdown is open at a time across all instances.
+
+class DropdownManager {
+  private static instance: DropdownManager
+  private openDropdown: ToolbarDropdown | null = null
+
+  static getInstance(): DropdownManager {
+    if (!DropdownManager.instance) {
+      DropdownManager.instance = new DropdownManager()
+
+      // Close on outside click / touch
+      const handleOutside = (e: Event) => {
+        const target = e.target as Node
+        const current = DropdownManager.instance.openDropdown
+        if (!current) return
+        if (!current.containsNode(target)) {
+          current.close()
+        }
+      }
+      document.addEventListener('mousedown', handleOutside)
+      document.addEventListener('touchstart', handleOutside, { passive: true })
+
+      // Close on Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && DropdownManager.instance.openDropdown) {
+          DropdownManager.instance.openDropdown.close()
+        }
+      })
+    }
+    return DropdownManager.instance
+  }
+
+  openNew(dropdown: ToolbarDropdown) {
+    if (this.openDropdown && this.openDropdown !== dropdown) {
+      this.openDropdown.close()
+    }
+    this.openDropdown = dropdown
+  }
+
+  unregister(dropdown: ToolbarDropdown) {
+    if (this.openDropdown === dropdown) {
+      this.openDropdown = null
+    }
+  }
+}
+
+const manager = DropdownManager.getInstance()
+
+// ── ToolbarDropdown ────────────────────────────────────────────────────────────
+
 export class ToolbarDropdown {
   private element: HTMLElement
   private trigger!: HTMLElement
   private menu!: HTMLElement
   private editorCore: EditorCore
   private props: ToolbarDropdownProps
-  private isOpen: boolean = false
+  private _isOpen: boolean = false
   private cleanupFloating: (() => void) | null = null
+  private focusedIndex: number = -1
 
   constructor(props: ToolbarDropdownProps, editorCore: EditorCore) {
     this.props = props
     this.editorCore = editorCore
     this.element = this.render()
-    
-    // Close when clicking outside
-    document.addEventListener('click', (e) => {
-      // If menu is in body, we need to check if click is inside menu or trigger
-      if (this.isOpen) {
-         const isClickInsideMenu = this.menu.contains(e.target as Node);
-         const isClickInsideTrigger = this.element.contains(e.target as Node);
-         
-         if (!isClickInsideMenu && !isClickInsideTrigger) {
-             this.close();
-         }
-      }
-    })
-    
-    // Listen for updates to update trigger label if needed
+
     this.editorCore.events.on('selectionUpdate', () => this.updateLabel())
     this.editorCore.events.on('transaction', () => this.updateLabel())
   }
@@ -41,379 +79,360 @@ export class ToolbarDropdown {
     return this.element
   }
 
+  /** Used by DropdownManager to check whether a click is inside this dropdown */
+  public containsNode(node: Node): boolean {
+    return this.element.contains(node) || this.menu.contains(node)
+  }
+
   private render(): HTMLElement {
     const wrapper = document.createElement('div')
     wrapper.className = 'toolbar-dropdown-wrapper'
-    
-    // Trigger
+
+    // ── Trigger button ─────────────────────────────────────────────────────────
     this.trigger = document.createElement('button')
     this.trigger.className = 'toolbar-dropdown-trigger'
-    if (this.props.label) {
-        this.trigger.dataset.tooltip = this.props.label // Add tooltip
-    }
+    this.trigger.setAttribute('aria-haspopup', 'listbox')
+    this.trigger.setAttribute('aria-expanded', 'false')
+    if (this.props.label) this.trigger.dataset.tooltip = this.props.label
     if (this.props.width) this.trigger.style.width = this.props.width
-    
+
     const labelSpan = document.createElement('span')
     labelSpan.className = 'dropdown-label'
-    
-    // Initial content
+    labelSpan.style.cssText = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:4px;flex:1;text-align:left;display:flex;align-items:center;'
     if (this.props.icon && icons[this.props.icon]) {
-        labelSpan.innerHTML = icons[this.props.icon]
+      labelSpan.innerHTML = icons[this.props.icon]
     } else {
-        labelSpan.textContent = this.props.label
+      labelSpan.textContent = this.props.label
     }
-
-    labelSpan.style.whiteSpace = 'nowrap'
-    labelSpan.style.overflow = 'hidden'
-    labelSpan.style.textOverflow = 'ellipsis'
-    labelSpan.style.marginRight = '4px'
-    labelSpan.style.flex = '1'
-    labelSpan.style.textAlign = 'left'
-    labelSpan.style.display = 'flex'
-    labelSpan.style.alignItems = 'center'
     this.trigger.appendChild(labelSpan)
-    
-    const iconSpan = document.createElement('span')
-    iconSpan.style.display = 'flex'
-    iconSpan.style.flexShrink = '0' // Prevent icon from shrinking
-    iconSpan.innerHTML = icons.chevronDown
-    this.trigger.appendChild(iconSpan)
 
-    this.trigger.onclick = (e) => {
+    const chevron = document.createElement('span')
+    chevron.className = 'dropdown-chevron'
+    chevron.style.cssText = 'display:flex;flex-shrink:0;transition:transform 0.2s ease;'
+    chevron.innerHTML = icons.chevronDown
+    this.trigger.appendChild(chevron)
+
+    this.trigger.addEventListener('click', (e) => {
       e.stopPropagation()
       this.toggle()
-    }
+    })
 
-    // Menu (Created but not attached yet, or hidden)
+    // Keyboard on trigger: open on ArrowDown / Enter / Space
+    this.trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        if (!this._isOpen) {
+          this.open()
+          this.focusItem(0)
+        }
+      }
+    })
+
+    // ── Menu container ─────────────────────────────────────────────────────────
     this.menu = document.createElement('div')
     this.menu.className = 'toolbar-dropdown-menu'
-    this.menu.style.display = 'none' // Ensure hidden initially
-    
+    this.menu.setAttribute('role', 'listbox')
+    this.menu.style.display = 'none'
+
     if (this.props.layout === 'row') {
-      this.menu.style.display = 'none' // Override previous setting, ensure consistent hidden state
       this.menu.style.flexDirection = 'row'
       this.menu.style.padding = '4px'
       this.menu.style.gap = '4px'
     }
 
-    this.props.options.forEach(opt => {
-      const item = document.createElement('div')
-      item.className = 'dropdown-item'
-      item.style.display = 'flex'
-      item.style.alignItems = 'center'
-      item.style.justifyContent = 'space-between'
-      
-      const content = document.createElement('div')
-      content.style.display = 'flex'
-      content.style.alignItems = 'center'
-      content.style.gap = '8px'
-
-      // If icon is present, show icon
-      if (opt.icon && icons[opt.icon]) {
-        const iconSpan = document.createElement('span')
-        iconSpan.innerHTML = icons[opt.icon]
-        iconSpan.style.display = 'flex'
-        content.appendChild(iconSpan)
-        
-        if (this.props.layout !== 'row') {
-            const textSpan = document.createElement('span')
-            textSpan.textContent = opt.label
-            content.appendChild(textSpan)
-        } else {
-             // Tooltip for icon-only mode
-             item.title = opt.label
-             item.dataset.tooltip = opt.label
-        }
-      } else {
-        content.textContent = opt.label
-      }
-      
-      item.appendChild(content)
-
-      // Check active state
-      let isActive = false
-      if (opt.isActive) {
-          isActive = opt.isActive(this.editorCore.editor)
-      } else {
-          const command = opt.command
-          const name = command.replace('toggle', '').replace('set', '').toLowerCase()
-          isActive = this.editorCore.editor.isActive(name, opt.args)
-      }
-
-      if (isActive && this.props.layout !== 'row') {
-          // Highlight active item with background color and text color
-          item.style.backgroundColor = '#e6f7ff' // Light blue
-          item.style.color = 'var(--color-blue-500)' // Blue
-          item.style.fontWeight = '500'
-      }
-      
-      if (this.props.layout === 'row') {
-           item.style.justifyContent = 'center'
-           item.style.padding = '4px'
-           item.style.minWidth = '32px'
-           item.style.minHeight = '32px'
-           item.style.borderRadius = '8px'
-           if (isActive) {
-               item.classList.add('active')
-               item.style.backgroundColor = 'var(--btn-active-bg)'
-               item.style.color = 'var(--btn-active-color)'
-           }
-      }
-
-      // Check option disabled state
-      if (opt.isDisabled) {
-          const isDisabled = opt.isDisabled(this.editorCore.editor)
-          if (isDisabled) {
-            item.setAttribute('disabled', 'true')
-            item.classList.add('disabled')
-            item.style.opacity = '0.5'
-            item.style.pointerEvents = 'none'
-          }
-      }
-
-      item.onclick = (e) => {
-        e.stopPropagation()
-        // Trigger tooltip hide immediately before element removal
-        const tooltipEvent = new MouseEvent('mouseout', {
-            bubbles: true,
-            cancelable: true,
-            relatedTarget: document.body // Simulate moving to body
-        });
-        item.dispatchEvent(tooltipEvent);
-        
-        this.execute(opt)
-        this.close()
-      }
-      this.menu.appendChild(item)
-    })
-
     wrapper.appendChild(this.trigger)
-    // Do NOT append menu to wrapper initially. It will be portaled to body on open.
-    // wrapper.appendChild(this.menu) 
     return wrapper
   }
 
   private toggle() {
-    if (this.isOpen) {
+    if (this._isOpen) {
       this.close()
     } else {
       this.open()
     }
   }
 
-  private open() {
-    this.isOpen = true
+  public open() {
+    manager.openNew(this)
+    this._isOpen = true
+    this.focusedIndex = -1
     this.element.classList.add('open')
-    
-    // Portal logic: Move menu to body to avoid overflow issues
+    this.trigger.setAttribute('aria-expanded', 'true')
+
+    // Rotate chevron
+    const chevron = this.trigger.querySelector('.dropdown-chevron') as HTMLElement | null
+    if (chevron) chevron.style.transform = 'rotate(180deg)'
+
+    // Portal to body
     document.body.appendChild(this.menu)
-    
-    // Re-render menu items to update disabled state
-    this.menu.innerHTML = ''
-    if (this.props.layout === 'row') {
-      this.menu.style.display = 'flex'
-      this.menu.style.flexDirection = 'row'
-      this.menu.style.padding = '4px'
-      this.menu.style.gap = '4px'
-    } else {
-      this.menu.style.display = 'block'
+    this.renderMenuItems()
+
+    // Animate in
+    this.menu.style.display = this.props.layout === 'row' ? 'flex' : 'block'
+    this.menu.style.opacity = '0'
+    this.menu.style.transform = 'translateY(-6px) scale(0.97)'
+    requestAnimationFrame(() => {
+      this.menu.style.transition = 'opacity 0.15s ease, transform 0.15s ease'
+      this.menu.style.opacity = '1'
+      this.menu.style.transform = 'translateY(0) scale(1)'
+    })
+
+    // Keyboard nav inside menu
+    this.menu.addEventListener('keydown', this.handleMenuKeydown)
+
+    // Floating UI positioning
+    this.cleanupFloating = autoUpdate(this.trigger, this.menu, () => {
+      if (!this.trigger.isConnected || this.trigger.offsetParent === null) {
+        this.close()
+        return
+      }
+      computePosition(this.trigger, this.menu, {
+        placement: 'bottom-start',
+        strategy: 'fixed',
+        middleware: [offset(4), flip(), shift({ padding: 5 }), hide()],
+      }).then(({ x, y, middlewareData }) => {
+        if (middlewareData.hide?.referenceHidden) {
+          this.close()
+          return
+        }
+        Object.assign(this.menu.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+          position: 'fixed',
+          zIndex: '10000',
+        })
+      })
+    })
+  }
+
+  public close() {
+    if (!this._isOpen) return
+    manager.unregister(this)
+    this._isOpen = false
+    this.focusedIndex = -1
+    this.element.classList.remove('open')
+    this.trigger.setAttribute('aria-expanded', 'false')
+
+    // Restore chevron
+    const chevron = this.trigger.querySelector('.dropdown-chevron') as HTMLElement | null
+    if (chevron) chevron.style.transform = 'rotate(0deg)'
+
+    this.menu.removeEventListener('keydown', this.handleMenuKeydown)
+
+    if (this.cleanupFloating) {
+      this.cleanupFloating()
+      this.cleanupFloating = null
     }
 
-    this.props.options.forEach(opt => {
+    // Animate out, then remove
+    this.menu.style.transition = 'opacity 0.12s ease, transform 0.12s ease'
+    this.menu.style.opacity = '0'
+    this.menu.style.transform = 'translateY(-4px) scale(0.97)'
+
+    setTimeout(() => {
+      if (this.menu.parentElement === document.body) {
+        document.body.removeChild(this.menu)
+      }
+      this.menu.style.display = 'none'
+      this.menu.style.transition = ''
+      this.menu.style.opacity = ''
+      this.menu.style.transform = ''
+    }, 120)
+  }
+
+  // ── Keyboard navigation inside menu ─────────────────────────────────────────
+
+  private handleMenuKeydown = (e: KeyboardEvent) => {
+    const items = this.getFocusableItems()
+    if (!items.length) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        this.focusItem((this.focusedIndex + 1) % items.length)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        this.focusItem((this.focusedIndex - 1 + items.length) % items.length)
+        break
+      case 'Home':
+        e.preventDefault()
+        this.focusItem(0)
+        break
+      case 'End':
+        e.preventDefault()
+        this.focusItem(items.length - 1)
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (this.focusedIndex >= 0) {
+          items[this.focusedIndex].click()
+        }
+        break
+      case 'Escape':
+        this.close()
+        this.trigger.focus()
+        break
+      case 'Tab':
+        this.close()
+        break
+    }
+  }
+
+  private getFocusableItems(): HTMLElement[] {
+    return Array.from(
+      this.menu.querySelectorAll<HTMLElement>('.dropdown-item:not([disabled])')
+    )
+  }
+
+  private focusItem(index: number) {
+    const items = this.getFocusableItems()
+    items.forEach((item, i) => {
+      item.classList.toggle('keyboard-focus', i === index)
+    })
+    this.focusedIndex = index
+    items[index]?.scrollIntoView({ block: 'nearest' })
+  }
+
+  // ── Menu item rendering ──────────────────────────────────────────────────────
+
+  private renderMenuItems() {
+    this.menu.innerHTML = ''
+
+    this.props.options.forEach((opt) => {
       const item = document.createElement('div')
       item.className = 'dropdown-item'
-      item.style.display = 'flex'
-      item.style.alignItems = 'center'
-      item.style.justifyContent = 'space-between'
-      
+      item.setAttribute('role', 'option')
+      item.setAttribute('tabindex', '-1')
+      item.setAttribute('aria-label', opt.label)
+      item.setAttribute('aria-selected', 'false')
+      item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;'
+
       const content = document.createElement('div')
-      content.style.display = 'flex'
-      content.style.alignItems = 'center'
-      content.style.gap = '8px'
-      
-      // If icon is present, show icon
+      content.style.cssText = 'display:flex;align-items:center;gap:8px;'
+
       if (opt.icon && icons[opt.icon]) {
         const iconSpan = document.createElement('span')
         iconSpan.innerHTML = icons[opt.icon]
         iconSpan.style.display = 'flex'
         content.appendChild(iconSpan)
-        
+
         if (this.props.layout !== 'row') {
-            const textSpan = document.createElement('span')
-            textSpan.textContent = opt.label
-            content.appendChild(textSpan)
+          const textSpan = document.createElement('span')
+          textSpan.textContent = opt.label
+          content.appendChild(textSpan)
         } else {
-             // Tooltip for icon-only mode
-             item.title = opt.label
-             item.dataset.tooltip = opt.label
+          item.title = opt.label
+          item.dataset.tooltip = opt.label
         }
       } else {
         content.textContent = opt.label
       }
-      
       item.appendChild(content)
 
-      // Check active state
+      // Active state
       let isActive = false
       if (opt.isActive) {
-          isActive = opt.isActive(this.editorCore.editor)
+        isActive = opt.isActive(this.editorCore.editor)
       } else {
-          const command = opt.command
-          const name = command.replace('toggle', '').replace('set', '').toLowerCase()
-          isActive = this.editorCore.editor.isActive(name, opt.args)
+        const name = opt.command.replace('toggle', '').replace('set', '').toLowerCase()
+        isActive = this.editorCore.editor.isActive(name, opt.args)
       }
 
-      if (isActive && this.props.layout !== 'row') {
-          // Highlight active item with background color and text color
-          item.style.backgroundColor = 'var(--btn-active-bg)' // Solid Blue
-          item.style.color = 'var(--btn-active-color)' // White
-          item.style.fontWeight = '500'
-      }
-      
       if (this.props.layout === 'row') {
-           item.style.justifyContent = 'center'
-           item.style.padding = '4px'
-           item.style.minWidth = '28px'
-           item.style.minHeight = '28px'
-           if (isActive) {
-               item.classList.add('active')
-               item.style.backgroundColor = '#e6ffec'
-               item.style.color = 'var(--primary-color)'
-           }
+        item.style.justifyContent = 'center'
+        item.style.padding = '4px'
+        item.style.minWidth = '28px'
+        item.style.minHeight = '28px'
+        if (isActive) {
+          item.classList.add('active')
+          item.style.backgroundColor = 'var(--btn-active-bg)'
+          item.style.color = 'var(--btn-active-color)'
+        }
+      } else {
+        if (isActive) {
+          item.classList.add('active')
+          item.style.backgroundColor = 'var(--btn-active-bg)'
+          item.style.color = 'var(--btn-active-color)'
+          item.style.fontWeight = '500'
+          item.setAttribute('aria-selected', 'true')
+        }
       }
 
-      // Check option disabled state
-      if (opt.isDisabled) {
-          const isDisabled = opt.isDisabled(this.editorCore.editor)
-          if (isDisabled) {
-            item.setAttribute('disabled', 'true')
-            item.classList.add('disabled')
-            item.style.opacity = '0.5'
-            item.style.pointerEvents = 'none'
-          }
+      // Disabled state
+      if (opt.isDisabled?.(this.editorCore.editor)) {
+        item.setAttribute('disabled', 'true')
+        item.classList.add('disabled')
+        item.style.opacity = '0.5'
+        item.style.pointerEvents = 'none'
       }
 
-      item.onclick = (e) => {
+      // Click / touch handler
+      const handleSelect = (e: Event) => {
         e.stopPropagation()
-        // Trigger tooltip hide immediately before element removal
-        const tooltipEvent = new MouseEvent('mouseout', {
-            bubbles: true,
-            cancelable: true,
-            relatedTarget: document.body // Simulate moving to body
-        });
-        item.dispatchEvent(tooltipEvent);
-
         this.execute(opt)
         this.close()
       }
+      item.addEventListener('click', handleSelect)
+      item.addEventListener('touchend', (e) => {
+        e.preventDefault() // prevent ghost click
+        handleSelect(e)
+      })
+
+      // Hover focus tracking (for mouse users)
+      item.addEventListener('mouseenter', () => {
+        const items = this.getFocusableItems()
+        this.focusedIndex = items.indexOf(item)
+        items.forEach((it, i) => it.classList.toggle('keyboard-focus', i === this.focusedIndex))
+      })
+
       this.menu.appendChild(item)
     })
-    
-    // Floating UI setup
-    this.cleanupFloating = autoUpdate(this.trigger, this.menu, () => {
-        // Check if trigger is visible/attached
-        if (!this.trigger.isConnected || this.trigger.offsetParent === null) {
-            this.close();
-            return;
-        }
-
-        computePosition(this.trigger, this.menu, {
-            placement: 'bottom-start',
-            strategy: 'fixed',
-            middleware: [
-                offset(4),
-                flip(),
-                shift({ padding: 5 }),
-                hide()
-            ]
-        }).then(({ x, y, middlewareData }) => {
-            if (middlewareData.hide?.referenceHidden) {
-                this.close();
-                return;
-            }
-
-            Object.assign(this.menu.style, {
-                left: `${x}px`,
-                top: `${y}px`,
-                position: 'fixed', // Floating UI works best with fixed for portals
-                zIndex: '10000'
-            });
-        });
-    });
   }
 
-  private close() {
-    this.isOpen = false
-    this.element.classList.remove('open')
-    
-    if (this.cleanupFloating) {
-        this.cleanupFloating();
-        this.cleanupFloating = null;
-    }
-
-    // Remove from body
-    if (this.menu.parentElement === document.body) {
-        document.body.removeChild(this.menu)
-    }
-    this.menu.style.display = 'none'
-  }
+  // ── Execute command ──────────────────────────────────────────────────────────
 
   private execute(opt: DropdownOptionConfig) {
     const chain = this.editorCore.editor.chain().focus()
     if (typeof (chain as any)[opt.command] === 'function') {
       if (opt.args) {
-        (chain as any)[opt.command](opt.args).run()
+        ;(chain as any)[opt.command](opt.args).run()
       } else {
-        (chain as any)[opt.command]().run()
+        ;(chain as any)[opt.command]().run()
       }
     }
   }
 
+  // ── Update trigger label ─────────────────────────────────────────────────────
+
   private updateLabel() {
-    // Check Disabled State for the main trigger
     if (this.props.isDisabled) {
-        const disabled = this.props.isDisabled(this.editorCore.editor)
-        if (disabled) {
-            this.trigger.setAttribute('disabled', 'true')
-            this.trigger.classList.add('disabled')
-        } else {
-            this.trigger.removeAttribute('disabled')
-            this.trigger.classList.remove('disabled')
-        }
+      const disabled = this.props.isDisabled(this.editorCore.editor)
+      this.trigger.toggleAttribute('disabled', disabled)
+      this.trigger.classList.toggle('disabled', disabled)
     }
 
-    // Logic to update label based on current selection
-    let activeOption = this.props.options.find(opt => {
-      // Priority 1: Custom isActive handler
-      if (opt.isActive) {
-        return opt.isActive(this.editorCore.editor)
-      }
-
-      // Priority 2: Fallback guess based on command
-      const command = opt.command
-      const name = command.replace('toggle', '').replace('set', '').toLowerCase()
-      
+    const activeOption = this.props.options.find((opt) => {
+      if (opt.isActive) return opt.isActive(this.editorCore.editor)
+      const name = opt.command.replace('toggle', '').replace('set', '').toLowerCase()
       return this.editorCore.editor.isActive(name, opt.args)
     })
-    
-    // ... rest of the function
 
-    const labelEl = this.trigger.querySelector('.dropdown-label') as HTMLElement
-    if (labelEl) {
-      if (activeOption) {
-        if (activeOption.icon && icons[activeOption.icon]) {
-            labelEl.innerHTML = icons[activeOption.icon]
-        } else {
-            labelEl.textContent = activeOption.label
-        }
+    const labelEl = this.trigger.querySelector('.dropdown-label') as HTMLElement | null
+    if (!labelEl) return
+
+    if (activeOption) {
+      if (activeOption.icon && icons[activeOption.icon]) {
+        labelEl.innerHTML = icons[activeOption.icon]
       } else {
-        // If no option is active, show the default label from props
-        // If group has an icon, show that instead of text label
-        if (this.props.icon && icons[this.props.icon]) {
-            labelEl.innerHTML = icons[this.props.icon]
-        } else {
-            labelEl.textContent = this.props.label
-        }
+        labelEl.textContent = activeOption.label
+      }
+    } else {
+      if (this.props.icon && icons[this.props.icon]) {
+        labelEl.innerHTML = icons[this.props.icon]
+      } else {
+        labelEl.textContent = this.props.label
       }
     }
   }
