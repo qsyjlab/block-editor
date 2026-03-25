@@ -7,6 +7,8 @@ const BLOCK_NODE_TYPES = [
   'bulletList',
   'orderedList',
   'taskList',
+  'listItem',
+  'taskItem',
   'table',
   'codeBlock',
   'callout',

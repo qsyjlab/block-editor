@@ -12,10 +12,14 @@ import { ToolbarDropdown } from "./toolbar/ToolbarDropdown";
 import { ColorPicker } from "./toolbar/color-picker/color-picker";
 import { TooltipManager } from "./toolbar/TooltipManager";
 import { ToolbarRegistry, ToolbarItemType } from "./toolbar/ToolbarRegistry";
-import { defaultToolbarItems } from "./toolbar/defaultToolbarItems";
+import { buildDefaultToolbarItems } from "./toolbar/defaultToolbarItems";
 import { icons } from "./toolbar/icons";
+import { resolveEditorI18n } from "../i18n";
+import type { EditorI18n } from "../i18n";
 
 export class Toolbar {
+  private static instanceCount = 0;
+
   private container: HTMLElement;
   private editorCore: EditorCore;
   // @ts-ignore
@@ -29,15 +33,23 @@ export class Toolbar {
   private isMoreMenuOpen = false;
   private cleanupFloating: (() => void) | null = null;
   private moreMenuTimer: any = null;
+  private readonly moreMenuOwnerId: string;
+  private readonly i18n: EditorI18n;
 
-  constructor(container: HTMLElement, editorCore: EditorCore) {
+  constructor(
+    container: HTMLElement,
+    editorCore: EditorCore,
+    i18nInput?: string | Partial<EditorI18n> | null,
+  ) {
     this.container = container;
     this.editorCore = editorCore;
+    this.i18n = resolveEditorI18n(i18nInput || this.editorCore.i18n);
     this.tooltipManager = new TooltipManager(); // Initialize TooltipManager
+    this.moreMenuOwnerId = `be-more-${++Toolbar.instanceCount}`;
 
     // Initialize default items if registry is empty
     if (ToolbarRegistry.getItems().length === 0) {
-      defaultToolbarItems.forEach((group) =>
+      buildDefaultToolbarItems(this.i18n).forEach((group) =>
         ToolbarRegistry.registerGroup(group),
       );
     }
@@ -109,7 +121,7 @@ export class Toolbar {
     this.moreBtn.innerHTML = icons.more || "...";
     // this.moreBtn.style.marginLeft = "auto"; // Push to end if possible, though we handle position manually
     this.moreBtn.style.display = "none"; // Hidden by default
-    this.moreBtn.dataset.tooltip = "More";
+    this.moreBtn.dataset.tooltip = this.i18n.toolbar.more;
 
     // Hover logic
     this.moreBtn.addEventListener("mouseenter", () => this.openMoreMenu());
@@ -123,6 +135,7 @@ export class Toolbar {
   private createMoreMenu() {
     this.moreMenu = document.createElement("div");
     this.moreMenu.className = "toolbar-dropdown-menu"; // Reuse dropdown styles
+    this.moreMenu.dataset.beMoreId = this.moreMenuOwnerId;
     this.moreMenu.style.display = "none";
     this.moreMenu.style.flexDirection = "row"; // Horizontal layout
     this.moreMenu.style.flexWrap = "wrap"; // Allow wrapping if needed, but horizontal is key
@@ -189,7 +202,29 @@ export class Toolbar {
   }
 
   private scheduleCloseMoreMenu() {
-    this.moreMenuTimer = setTimeout(() => this.closeMoreMenu(), 200);
+    this.moreMenuTimer = setTimeout(() => {
+      const relatedSubmenus = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `.toolbar-dropdown-menu[data-owner-in-more="true"][data-owner-more-id="${this.moreMenuOwnerId}"]`,
+        ),
+      );
+
+      const isAnyRelatedSubmenuActive = relatedSubmenus.some(
+        (submenu) =>
+          submenu.matches(':hover') ||
+          submenu.contains(document.activeElement as Node | null),
+      );
+
+      if (
+        this.moreBtn.matches(':hover') ||
+        this.moreMenu.matches(':hover') ||
+        isAnyRelatedSubmenuActive
+      ) {
+        return;
+      }
+
+      this.closeMoreMenu();
+    }, 200);
   }
 
   private cancelCloseMoreMenu() {

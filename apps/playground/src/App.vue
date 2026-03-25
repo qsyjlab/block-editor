@@ -6,10 +6,18 @@ import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
 const editorContainer = ref<HTMLElement | null>(null);
 let editor: EditorCore | null = null;
 
-const params = new URLSearchParams(window.location.search)
-const room = params.get('room') || 'block-editor-demo-room'
-const userName = params.get('user') || `用户-${Math.random().toString(36).slice(2, 6)}`
-const userColor = `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room") || "block-editor-demo-room";
+const userName =
+  params.get("user") || `用户-${Math.random().toString(36).slice(2, 6)}`;
+const userColor = `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`;
+const locale = (
+  params.get("lang") ||
+  navigator.language ||
+  "zh-CN"
+).toLowerCase();
+
+const editorLocale = locale.startsWith("en") ? "en-US" : "zh-CN";
 
 onMounted(() => {
   if (editorContainer.value) {
@@ -21,17 +29,20 @@ onMounted(() => {
       collaboration: {
         enabled: true,
         roomName: room,
-        websocketUrl: 'wss://demos.yjs.dev',
+        websocketUrl: "wss://demos.yjs.dev",
         user: {
           name: userName,
           color: userColor,
         },
       },
-    });
+      i18n: editorLocale,
+    } as any);
 
     // 2. Initialize UI Renderer
     // This will mount the toolbar, workspace, etc. into our container
-    new EditorUIRenderer(core, editorContainer.value);
+    new EditorUIRenderer(core, editorContainer.value, {
+      i18n: editorLocale,
+    } as any);
 
     editor = core;
   }

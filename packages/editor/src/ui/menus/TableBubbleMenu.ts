@@ -18,7 +18,7 @@ export class TableBubbleMenu {
     this.editorCore = editorCore
     this.element = this.render()
 
-    document.body.appendChild(this.element)
+    this.getOverlayContainer().appendChild(this.element)
 
     const scheduleUpdate = () => {
       if (this.rafId !== null) return
@@ -32,6 +32,14 @@ export class TableBubbleMenu {
     this.editorCore.events.on('transaction', scheduleUpdate)
     this.editorCore.events.on('update', scheduleUpdate)
     this.editorCore.events.on('modeChange', scheduleUpdate)
+  }
+
+  private getOverlayContainer(): HTMLElement {
+    const editorRoot = this.editorCore.editor.options.element as HTMLElement
+    const container =
+      (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
+    return container || document.body
   }
 
   private render(): HTMLElement {

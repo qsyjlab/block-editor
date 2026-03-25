@@ -53,6 +53,68 @@ function convertCalloutMarkdownToHtml(markdown: string): string {
   return output.join('\n')
 }
 
+function normalizeMarkdownHtml(html: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  // [indent:N] 前缀 -> data-indent 属性
+  doc.querySelectorAll<HTMLElement>('p,h1,h2,h3,h4,h5,h6').forEach((el) => {
+    const text = (el.textContent || '').trimStart()
+    const match = text.match(/^\[indent:(\d+)\]\s*/i)
+    if (!match) return
+
+    const level = Math.max(0, Number(match[1]) || 0)
+    if (level > 0) {
+      el.setAttribute('data-indent', String(level))
+    }
+
+    if (el.firstChild?.nodeType === Node.TEXT_NODE) {
+      el.firstChild.textContent = (el.firstChild.textContent || '').replace(/^\[indent:\d+\]\s*/i, '')
+    } else {
+      el.textContent = (el.textContent || '').replace(/^\[indent:\d+\]\s*/i, '')
+    }
+  })
+
+  // 标准 markdown checkbox 列表 -> Tiptap taskList 结构
+  doc.querySelectorAll('ul').forEach((ul) => {
+    const lis = Array.from(ul.children).filter((el) => el.tagName === 'LI') as HTMLLIElement[]
+    if (lis.length === 0) return
+
+    const allTask = lis.every((li) => {
+      const first = li.firstElementChild
+      return first?.tagName === 'INPUT' && (first as HTMLInputElement).type === 'checkbox'
+    })
+    if (!allTask) return
+
+    const taskList = doc.createElement('ul')
+    taskList.setAttribute('data-type', 'taskList')
+
+    lis.forEach((li) => {
+      const checkbox = li.firstElementChild as HTMLInputElement
+      const taskItem = doc.createElement('li')
+      taskItem.setAttribute('data-type', 'taskItem')
+      taskItem.setAttribute('data-checked', checkbox.checked ? 'true' : 'false')
+
+      const paragraph = doc.createElement('p')
+      const contentNodes = Array.from(li.childNodes).filter((node, idx) => {
+        if (idx === 0 && node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement
+          return !(el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'checkbox')
+        }
+        return true
+      })
+
+      contentNodes.forEach((node) => paragraph.appendChild(node.cloneNode(true)))
+      taskItem.appendChild(paragraph)
+      taskList.appendChild(taskItem)
+    })
+
+    ul.replaceWith(taskList)
+  })
+
+  return doc.body.innerHTML
+}
+
 export class MarkdownImporter {
   private fileInput: HTMLInputElement
 
@@ -86,7 +148,8 @@ export class MarkdownImporter {
     try {
       const withCalloutHtml = convertCalloutMarkdownToHtml(markdown)
       const html = marked.parse(withCalloutHtml, { gfm: true, breaks: true }) as string
-      this.editor.commands.setContent(html, true)
+      const normalizedHtml = normalizeMarkdownHtml(html)
+      this.editor.commands.setContent(normalizedHtml, true)
     } catch (error) {
       console.error('Markdown import failed:', error)
       alert('导入 Markdown 失败，请检查内容格式。')

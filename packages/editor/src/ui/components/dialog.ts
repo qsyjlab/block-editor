@@ -84,9 +84,19 @@ export class Dialog {
 
     const closeBtn = document.createElement("button");
     closeBtn.className =
-      "be-text-gray-400 be-hover:text-gray-600 be-p-1.5 be-rounded-lg be-transition-colors be-border-0 be-bg-transparent be-cursor-pointer be-flex be-items-center be-justify-center be-shrink-0";
+      "be-text-gray-400 be-hover:text-gray-600 be-rounded-lg be-transition-colors be-border-0 be-bg-transparent be-cursor-pointer be-flex be-items-center be-justify-center be-shrink-0";
+    closeBtn.style.width = "32px";
+    closeBtn.style.height = "32px";
+    closeBtn.style.padding = "0";
+    closeBtn.style.lineHeight = "0";
     closeBtn.setAttribute("aria-label", "关闭对话框");
     closeBtn.innerHTML = icons.close || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    const closeSvg = closeBtn.querySelector("svg") as SVGElement | null;
+    if (closeSvg) {
+      closeSvg.setAttribute("width", "16");
+      closeSvg.setAttribute("height", "16");
+      closeSvg.style.display = "block";
+    }
     closeBtn.addEventListener("mouseenter", () => {
       closeBtn.style.background = "#f3f4f6";
       closeBtn.style.color = "#374151";

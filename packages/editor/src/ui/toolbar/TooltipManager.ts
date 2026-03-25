@@ -72,6 +72,7 @@ export class TooltipManager {
     this.tooltip.style.position = 'fixed';
     this.tooltip.style.top = '0';
     this.tooltip.style.left = '0';
+    this.tooltip.style.zIndex = '200000';
     
     // Ensure initial visibility is hidden until positioned
     // opacity is handled by css class .visible, but visibility helps avoid flicker

@@ -112,6 +112,10 @@ export class ToolbarDropdown {
     chevron.innerHTML = icons.chevronDown
     this.trigger.appendChild(chevron)
 
+    this.trigger.addEventListener('mousedown', (e) => {
+      e.stopPropagation()
+    })
+
     this.trigger.addEventListener('click', (e) => {
       e.stopPropagation()
       this.toggle()
@@ -133,6 +137,12 @@ export class ToolbarDropdown {
     this.menu.className = 'toolbar-dropdown-menu'
     this.menu.setAttribute('role', 'listbox')
     this.menu.style.display = 'none'
+
+    // Avoid bubbling to global outside-click handlers of other floating UIs
+    const stopEvent = (e: Event) => e.stopPropagation()
+    this.menu.addEventListener('mousedown', stopEvent)
+    this.menu.addEventListener('click', stopEvent)
+    this.menu.addEventListener('touchstart', stopEvent, { passive: true })
 
     if (this.props.layout === 'row') {
       this.menu.style.flexDirection = 'row'
@@ -164,6 +174,10 @@ export class ToolbarDropdown {
     if (chevron) chevron.style.transform = 'rotate(180deg)'
 
     // Portal to body
+    const ownerMoreMenu = this.element.closest('.toolbar-dropdown-menu[data-be-more-id]') as HTMLElement | null
+    const openedFromMoreMenu = Boolean(ownerMoreMenu)
+    this.menu.dataset.ownerInMore = openedFromMoreMenu ? 'true' : 'false'
+    this.menu.dataset.ownerMoreId = ownerMoreMenu?.dataset.beMoreId ?? ''
     document.body.appendChild(this.menu)
     this.renderMenuItems()
 
@@ -335,7 +349,7 @@ export class ToolbarDropdown {
       let isActive = false
       if (opt.isActive) {
         isActive = opt.isActive(this.editorCore.editor)
-      } else {
+      } else if (opt.command) {
         const name = opt.command.replace('toggle', '').replace('set', '').toLowerCase()
         isActive = this.editorCore.editor.isActive(name, opt.args)
       }
@@ -394,6 +408,13 @@ export class ToolbarDropdown {
   // ── Execute command ──────────────────────────────────────────────────────────
 
   private execute(opt: DropdownOptionConfig) {
+    if (opt.onExecute) {
+      void opt.onExecute(this.editorCore)
+      return
+    }
+
+    if (!opt.command) return
+
     const chain = this.editorCore.editor.chain().focus()
     if (typeof (chain as any)[opt.command] === 'function') {
       if (opt.args) {
@@ -415,6 +436,7 @@ export class ToolbarDropdown {
 
     const activeOption = this.props.options.find((opt) => {
       if (opt.isActive) return opt.isActive(this.editorCore.editor)
+      if (!opt.command) return false
       const name = opt.command.replace('toggle', '').replace('set', '').toLowerCase()
       return this.editorCore.editor.isActive(name, opt.args)
     })

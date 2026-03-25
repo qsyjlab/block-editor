@@ -1,108 +1,726 @@
-import { EditorCore } from '../../../core/EditorCore'
-import { Dialog } from '../../components/dialog'
+import { EditorCore } from "../../../core/EditorCore";
+import {
+  SnapshotBlameLine,
+  SnapshotDiffLine,
+  SnapshotDiffResult,
+} from "../../../core/VersionHistory";
+import { Dialog } from "../../components/dialog";
+import type { VersionHistoryDialogI18n } from "../../../i18n";
 
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleString('zh-CN', {
+function formatTime(ts: number, locale: string) {
+  return new Date(ts).toLocaleString(locale, {
     hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
+function sourceLabel(
+  source: "auto" | "manual" | "restore",
+  i18n: VersionHistoryDialogI18n,
+) {
+  if (source === "auto") return i18n.sourceAuto;
+  if (source === "manual") return i18n.sourceManual;
+  return i18n.sourceRestore;
+}
+
+const DEFAULT_VERSION_HISTORY_I18N: VersionHistoryDialogI18n = {
+  title: "版本历史",
+  subtitle: "本地快照、逐行差异与 Blame",
+  tips: "支持按行查看增删改、作者与时间；点击快照可查看详细变更或 Blame。",
+  saveSnapshot: "立即保存快照",
+  manualSnapshotLabel: "手动快照",
+  noSnapshots: "暂无快照",
+  sourceAuto: "自动",
+  sourceManual: "手动",
+  sourceRestore: "回滚前",
+  viewChanges: "查看变更",
+  collapse: "收起",
+  restoreToThis: "回滚到此版本",
+  restoreConfirm: "确认回滚到该版本？当前内容会被替换。",
+  restoreCompareTip: (previousLabel) => `Diff preview（对比上一版：${previousLabel}）`,
+  noChanges: "该版本暂无可展示变更",
+  fullDiff: "查看完整 Diff",
+  detailUnavailable: "该快照详情不可用",
+  completeDiffTitle: "完整变更文本",
+  oldLine: "旧行",
+  newLine: "新行",
+  oldVersion: "旧版本",
+  blankBase: "初始空白",
+};
+
 export class VersionHistoryDialog {
-  private dialog: Dialog
-  private editorCore: EditorCore
-  private listRoot: HTMLElement
+  private dialog: Dialog;
+  private editorCore: EditorCore;
+  private listRoot: HTMLElement;
+  private detailRoot: HTMLElement;
+  private activeSnapshotId: string | null = null;
+  private expandedSnapshotId: string | null = null;
+  private detailTab: "diff" | "blame" = "diff";
+  private readonly i18n: VersionHistoryDialogI18n;
+  private readonly locale: string;
 
-  constructor(editorCore: EditorCore) {
-    this.editorCore = editorCore
-    this.listRoot = document.createElement('div')
-    this.listRoot.className = 'be-space-y-2'
+  constructor(
+    editorCore: EditorCore,
+    i18n?: VersionHistoryDialogI18n,
+    locale: string = "zh-CN",
+  ) {
+    this.editorCore = editorCore;
+    this.i18n = i18n || DEFAULT_VERSION_HISTORY_I18N;
+    this.locale = locale;
+    this.listRoot = document.createElement("div");
+    this.listRoot.className = "be-space-y-2";
 
-    const content = document.createElement('div')
-    content.className = 'be-space-y-4'
+    this.detailRoot = document.createElement("div");
+    this.detailRoot.className =
+      "be-mt-3 be-border be-border-gray-200 be-rounded-xl be-overflow-hidden";
+    this.detailRoot.style.display = "none";
 
-    const tips = document.createElement('div')
-    tips.className = 'be-text-xs be-text-gray-500'
-    tips.textContent = '自动快照会定期保存，你也可以手动创建快照后再回滚。'
-    content.appendChild(tips)
+    const content = document.createElement("div");
+    content.className = "be-space-y-4";
 
-    const createBtn = document.createElement('button')
-    createBtn.textContent = '立即保存快照'
-    createBtn.className = 'be-px-4 be-py-2 be-text-sm be-font-medium be-text-white be-rounded-lg be-border-0 be-cursor-pointer'
-    createBtn.style.cssText = 'font-family:inherit;background:linear-gradient(135deg,#3b82f6,#2563eb);'
+    const tips = document.createElement("div");
+    tips.className = "be-text-xs be-text-gray-500";
+    tips.textContent = this.i18n.tips;
+    content.appendChild(tips);
+
+    const createBtn = document.createElement("button");
+    createBtn.textContent = "立即保存快照";
+    createBtn.className =
+      "be-px-4 be-py-2 be-text-sm be-font-medium be-text-white be-rounded-lg be-border-0 be-cursor-pointer";
+    createBtn.style.cssText =
+      "font-family:inherit;background:linear-gradient(135deg,#3b82f6,#2563eb);";
     createBtn.onclick = () => {
-      this.editorCore.versionHistory.createManualSnapshot('手动快照')
-      this.renderList()
-    }
-    content.appendChild(createBtn)
+      this.editorCore.versionHistory.createManualSnapshot(this.i18n.manualSnapshotLabel);
+      this.renderList();
+    };
+    content.appendChild(createBtn);
 
-    content.appendChild(this.listRoot)
+    content.appendChild(this.listRoot);
+    content.appendChild(this.detailRoot);
 
     this.dialog = new Dialog({
-      title: '版本历史',
-      subtitle: '本地快照与回滚',
-      icon: 'fileText',
-      iconBgClass: 'be-bg-gradient-to-br be-from-indigo-500 be-to-violet-600',
+      title: this.i18n.title,
+      subtitle: this.i18n.subtitle,
+      icon: "fileText",
+      iconBgClass: "be-bg-gradient-to-br be-from-indigo-500 be-to-violet-600",
       onClose: () => {},
-      width: '640px',
-    })
+      width: "860px",
+    });
 
-    this.dialog.setContent(content)
-    this.renderList()
+    this.dialog.setContent(content);
+    this.renderList();
   }
 
   private renderList() {
-    const snapshots = this.editorCore.versionHistory.listSnapshots()
-    this.listRoot.innerHTML = ''
+    const snapshots = this.editorCore.versionHistory.listSnapshots();
+    this.listRoot.innerHTML = "";
 
     if (snapshots.length === 0) {
-      const empty = document.createElement('div')
-      empty.className = 'be-text-sm be-text-gray-500 be-py-3'
-      empty.textContent = '暂无快照'
-      this.listRoot.appendChild(empty)
-      return
+      const empty = document.createElement("div");
+      empty.className = "be-text-sm be-text-gray-500 be-py-3";
+      empty.textContent = this.i18n.noSnapshots;
+      this.listRoot.appendChild(empty);
+      this.detailRoot.innerHTML = "";
+      this.activeSnapshotId = null;
+      return;
     }
 
-    snapshots.forEach((snapshot) => {
-      const row = document.createElement('div')
-      row.className = 'be-border be-border-gray-200 be-rounded-xl be-p-3 be-flex be-items-center be-justify-between be-gap-3'
+    if (
+      this.activeSnapshotId &&
+      !snapshots.some((s) => s.id === this.activeSnapshotId)
+    ) {
+      this.activeSnapshotId = null;
+    }
+    if (
+      this.expandedSnapshotId &&
+      !snapshots.some((s) => s.id === this.expandedSnapshotId)
+    ) {
+      this.expandedSnapshotId = null;
+    }
 
-      const left = document.createElement('div')
-      left.className = 'be-min-w-0'
+    snapshots.forEach((snapshot, index) => {
+      const expanded = this.expandedSnapshotId === snapshot.id;
+      const previousSnapshot = this.resolveBaseSnapshotForDiff(
+        snapshots,
+        index,
+      );
+      const previousSnapshotId = previousSnapshot?.id;
 
-      const title = document.createElement('div')
-      title.className = 'be-text-sm be-font-medium be-text-gray-900'
-      title.textContent = `${snapshot.label} · ${formatTime(snapshot.createdAt)}`
-
-      const meta = document.createElement('div')
-      meta.className = 'be-text-xs be-text-gray-500 be-mt-1 be-truncate'
-      meta.textContent = `${snapshot.source === 'auto' ? '自动' : snapshot.source === 'manual' ? '手动' : '回滚前'} · ${snapshot.excerpt}`
-
-      left.appendChild(title)
-      left.appendChild(meta)
-
-      const restoreBtn = document.createElement('button')
-      restoreBtn.textContent = '回滚到此版本'
-      restoreBtn.className = 'be-px-3 be-py-1.5 be-text-xs be-font-medium be-rounded-lg be-border be-border-gray-200 be-bg-white be-cursor-pointer be-shrink-0'
-      restoreBtn.onclick = () => {
-        const ok = window.confirm('确认回滚到该版本？当前内容会被替换。')
-        if (!ok) return
-        this.editorCore.versionHistory.restoreSnapshot(snapshot.id)
-        this.dialog.close()
+      const row = document.createElement("div");
+      row.className =
+        "be-border be-border-gray-200 be-rounded-xl be-overflow-hidden";
+      if (snapshot.id === this.activeSnapshotId) {
+        row.style.borderColor = "#93c5fd";
       }
 
-      row.appendChild(left)
-      row.appendChild(restoreBtn)
-      this.listRoot.appendChild(row)
-    })
+      const header = document.createElement("div");
+      header.style.display = "flex";
+      header.style.alignItems = "center";
+      header.style.justifyContent = "space-between";
+      header.style.gap = "12px";
+      header.style.padding = "10px 12px";
+      header.style.cursor = "pointer";
+      header.style.background = expanded ? "#f6f8fa" : "#fff";
+      header.addEventListener("click", () => {
+        this.activeSnapshotId = snapshot.id;
+        this.expandedSnapshotId = expanded ? null : snapshot.id;
+        this.detailTab = "diff";
+        this.renderList();
+      });
+
+      const left = document.createElement("div");
+      left.className = "be-min-w-0";
+      left.style.display = "flex";
+      left.style.flexDirection = "column";
+
+      const title = document.createElement("div");
+      title.className = "be-text-sm be-font-medium be-text-gray-900";
+      title.textContent = `${expanded ? "▾" : "▸"} ${snapshot.label} · ${formatTime(snapshot.createdAt, this.locale)}`;
+
+      const stats = this.getDiffStats(snapshot.id, previousSnapshotId);
+
+      const meta = document.createElement("div");
+      meta.className = "be-text-xs be-text-gray-500 be-mt-1 be-truncate";
+      meta.textContent = `${sourceLabel(snapshot.source, this.i18n)} · ${snapshot.authorName} · +${stats.added}/-${stats.deleted}/~${stats.modified} · ${snapshot.excerpt}`;
+
+      left.appendChild(title);
+      left.appendChild(meta);
+
+      const actionWrap = document.createElement("div");
+      actionWrap.className = "be-flex be-items-center be-gap-2 be-shrink-0";
+
+      const detailBtn = document.createElement("button");
+      detailBtn.type = "button";
+      detailBtn.textContent = expanded ? this.i18n.collapse : this.i18n.viewChanges;
+      detailBtn.className =
+        "be-px-3 be-py-1.5 be-text-xs be-font-medium be-rounded-md be-border be-border-blue-200 be-bg-blue-50 be-cursor-pointer";
+      detailBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.activeSnapshotId = snapshot.id;
+        this.expandedSnapshotId = expanded ? null : snapshot.id;
+        this.detailTab = "diff";
+        this.renderList();
+      });
+
+      const restoreBtn = document.createElement("button");
+      restoreBtn.type = "button";
+      restoreBtn.textContent = this.i18n.restoreToThis;
+      restoreBtn.className =
+        "be-px-3 be-py-1.5 be-text-xs be-font-medium be-rounded-md be-border be-border-gray-200 be-bg-white be-cursor-pointer";
+      restoreBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const ok = window.confirm(this.i18n.restoreConfirm);
+        if (!ok) return;
+        this.editorCore.versionHistory.restoreSnapshot(snapshot.id);
+        this.dialog.close();
+      });
+
+      actionWrap.appendChild(detailBtn);
+      actionWrap.appendChild(restoreBtn);
+      header.appendChild(left);
+      header.appendChild(actionWrap);
+      row.appendChild(header);
+
+      if (expanded) {
+        const previewWrap = document.createElement("div");
+        previewWrap.style.borderTop = "1px solid #d0d7de";
+        previewWrap.style.background = "#fff";
+
+        const previewHeader = document.createElement("div");
+        previewHeader.style.padding = "6px 10px";
+        previewHeader.style.fontSize = "12px";
+        previewHeader.style.color = "#57606a";
+        previewHeader.style.background = "#f6f8fa";
+        previewHeader.style.borderBottom = "1px solid #d0d7de";
+        const previousLabel = previousSnapshot?.label || "初始空白";
+        previewHeader.textContent = `Diff preview（对比上一版：${previousLabel}）`;
+        previewWrap.appendChild(previewHeader);
+
+        const lines = this.getPreviewDiffLines(snapshot.id, previousSnapshotId);
+        if (lines.length === 0) {
+          const empty = document.createElement("div");
+          empty.style.padding = "10px";
+          empty.style.fontSize = "12px";
+          empty.style.color = "#6b7280";
+          empty.textContent = this.i18n.noChanges;
+          previewWrap.appendChild(empty);
+        } else {
+          lines.forEach((line) => {
+            const lineRow = document.createElement("div");
+            lineRow.style.display = "grid";
+            lineRow.style.gridTemplateColumns = "44px 1fr 44px 1fr";
+            lineRow.style.alignItems = "start";
+            lineRow.style.fontSize = "12px";
+            lineRow.style.fontFamily =
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+            lineRow.style.borderBottom = "1px solid #f3f4f6";
+
+            const oldNo = document.createElement("div");
+            oldNo.style.padding = "3px 8px";
+            oldNo.style.color = "#8c959f";
+            oldNo.textContent =
+              line.oldLineNumber === null ? "" : String(line.oldLineNumber);
+
+            const oldText = document.createElement("div");
+            oldText.style.padding = "3px 8px";
+            oldText.style.whiteSpace = "nowrap";
+            oldText.style.overflow = "hidden";
+            oldText.style.textOverflow = "ellipsis";
+            oldText.style.color = "#24292f";
+            oldText.style.borderRight = "1px solid #e5e7eb";
+            oldText.textContent = line.type === "added" ? "" : line.oldText;
+
+            const newNo = document.createElement("div");
+            newNo.style.padding = "3px 8px";
+            newNo.style.color = "#8c959f";
+            newNo.textContent =
+              line.newLineNumber === null ? "" : String(line.newLineNumber);
+
+            const newText = document.createElement("div");
+            newText.style.padding = "3px 8px";
+            newText.style.whiteSpace = "nowrap";
+            newText.style.overflow = "hidden";
+            newText.style.textOverflow = "ellipsis";
+            newText.style.color = "#24292f";
+            newText.textContent = line.type === "deleted" ? "" : line.newText;
+
+            if (line.type === "deleted") {
+              oldNo.style.background = "#ffebe9";
+              oldText.style.background = "#ffebe9";
+            } else if (line.type === "added") {
+              newNo.style.background = "#dafbe1";
+              newText.style.background = "#dafbe1";
+            } else {
+              oldNo.style.background = "#ffebe9";
+              oldText.style.background = "#ffebe9";
+              newNo.style.background = "#dafbe1";
+              newText.style.background = "#dafbe1";
+            }
+
+            lineRow.appendChild(oldNo);
+            lineRow.appendChild(oldText);
+            lineRow.appendChild(newNo);
+            lineRow.appendChild(newText);
+            previewWrap.appendChild(lineRow);
+          });
+
+          const footer = document.createElement("div");
+          footer.style.padding = "8px 10px";
+          footer.style.background = "#fff";
+
+          const fullBtn = document.createElement("button");
+          fullBtn.type = "button";
+          fullBtn.textContent = this.i18n.fullDiff;
+          fullBtn.className =
+            "be-px-2.5 be-py-1 be-text-xs be-font-medium be-rounded-md be-border be-border-blue-200 be-bg-white be-cursor-pointer";
+          fullBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.openFullDiffDialog(snapshot.id, previousSnapshotId);
+          });
+          footer.appendChild(fullBtn);
+          previewWrap.appendChild(footer);
+        }
+
+        row.appendChild(previewWrap);
+      }
+
+      this.listRoot.appendChild(row);
+    });
+  }
+
+  private renderDetail() {
+    this.detailRoot.innerHTML = "";
+
+    if (!this.activeSnapshotId) {
+      const empty = document.createElement("div");
+      empty.className = "be-p-3 be-text-sm be-text-gray-500";
+      empty.textContent = "请选择一个快照查看详情";
+      this.detailRoot.appendChild(empty);
+      return;
+    }
+
+    const diff = this.editorCore.versionHistory.getSnapshotDiff(
+      this.activeSnapshotId,
+    );
+    if (!diff) {
+      const empty = document.createElement("div");
+      empty.className = "be-p-3 be-text-sm be-text-gray-500";
+      empty.textContent = this.i18n.detailUnavailable;
+      this.detailRoot.appendChild(empty);
+      return;
+    }
+
+    const blame = this.editorCore.versionHistory.getSnapshotBlame(
+      this.activeSnapshotId,
+    );
+
+    const header = document.createElement("div");
+    header.className =
+      "be-flex be-items-center be-justify-between be-gap-2 be-px-3 be-py-2 be-bg-gray-50 be-border-b be-border-gray-200";
+
+    const summary = document.createElement("div");
+    summary.className = "be-text-xs be-text-gray-600";
+    summary.textContent = this.buildDiffSummary(diff);
+
+    const tabWrap = document.createElement("div");
+    tabWrap.className = "be-flex be-gap-1";
+
+    const diffBtn = this.createTabBtn(
+      "变更视图",
+      this.detailTab === "diff",
+      () => {
+        this.detailTab = "diff";
+        this.renderDetail();
+      },
+    );
+    const blameBtn = this.createTabBtn(
+      "Blame 视图",
+      this.detailTab === "blame",
+      () => {
+        this.detailTab = "blame";
+        this.renderDetail();
+      },
+    );
+
+    tabWrap.appendChild(diffBtn);
+    tabWrap.appendChild(blameBtn);
+    header.appendChild(summary);
+    header.appendChild(tabWrap);
+
+    const body = document.createElement("div");
+    body.style.maxHeight = "340px";
+    body.style.overflow = "auto";
+    body.style.fontFamily =
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    body.style.fontSize = "12px";
+
+    if (this.detailTab === "diff") {
+      this.renderDiffBody(body, diff);
+    } else {
+      this.renderBlameBody(body, blame);
+    }
+
+    this.detailRoot.appendChild(header);
+    this.detailRoot.appendChild(body);
+  }
+
+  private createTabBtn(label: string, active: boolean, onClick: () => void) {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    btn.className =
+      "be-px-2.5 be-py-1 be-text-xs be-rounded-md be-border be-cursor-pointer";
+    btn.style.borderColor = active ? "#93c5fd" : "#e5e7eb";
+    btn.style.background = active ? "#dbeafe" : "#fff";
+    btn.style.color = active ? "#1d4ed8" : "#4b5563";
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  private buildDiffSummary(diff: SnapshotDiffResult) {
+    const added = diff.lines.filter((l) => l.type === "added").length;
+    const deleted = diff.lines.filter((l) => l.type === "deleted").length;
+    const modified = diff.lines.filter((l) => l.type === "modified").length;
+    const base = diff.baseSnapshot ? `${diff.baseSnapshot.label}` : "空白基线";
+    return `对比基线：${base} · +${added} / -${deleted} / ~${modified}`;
+  }
+
+  private renderDiffBody(root: HTMLElement, diff: SnapshotDiffResult) {
+    if (diff.lines.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "be-p-3 be-text-gray-500";
+      empty.textContent = "无差异";
+      root.appendChild(empty);
+      return;
+    }
+
+    diff.lines.forEach((line) => {
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "52px 52px 1fr 170px";
+      row.style.gap = "8px";
+      row.style.padding = "4px 8px";
+      row.style.borderBottom = "1px solid #f3f4f6";
+      row.style.alignItems = "start";
+
+      if (line.type === "added") row.style.background = "#ecfdf5";
+      if (line.type === "deleted") row.style.background = "#fef2f2";
+      if (line.type === "modified") row.style.background = "#eff6ff";
+
+      const oldNo = document.createElement("span");
+      oldNo.style.color = "#9ca3af";
+      oldNo.textContent =
+        line.oldLineNumber === null ? "" : String(line.oldLineNumber);
+
+      const newNo = document.createElement("span");
+      newNo.style.color = "#9ca3af";
+      newNo.textContent =
+        line.newLineNumber === null ? "" : String(line.newLineNumber);
+
+      const text = document.createElement("div");
+      text.style.whiteSpace = "pre-wrap";
+      text.style.wordBreak = "break-word";
+      text.style.color = "#111827";
+      text.textContent =
+        line.type === "deleted"
+          ? `- ${line.oldText}`
+          : line.type === "added"
+            ? `+ ${line.newText}`
+            : line.type === "modified"
+              ? `~ ${line.oldText}\n→ ${line.newText}`
+              : `  ${line.newText}`;
+
+      const meta = document.createElement("span");
+      meta.style.color = "#6b7280";
+      meta.style.fontSize = "11px";
+      meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`;
+
+      row.appendChild(oldNo);
+      row.appendChild(newNo);
+      row.appendChild(text);
+      row.appendChild(meta);
+      root.appendChild(row);
+    });
+  }
+
+  private renderBlameBody(root: HTMLElement, blame: SnapshotBlameLine[]) {
+    if (blame.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "be-p-3 be-text-gray-500";
+      empty.textContent = "当前快照无可展示行";
+      root.appendChild(empty);
+      return;
+    }
+
+    blame.forEach((line) => {
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "48px 170px 1fr";
+      row.style.gap = "8px";
+      row.style.padding = "4px 8px";
+      row.style.borderBottom = "1px solid #f3f4f6";
+      row.style.alignItems = "start";
+
+      const no = document.createElement("span");
+      no.style.color = "#9ca3af";
+      no.textContent = String(line.lineNumber);
+
+      const meta = document.createElement("span");
+      meta.style.color = "#6b7280";
+      meta.style.fontSize = "11px";
+      meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`;
+
+      const text = document.createElement("div");
+      text.style.whiteSpace = "pre-wrap";
+      text.style.wordBreak = "break-word";
+      text.style.color = "#111827";
+      text.textContent = line.text || " ";
+
+      row.appendChild(no);
+      row.appendChild(meta);
+      row.appendChild(text);
+      root.appendChild(row);
+    });
+  }
+
+  private resolveBaseSnapshotForDiff(
+    snapshots: ReturnType<EditorCore["versionHistory"]["listSnapshots"]>,
+    index: number,
+  ) {
+    const current = snapshots[index];
+    if (!current) return null;
+
+    const immediate = snapshots[index + 1] || null;
+    if (!immediate) return null;
+
+    for (let i = index + 1; i < snapshots.length; i += 1) {
+      const candidate = snapshots[i];
+      if (!candidate) continue;
+      const diff = this.editorCore.versionHistory.getSnapshotDiff(
+        current.id,
+        candidate.id,
+      );
+      if (!diff) continue;
+      const hasChange = diff.lines.some((line) => line.type !== "context");
+      if (hasChange) return candidate;
+    }
+
+    return immediate;
+  }
+
+  private getDiffStats(snapshotId: string, previousSnapshotId?: string) {
+    const diff = this.editorCore.versionHistory.getSnapshotDiff(
+      snapshotId,
+      previousSnapshotId,
+    );
+    if (!diff) return { added: 0, deleted: 0, modified: 0 };
+    return {
+      added: diff.lines.filter((line) => line.type === "added").length,
+      deleted: diff.lines.filter((line) => line.type === "deleted").length,
+      modified: diff.lines.filter((line) => line.type === "modified").length,
+    };
+  }
+
+  private getPreviewDiffLines(
+    snapshotId: string,
+    previousSnapshotId?: string,
+  ): SnapshotDiffLine[] {
+    const diff = this.editorCore.versionHistory.getSnapshotDiff(
+      snapshotId,
+      previousSnapshotId,
+    );
+    if (!diff) return [];
+    return diff.lines.filter((line) => line.type !== "context").slice(0, 3);
+  }
+
+  private openFullDiffDialog(snapshotId: string, previousSnapshotId?: string) {
+    const diff = this.editorCore.versionHistory.getSnapshotDiff(
+      snapshotId,
+      previousSnapshotId,
+    );
+    if (!diff) return;
+
+    const changed = diff.lines.filter((line) => line.type !== "context");
+
+    const content = document.createElement("div");
+    content.style.maxHeight = "70vh";
+    content.style.overflow = "auto";
+    content.style.border = "1px solid #d0d7de";
+    content.style.borderRadius = "8px";
+    content.style.background = "#fff";
+
+    const head = document.createElement("div");
+    head.style.padding = "6px 10px";
+    head.style.fontSize = "12px";
+    head.style.color = "#57606a";
+    head.style.background = "#f6f8fa";
+    head.style.borderBottom = "1px solid #d0d7de";
+    head.textContent = `完整 Diff（对比：${diff.baseSnapshot?.label || this.i18n.blankBase}）`;
+    content.appendChild(head);
+
+    if (changed.length === 0) {
+      const empty = document.createElement("div");
+      empty.style.padding = "10px";
+      empty.style.fontSize = "12px";
+      empty.style.color = "#6b7280";
+      empty.textContent = this.i18n.noChanges;
+      content.appendChild(empty);
+    } else {
+      const stats = {
+        added: changed.filter((line) => line.type === "added").length,
+        deleted: changed.filter((line) => line.type === "deleted").length,
+        modified: changed.filter((line) => line.type === "modified").length,
+      };
+
+      const summary = document.createElement("div");
+      summary.style.padding = "6px 10px";
+      summary.style.fontSize = "12px";
+      summary.style.color = "#57606a";
+      summary.style.borderBottom = "1px solid #d0d7de";
+      summary.textContent = `+${stats.added}  -${stats.deleted}  ~${stats.modified}`;
+      content.appendChild(summary);
+
+      const splitHead = document.createElement("div");
+      splitHead.style.display = "grid";
+      splitHead.style.gridTemplateColumns = "56px 1fr 56px 1fr";
+      splitHead.style.borderBottom = "1px solid #d0d7de";
+      splitHead.style.background = "#f6f8fa";
+      splitHead.style.fontSize = "12px";
+      splitHead.style.color = "#57606a";
+
+      const oldHeadNo = document.createElement("div");
+      oldHeadNo.style.padding = "6px 8px";
+      oldHeadNo.textContent = this.i18n.oldLine;
+      const oldHead = document.createElement("div");
+      oldHead.style.padding = "6px 8px";
+      oldHead.textContent = diff.baseSnapshot?.label || this.i18n.oldVersion;
+      const newHeadNo = document.createElement("div");
+      newHeadNo.style.padding = "6px 8px";
+      newHeadNo.textContent = this.i18n.newLine;
+      const newHead = document.createElement("div");
+      newHead.style.padding = "6px 8px";
+      newHead.textContent = diff.currentSnapshot.label;
+
+      splitHead.appendChild(oldHeadNo);
+      splitHead.appendChild(oldHead);
+      splitHead.appendChild(newHeadNo);
+      splitHead.appendChild(newHead);
+      content.appendChild(splitHead);
+
+      changed.forEach((line) => {
+        const row = document.createElement("div");
+        row.style.display = "grid";
+        row.style.gridTemplateColumns = "44px 1fr 44px 1fr";
+        row.style.fontSize = "12px";
+        row.style.fontFamily =
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+        row.style.borderBottom = "1px solid #f3f4f6";
+
+        const oldNo = document.createElement("div");
+        oldNo.style.padding = "3px 8px";
+        oldNo.style.color = "#8c959f";
+        oldNo.textContent =
+          line.oldLineNumber === null ? "" : String(line.oldLineNumber);
+
+        const oldText = document.createElement("div");
+        oldText.style.padding = "3px 8px";
+        oldText.style.whiteSpace = "pre-wrap";
+        oldText.style.wordBreak = "break-word";
+        oldText.style.color = "#24292f";
+        oldText.style.borderRight = "1px solid #e5e7eb";
+        oldText.textContent = line.type === "added" ? "" : line.oldText;
+
+        const newNo = document.createElement("div");
+        newNo.style.padding = "3px 8px";
+        newNo.style.color = "#8c959f";
+        newNo.textContent =
+          line.newLineNumber === null ? "" : String(line.newLineNumber);
+
+        const newText = document.createElement("div");
+        newText.style.padding = "3px 8px";
+        newText.style.whiteSpace = "pre-wrap";
+        newText.style.wordBreak = "break-word";
+        newText.style.color = "#24292f";
+        newText.textContent = line.type === "deleted" ? "" : line.newText;
+
+        if (line.type === "deleted") {
+          oldNo.style.background = "#ffebe9";
+          oldText.style.background = "#ffebe9";
+        } else if (line.type === "added") {
+          newNo.style.background = "#dafbe1";
+          newText.style.background = "#dafbe1";
+        } else {
+          oldNo.style.background = "#ffebe9";
+          oldText.style.background = "#ffebe9";
+          newNo.style.background = "#dafbe1";
+          newText.style.background = "#dafbe1";
+        }
+
+        row.appendChild(oldNo);
+        row.appendChild(oldText);
+        row.appendChild(newNo);
+        row.appendChild(newText);
+        content.appendChild(row);
+      });
+    }
+
+    const modal = new Dialog({
+      title: this.i18n.completeDiffTitle,
+      subtitle: `${diff.currentSnapshot.label} · 对比 ${diff.baseSnapshot?.label || this.i18n.blankBase} · ${formatTime(diff.currentSnapshot.createdAt, this.locale)}`,
+      icon: "fileText",
+      iconBgClass: "be-bg-gradient-to-br be-from-blue-500 be-to-indigo-600",
+      onClose: () => {},
+      width: "70%",
+    });
+    modal.setContent(content);
+    modal.show();
   }
 
   public show() {
-    this.dialog.show()
+    this.dialog.show();
   }
 }

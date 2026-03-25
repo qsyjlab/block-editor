@@ -45,6 +45,7 @@ class BlockHandleView {
   private currentBlockPos: number | null = null;
   private editor: any; // Tiptap editor instance
   private hideTimer: any = null;
+  private scrollTarget: HTMLElement | Document = document;
 
   constructor(editorView: EditorView, _width: number, editor: any) {
     this.editorView = editorView;
@@ -108,7 +109,7 @@ class BlockHandleView {
     // Add menu items
     this.renderMenu();
 
-    document.body.appendChild(this.menu);
+    this.getOverlayContainer().appendChild(this.menu);
 
     // Event Listeners
     this.element.addEventListener("mousedown", (e) => {
@@ -126,13 +127,39 @@ class BlockHandleView {
 
     window.addEventListener("mousemove", this.handleMouseMove);
     document.addEventListener("click", this.handleGlobalClick);
-    // Handle scrolling
-    // We need to update position on scroll if we use absolute positioning relative to a parent that scrolls?
-    // Or if the parent is the body.
-    // Usually Tiptap editors are in a scrollable container.
-    // We should listen to scroll events on the editor's scroll parent.
-    // For now, let's assume mousemove handles most updates, but scroll might leave handle behind.
-    document.addEventListener("scroll", this.handleScroll, true);
+
+    this.scrollTarget = this.getScrollContainer() || document;
+    if (this.scrollTarget === document) {
+      document.addEventListener("scroll", this.handleScroll, true);
+    } else {
+      (this.scrollTarget as HTMLElement).addEventListener("scroll", this.handleScroll, {
+        passive: true,
+      });
+    }
+  }
+
+  private getEditorContainer(): HTMLElement | null {
+    const dom = this.editorView.dom as HTMLElement;
+    return (
+      (dom.closest('[data-be-editor-container="true"]') as HTMLElement | null) ||
+      (dom.closest(".editor-container") as HTMLElement | null)
+    );
+  }
+
+  private getOverlayContainer(): HTMLElement {
+    const dom = this.editorView.dom as HTMLElement;
+    const container =
+      (dom.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (dom.closest('[data-be-ui-root="true"]') as HTMLElement | null);
+    return container || document.body;
+  }
+
+  private getScrollContainer(): HTMLElement | null {
+    const dom = this.editorView.dom as HTMLElement;
+    return (
+      (dom.closest('[data-be-scroll-container="true"]') as HTMLElement | null) ||
+      (dom.closest(".editor-scroll-area") as HTMLElement | null)
+    );
   }
 
   renderMenu() {
@@ -291,39 +318,49 @@ class BlockHandleView {
 
   moveBlock(direction: 1 | -1) {
     if (this.currentBlockPos === null) return;
+
     const { doc } = this.editorView.state;
     const node = doc.nodeAt(this.currentBlockPos);
     if (!node) return;
 
-    const nodeSize = node.nodeSize;
-    const nodeEnd = this.currentBlockPos + nodeSize;
+    const resolved = doc.resolve(this.currentBlockPos);
+    let targetDepth = 1;
+
+    for (let depth = resolved.depth; depth >= 1; depth -= 1) {
+      if (resolved.before(depth) === this.currentBlockPos) {
+        targetDepth = depth;
+        break;
+      }
+    }
+
+    const parentDepth = targetDepth - 1;
+    const parent = parentDepth >= 0 ? resolved.node(parentDepth) : doc;
+    const index = resolved.index(parentDepth);
 
     if (direction === -1) {
-      // Move up: swap with previous sibling
-      if (this.currentBlockPos === 0) return;
-      const resolvedPrev = doc.resolve(this.currentBlockPos - 1);
-      if (resolvedPrev.depth < 1) return;
-      const prevBlockStart = resolvedPrev.before(1);
-      const prevNode = doc.nodeAt(prevBlockStart);
-      if (!prevNode) return;
+      if (index <= 0) return;
 
-      // Build fresh tr: replace the range [prevBlockStart, nodeEnd] with [thisNode, prevNode]
-      const tr = this.editorView.state.tr;
-      tr.replaceWith(prevBlockStart, nodeEnd, [node, prevNode]);
-      this.editorView.dispatch(tr);
-      this.currentBlockPos = prevBlockStart;
-    } else {
-      // Move down: swap with next sibling
-      const nextPos = nodeEnd;
-      if (nextPos >= doc.content.size) return;
-      const nextNode = doc.nodeAt(nextPos);
-      if (!nextNode) return;
+      const prevNode = parent.child(index - 1);
+      const prevPos = this.currentBlockPos - prevNode.nodeSize;
+      const end = this.currentBlockPos + node.nodeSize;
 
       const tr = this.editorView.state.tr;
-      tr.replaceWith(this.currentBlockPos, nodeEnd + nextNode.nodeSize, [nextNode, node]);
+      tr.replaceWith(prevPos, end, [node, prevNode]);
       this.editorView.dispatch(tr);
-      this.currentBlockPos = this.currentBlockPos + nextNode.nodeSize;
+      this.currentBlockPos = prevPos;
+      return;
     }
+
+    if (index >= parent.childCount - 1) return;
+
+    const nextNode = parent.child(index + 1);
+    const nextPos = this.currentBlockPos + node.nodeSize;
+    const end = nextPos + nextNode.nodeSize;
+
+    const tr = this.editorView.state.tr;
+    tr.replaceWith(this.currentBlockPos, end, [nextNode, node]);
+    this.editorView.dispatch(tr);
+    this.currentBlockPos = this.currentBlockPos + nextNode.nodeSize;
   }
 
   deleteBlock() {
@@ -404,8 +441,7 @@ class BlockHandleView {
   }
 
   update() {
-    const dom = this.editorView.dom as HTMLElement;
-    const container = dom.closest(".editor-container") as HTMLElement;
+    const container = this.getEditorContainer();
 
     if (container && this.element.parentNode !== container) {
       if (getComputedStyle(container).position === "static") {
@@ -450,6 +486,23 @@ class BlockHandleView {
     this.element.style.pointerEvents = "auto";
   }
 
+  private getVisualBlockFromResolvedPos(resolvedPos: any) {
+    for (let depth = resolvedPos.depth; depth >= 2; depth -= 1) {
+      const node = resolvedPos.node(depth);
+      if (node?.type?.name === "listItem" || node?.type?.name === "taskItem") {
+        return {
+          pos: resolvedPos.before(depth),
+          node,
+        };
+      }
+    }
+
+    return {
+      pos: resolvedPos.before(1),
+      node: resolvedPos.node(1),
+    };
+  }
+
   handleMouseMove = throttle((event: MouseEvent) => {
     // throttled at 16ms (~60fps)
     this.update();
@@ -484,52 +537,38 @@ class BlockHandleView {
     if (!pos) return;
 
     const resolvedPos = this.editorView.state.doc.resolve(pos.pos);
+    if (resolvedPos.depth < 1) return;
 
-    // Find the direct child of doc (block)
-    let depth = resolvedPos.depth;
-    while (depth > 0) {
-      const parent = resolvedPos.node(depth);
-      if (parent.type.name === "doc") {
-        break;
-      }
-      depth--;
-    }
+    const visual = this.getVisualBlockFromResolvedPos(resolvedPos);
+    if (!visual.node) return;
 
-    // Usually depth 1 is the block level
-    if (resolvedPos.depth >= 1) {
-      const blockPos = resolvedPos.before(1);
-      const blockNode = resolvedPos.node(1);
-
-      if (blockNode) {
-        this.currentBlockPos = blockPos;
-        this.showHandle(blockPos, blockNode);
-        this.cancelHide();
-      }
-    }
+    this.currentBlockPos = visual.pos;
+    this.showHandle(visual.pos, visual.node);
+    this.cancelHide();
   }, 16);
 
   showHandle(pos: number, node: any) {
-    const isEmpty = node.content.size === 0;
-    const alignPos = isEmpty ? pos : pos + 1;
-
-    const coords = this.editorView.coordsAtPos(alignPos);
-    if (!coords) return;
-
-    const dom = this.editorView.dom as HTMLElement;
-    const container = dom.closest(".editor-container") as HTMLElement;
+    const container = this.getEditorContainer();
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
+    const editorRect = (this.editorView.dom as HTMLElement).getBoundingClientRect();
+    const nodeDom = this.editorView.nodeDOM(pos) as HTMLElement | null;
 
-    const lineHeight = coords.bottom - coords.top;
-    const handleHeight = 24;
-    const topOffset = (lineHeight - handleHeight) / 2;
+    let top = 0;
+    const left = editorRect.left - containerRect.left - 28;
 
-    // Position relative to container (editor-container)
-    const top = coords.top - containerRect.top;
-    const left = coords.left - containerRect.left - 28; // 24px width + 4px gap
+    if (nodeDom) {
+      const blockRect = nodeDom.getBoundingClientRect();
+      top = blockRect.top - containerRect.top + 1;
+    } else {
+      const isEmpty = node.content.size === 0;
+      const alignPos = isEmpty ? pos : pos + 1;
+      const coords = this.editorView.coordsAtPos(alignPos);
+      top = coords.top - containerRect.top + 1;
+    }
 
-    this.element.style.top = `${top + topOffset}px`;
+    this.element.style.top = `${top}px`;
     this.element.style.left = `${left}px`;
     this.element.style.display = "flex";
   }
@@ -567,7 +606,11 @@ class BlockHandleView {
     this.menu.remove();
     window.removeEventListener("mousemove", this.handleMouseMove);
     document.removeEventListener("click", this.handleGlobalClick);
-    document.removeEventListener("scroll", this.handleScroll, true);
+    if (this.scrollTarget === document) {
+      document.removeEventListener("scroll", this.handleScroll, true);
+    } else {
+      (this.scrollTarget as HTMLElement).removeEventListener("scroll", this.handleScroll);
+    }
     if (this.hideTimer) clearTimeout(this.hideTimer);
   }
 }

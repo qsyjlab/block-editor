@@ -42,6 +42,19 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
+import {
+  DEFAULT_MARKDOWN_REGRESSION_CASES,
+  MarkdownRegressionCase,
+  MarkdownRegressionResult,
+  normalizeMarkdownForCompare,
+} from "../utils/markdownRegression";
+import {
+  PerformanceBenchmarkOptions,
+  PerformanceBenchmarkResult,
+  runEditorPerformanceBenchmark,
+} from "../utils/performanceBenchmark";
+import { resolveEditorI18n } from "../i18n";
+import type { EditorI18n } from "../i18n";
 
 // Simple Event Bus
 type Listener = (...args: any[]) => void;
@@ -80,6 +93,7 @@ export interface EditorCoreOptions {
   content?: any;
   onUpdate?: (editor: Editor) => void;
   collaboration?: CollaborationOptions;
+  i18n?: string | Partial<EditorI18n>;
 }
 
 export class EditorCore {
@@ -90,14 +104,16 @@ export class EditorCore {
   public markdownImporter!: MarkdownImporter;
   public versionHistory: VersionHistoryManager;
   public provider: WebsocketProvider | null = null;
+  public i18n: EditorI18n;
   private ydoc: Y.Doc | null = null;
 
   constructor(options: EditorCoreOptions) {
     this.events = new EventBus();
+    this.i18n = resolveEditorI18n(options.i18n);
 
     const collaborationEnabled = Boolean(options.collaboration?.enabled);
     const roomName = options.collaboration?.roomName || "block-editor-room";
-    const websocketUrl = options.collaboration?.websocketUrl || "wss://demos.yjs.dev";
+    const websocketUrl = options.collaboration?.websocketUrl;
     const user =
       options.collaboration?.user ||
       ({
@@ -107,7 +123,14 @@ export class EditorCore {
 
     if (collaborationEnabled) {
       this.ydoc = new Y.Doc();
-      this.provider = new WebsocketProvider(websocketUrl, roomName, this.ydoc);
+
+      if (websocketUrl) {
+        this.provider = new WebsocketProvider(
+          websocketUrl,
+          roomName,
+          this.ydoc,
+        );
+      }
     }
 
     const extensions: any[] = [
@@ -194,10 +217,15 @@ export class EditorCore {
       },
     });
 
+    (this.editor as Editor & { __core?: EditorCore }).__core = this;
+
     this.exporter = new Exporter(this.editor);
     this.importer = new DocxImporter(this.editor);
     this.markdownImporter = new MarkdownImporter(this.editor);
-    this.versionHistory = new VersionHistoryManager(this.editor);
+    this.versionHistory = new VersionHistoryManager(this.editor, {
+      authorName: user.name,
+      getAuthorName: () => user.name,
+    });
     this.syncInteractionMode(this.editor);
   }
 
@@ -250,11 +278,62 @@ export class EditorCore {
   // Command dispatcher — maps plain string commands to Tiptap chain calls.
   // Supports all built-in Tiptap commands and custom extensions.
   public exec(command: string, options?: any): boolean {
-    const cmds = this.editor.commands as Record<string, (...args: any[]) => boolean>;
+    const cmds = this.editor.commands as Record<
+      string,
+      (...args: any[]) => boolean
+    >;
     if (typeof cmds[command] !== "function") {
       console.warn(`[EditorCore.exec] Unknown command: "${command}"`);
       return false;
     }
     return options !== undefined ? cmds[command](options) : cmds[command]();
+  }
+
+  public async runMarkdownRegressionMatrix(
+    cases: MarkdownRegressionCase[] = DEFAULT_MARKDOWN_REGRESSION_CASES,
+  ): Promise<MarkdownRegressionResult[]> {
+    const original = this.editor.getJSON();
+    const results: MarkdownRegressionResult[] = [];
+
+    try {
+      for (const testCase of cases) {
+        this.markdownImporter.importText(testCase.input);
+        const output = await this.exporter.toMarkdownText();
+        const normalized = normalizeMarkdownForCompare(output);
+        const missing = testCase.expectedIncludes.filter(
+          (frag) => !normalized.includes(normalizeMarkdownForCompare(frag)),
+        );
+
+        results.push({
+          name: testCase.name,
+          passed: missing.length === 0,
+          missing,
+          output,
+        });
+      }
+    } finally {
+      this.editor.commands.setContent(original, true);
+    }
+
+    return results;
+  }
+
+  public async runPerformanceBenchmark(
+    options: PerformanceBenchmarkOptions = {},
+  ): Promise<PerformanceBenchmarkResult> {
+    const result = await runEditorPerformanceBenchmark(this.editor, options);
+
+    try {
+      const path =
+        typeof window !== "undefined" ? window.location.pathname : "default";
+      localStorage.setItem(
+        `be-performance-baseline-v1:${path}`,
+        JSON.stringify(result),
+      );
+    } catch {
+      // ignore persistence errors
+    }
+
+    return result;
   }
 }

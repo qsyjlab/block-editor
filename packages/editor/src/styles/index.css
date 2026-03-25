@@ -2,17 +2,17 @@
 
 :root {
   /* Core Colors */
-  --primary-color: oklch(62.3% 0.214 259.815); /* Blue-500 equivalent */
-  --primary-hover: oklch(55% 0.2 260); /* Slightly darker blue */
+  --primary-color: #3b82f6; /* Blue-500 equivalent */
+  --primary-hover: #2563eb; /* Slightly darker blue */
   --text-color: var(--color-gray-900); /* Gray-700 equivalent */
   --bg-color: #f9fafb; /* Gray-50 */
   --border-color: #e5e7eb; /* Gray-200 */
   --paper-bg: #ffffff;
 
   /* Color Palette */
-  --color-blue-500: oklch(62.3% 0.214 259.815);
-  --color-gray-100: oklch(96.7% 0.003 264.542);
-  --color-gray-900: oklch(20.5% 0.021 264.3); /* Dark gray/black for text */
+  --color-blue-500: #3b82f6;
+  --color-gray-100: #f3f4f6;
+  --color-gray-900: #111827; /* Dark gray/black for text */
 
   /* Toolbar Button Colors */
   --btn-hover-bg: var(--color-gray-100);
@@ -593,6 +593,21 @@ ul[data-type="taskList"] li > div {
   flex: 0 0 auto;
 }
 
+.be-inline-toolbar {
+  max-width: min(1200px, calc(100vw - 16px));
+  padding: 6px;
+}
+
+.be-inline-toolbar .toolbar-dropdown-wrapper,
+.be-inline-toolbar .color-picker-trigger,
+.be-inline-toolbar .divider {
+  flex: 0 0 auto;
+}
+
+.be-inline-toolbar .toolbar-dropdown-trigger {
+  margin: 0;
+}
+
 /* Table Bubble Menu */
 .table-bubble-menu {
   display: flex;
@@ -716,7 +731,7 @@ ul[data-type="taskList"] li > div {
   font-size: 12px;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 10000;
+  z-index: 200000;
   opacity: 0;
   transform: translateY(4px) scale(0.96); /* Subtle initial state for animation */
   transition:

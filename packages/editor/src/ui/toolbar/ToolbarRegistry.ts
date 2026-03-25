@@ -20,8 +20,9 @@ export interface DropdownOptionConfig {
   label: string
   icon?: string
   value: string
-  command: string
+  command?: string
   args?: any
+  onExecute?: (editorCore: EditorCore) => void | Promise<void>
   isActive?: (editor: Editor) => boolean
   isDisabled?: (editor: Editor) => boolean
 }

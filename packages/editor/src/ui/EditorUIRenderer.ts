@@ -1,36 +1,134 @@
+import { TextSelection } from 'prosemirror-state'
 import { EditorCore } from '../core/EditorCore'
 import { Toolbar } from './Toolbar'
-import { Outline } from './Outline'
+import { Outline, OutlineI18n } from './Outline'
 import { TableBubbleMenu } from './menus/TableBubbleMenu'
 import { BlockMultiSelectBar } from './menus/block-multi-select-bar'
 import { CommentPanel } from './CommentPanel'
-import { TextSelection } from 'prosemirror-state'
+import { resolveEditorI18n } from '../i18n'
+import type { EditorI18n } from '../i18n'
+
+export type ToolbarMode = 'top' | 'inline'
+
+export interface EditorUILayoutSlots {
+  toolbarContainer?: HTMLElement | null
+  editorContainer: HTMLElement
+  scrollContainer?: HTMLElement | null
+  overlayContainer?: HTMLElement | null
+  outlineContainer?: HTMLElement | null
+  commentContainer?: HTMLElement | null
+}
+
+export interface EditorUILayoutBuilderParams {
+  container: HTMLElement
+  editorCore: EditorCore
+  toolbarMode: ToolbarMode
+}
+
+export interface EditorUIRendererOptions {
+  toolbarMode?: ToolbarMode
+  commentPanelDefaultVisible?: boolean
+  i18n?: string | Partial<EditorI18n>
+  outlineI18n?: Partial<OutlineI18n>
+  layoutBuilder?: (params: EditorUILayoutBuilderParams) => EditorUILayoutSlots
+}
 
 export class EditorUIRenderer {
   private editorCore: EditorCore
   private container: HTMLElement
-  
-  private toolbarContainer: HTMLElement
-  private mainContentArea: HTMLElement
-  private editorPaper: HTMLElement
-  private rightSidebar: HTMLElement
-  private commentSidebar: HTMLElement
+  private options: EditorUIRendererOptions
+
+  private slots: EditorUILayoutSlots
   private tiptapElement: HTMLElement
   private commentPanelVisible = false
+  private linkPreviewEl: HTMLElement | null = null
+  private hoverAnchor: HTMLAnchorElement | null = null
+  private readonly i18n: EditorI18n
 
-  constructor(editorCore: EditorCore, container: HTMLElement) {
+  constructor(editorCore: EditorCore, container: HTMLElement, options: EditorUIRendererOptions = {}) {
     this.editorCore = editorCore
     this.container = container
-    
-    // Use the .layout class from index.css
-    this.container.classList.add('layout')
-    this.container.style.flexDirection = 'column' // Ensure vertical stack of Toolbar + Workspace
+    this.options = {
+      toolbarMode: options.toolbarMode || 'top',
+      commentPanelDefaultVisible: options.commentPanelDefaultVisible ?? false,
+      i18n: options.i18n,
+      outlineI18n: options.outlineI18n,
+      layoutBuilder: options.layoutBuilder,
+    }
 
-    // 1. Toolbar Area
-    this.toolbarContainer = document.createElement('div')
-    this.container.appendChild(this.toolbarContainer)
-    
-    // 2. Workspace (Left + Main + Right)
+    this.i18n = resolveEditorI18n(this.options.i18n || this.editorCore.i18n)
+
+    this.slots =
+      this.options.layoutBuilder?.({
+        container: this.container,
+        editorCore: this.editorCore,
+        toolbarMode: this.options.toolbarMode || 'top',
+      }) || this.createDefaultLayout()
+
+    this.commentPanelVisible = Boolean(this.options.commentPanelDefaultVisible)
+    this.applyLayoutDataAttributes()
+
+    if (this.slots.toolbarContainer && this.options.toolbarMode === 'top') {
+      this.renderToolbar(this.slots.toolbarContainer)
+    }
+
+    if (this.slots.outlineContainer) {
+      this.renderOutline(this.slots.outlineContainer)
+    }
+
+    if (this.slots.commentContainer) {
+      this.renderCommentPanel(this.slots.commentContainer)
+      this.applyCommentPanelVisibility()
+    }
+
+    this.renderMenus()
+
+    this.editorCore.events.on('toggleCommentPanel', () => this.toggleCommentPanel())
+
+    this.tiptapElement = this.editorCore.editor.options.element as HTMLElement
+    this.tiptapElement.dataset.beToolbarMode = this.options.toolbarMode || 'top'
+    this.slots.editorContainer.appendChild(this.tiptapElement)
+
+    window.addEventListener('hashchange', this.handleHashChange)
+    this.tiptapElement.addEventListener('click', this.handleEditorLinkClick)
+    this.tiptapElement.addEventListener('mouseover', this.handleEditorLinkHover)
+    this.tiptapElement.addEventListener('mouseout', this.handleEditorLinkLeave)
+    queueMicrotask(() => this.navigateToCurrentHash())
+  }
+
+  public toggleCommentPanel() {
+    if (!this.slots.commentContainer) return
+    this.commentPanelVisible = !this.commentPanelVisible
+    this.applyCommentPanelVisibility()
+  }
+
+  private applyCommentPanelVisibility() {
+    if (!this.slots.commentContainer) return
+    this.slots.commentContainer.style.display = this.commentPanelVisible ? 'block' : 'none'
+  }
+
+  private applyLayoutDataAttributes() {
+    this.container.dataset.beUiRoot = 'true'
+    this.slots.editorContainer.dataset.beEditorContainer = 'true'
+    if (this.slots.scrollContainer) {
+      this.slots.scrollContainer.dataset.beScrollContainer = 'true'
+    }
+
+    const overlayHost = this.slots.overlayContainer || this.container
+    overlayHost.dataset.beOverlayContainer = 'true'
+  }
+
+  private createDefaultLayout(): EditorUILayoutSlots {
+    this.container.innerHTML = ''
+    this.container.classList.add('layout')
+    this.container.style.flexDirection = 'column'
+
+    let toolbarContainer: HTMLElement | null = null
+    if (this.options.toolbarMode === 'top') {
+      toolbarContainer = document.createElement('div')
+      this.container.appendChild(toolbarContainer)
+    }
+
     const workspace = document.createElement('div')
     workspace.style.display = 'flex'
     workspace.style.flex = '1'
@@ -38,59 +136,42 @@ export class EditorUIRenderer {
     workspace.style.width = '100%'
     this.container.appendChild(workspace)
 
-    // Main Content Area (Gray background, scrollable)
-    this.mainContentArea = document.createElement('div')
-    this.mainContentArea.classList.add('main-content') // Uses .main-content from css
-    workspace.appendChild(this.mainContentArea)
+    const mainContentArea = document.createElement('div')
+    mainContentArea.classList.add('main-content')
+    workspace.appendChild(mainContentArea)
 
-    // Scrollable Wrapper for Paper
     const scrollArea = document.createElement('div')
-    scrollArea.classList.add('editor-scroll-area') // Uses .editor-scroll-area from css
-    this.mainContentArea.appendChild(scrollArea)
+    scrollArea.classList.add('editor-scroll-area')
+    mainContentArea.appendChild(scrollArea)
 
-    // Editor Paper (White centered card)
-    this.editorPaper = document.createElement('div')
-    this.editorPaper.classList.add('editor-container') // Uses .editor-container from css
-    scrollArea.appendChild(this.editorPaper)
+    const editorPaper = document.createElement('div')
+    editorPaper.classList.add('editor-container')
+    scrollArea.appendChild(editorPaper)
 
-    // Right Sidebar (Outline)
-    this.rightSidebar = document.createElement('div')
-    this.rightSidebar.classList.add('outline-sidebar')
-    this.rightSidebar.style.width = '240px'
-    this.rightSidebar.style.padding = '20px'
-    this.rightSidebar.style.borderLeft = '1px solid #e8e8e8'
-    this.rightSidebar.style.backgroundColor = '#fff'
-    this.rightSidebar.style.display = 'block'
-    workspace.appendChild(this.rightSidebar)
+    const outlineSidebar = document.createElement('div')
+    outlineSidebar.classList.add('outline-sidebar')
+    outlineSidebar.style.width = '260px'
+    outlineSidebar.style.padding = '16px 14px'
+    outlineSidebar.style.borderLeft = '1px solid #eef0f3'
+    outlineSidebar.style.backgroundColor = '#fcfcfd'
+    outlineSidebar.style.display = 'block'
+    outlineSidebar.style.overflow = 'hidden'
+    workspace.appendChild(outlineSidebar)
 
-    // Comment Sidebar (hidden by default, toggled via toolbar)
-    this.commentSidebar = document.createElement('div')
-    this.commentSidebar.style.display = 'none'
-    this.commentSidebar.style.width = '280px'
-    this.commentSidebar.style.flexShrink = '0'
-    workspace.appendChild(this.commentSidebar)
+    const commentSidebar = document.createElement('div')
+    commentSidebar.style.display = 'none'
+    commentSidebar.style.width = '280px'
+    commentSidebar.style.flexShrink = '0'
+    workspace.appendChild(commentSidebar)
 
-    // Initialize Components
-    this.renderToolbar()
-    this.renderOutline()
-    this.renderMenus()
-    this.renderCommentPanel()
-
-    this.editorCore.events.on('toggleCommentPanel', () => this.toggleCommentPanel())
-
-    // Re-mount editor element to our new container
-    this.tiptapElement = this.editorCore.editor.options.element as HTMLElement
-    this.editorPaper.appendChild(this.tiptapElement)
-
-    window.addEventListener('hashchange', this.handleHashChange)
-    this.tiptapElement.addEventListener('click', this.handleEditorLinkClick)
-    queueMicrotask(() => this.navigateToCurrentHash())
-  }
-
-  /** Toggle comment panel visibility — called by toolbar comment button */
-  public toggleCommentPanel() {
-    this.commentPanelVisible = !this.commentPanelVisible
-    this.commentSidebar.style.display = this.commentPanelVisible ? 'block' : 'none'
+    return {
+      toolbarContainer,
+      editorContainer: editorPaper,
+      scrollContainer: scrollArea,
+      overlayContainer: this.container,
+      outlineContainer: outlineSidebar,
+      commentContainer: commentSidebar,
+    }
   }
 
   private handleHashChange = () => {
@@ -132,6 +213,71 @@ export class EditorUIRenderer {
     this.focusBlockById(hash)
   }
 
+  private handleEditorLinkHover = (event: MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    const anchor = target?.closest('a[href^="#"]') as HTMLAnchorElement | null
+    if (!anchor) return
+
+    this.hoverAnchor = anchor
+    const blockId = decodeURIComponent((anchor.getAttribute('href') || '').replace(/^#/, '').trim())
+    if (!blockId) return
+
+    const preview = this.getBlockPreviewText(blockId)
+    if (!preview) return
+    this.showLinkPreview(anchor, preview)
+  }
+
+  private handleEditorLinkLeave = (event: MouseEvent) => {
+    if (!this.hoverAnchor) return
+    const related = event.relatedTarget as Node | null
+    if (related && this.hoverAnchor.contains(related)) return
+    this.hoverAnchor = null
+    this.hideLinkPreview()
+  }
+
+  private getBlockPreviewText(blockId: string): string | null {
+    const { state } = this.editorCore.editor
+    let text = ''
+
+    state.doc.descendants((node) => {
+      if (node.attrs?.blockId !== blockId) return true
+      text = (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120)
+      return false
+    })
+
+    if (!text) return null
+    return text
+  }
+
+  private ensureLinkPreviewEl() {
+    if (this.linkPreviewEl) return this.linkPreviewEl
+
+    const el = document.createElement('div')
+    el.style.cssText = 'position:fixed;z-index:10020;max-width:320px;padding:8px 10px;background:#111827;color:#fff;border-radius:8px;font-size:12px;line-height:1.5;box-shadow:0 10px 24px rgba(0,0,0,0.22);pointer-events:none;display:none;'
+    const host = this.slots.overlayContainer || this.container
+    host.appendChild(el)
+    this.linkPreviewEl = el
+    return el
+  }
+
+  private showLinkPreview(anchor: HTMLAnchorElement, text: string) {
+    const el = this.ensureLinkPreviewEl()
+    el.textContent = text
+
+    const rect = anchor.getBoundingClientRect()
+    const left = Math.min(rect.left, window.innerWidth - 340)
+    const top = Math.min(rect.bottom + 8, window.innerHeight - 80)
+
+    el.style.left = `${Math.max(8, left)}px`
+    el.style.top = `${Math.max(8, top)}px`
+    el.style.display = 'block'
+  }
+
+  private hideLinkPreview() {
+    if (!this.linkPreviewEl) return
+    this.linkPreviewEl.style.display = 'none'
+  }
+
   private focusBlockById(blockId: string) {
     const { state, view } = this.editorCore.editor
     let foundPos: number | null = null
@@ -150,21 +296,27 @@ export class EditorUIRenderer {
     const selection = TextSelection.near(resolvedPos)
     view.dispatch(state.tr.setSelection(selection).scrollIntoView())
 
-    const target = this.editorPaper.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null
+    const target = this.slots.editorContainer.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null
     target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     return true
   }
 
-  private renderToolbar() {
-    new Toolbar(this.toolbarContainer, this.editorCore)
+  private renderToolbar(toolbarContainer: HTMLElement) {
+    new Toolbar(toolbarContainer, this.editorCore, this.i18n)
   }
 
-  private renderOutline() {
-    new Outline(this.rightSidebar, this.editorCore)
+  private renderOutline(outlineContainer: HTMLElement) {
+    new Outline(outlineContainer, this.editorCore, {
+      scrollArea: this.slots.scrollContainer || null,
+      i18n: {
+        ...this.i18n.outline,
+        ...(this.options.outlineI18n || {}),
+      },
+    })
   }
 
-  private renderCommentPanel() {
-    new CommentPanel(this.editorCore, this.commentSidebar)
+  private renderCommentPanel(commentContainer: HTMLElement) {
+    new CommentPanel(this.editorCore, commentContainer)
   }
 
   private renderMenus() {

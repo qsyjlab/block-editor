@@ -143,7 +143,7 @@ export const ImageEnhanced = Image.extend({
       wrapper.addEventListener('mouseleave', () => { handle.style.opacity = '0' })
 
       // drag-resize logic
-      let startX = 0, startY = 0, startW = 0, startH = 0
+      let startX = 0, startW = 0, startH = 0
 
       const onMove = (e: MouseEvent) => {
         const dx = e.clientX - startX
@@ -174,7 +174,6 @@ export const ImageEnhanced = Image.extend({
         e.preventDefault()
         e.stopPropagation()
         startX = e.clientX
-        startY = e.clientY
         startW = img.offsetWidth || initWidth || 300
         startH = img.offsetHeight || initHeight || 200
         document.addEventListener('mousemove', onMove)

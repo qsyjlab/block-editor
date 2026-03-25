@@ -357,15 +357,21 @@ class BlockMultiSelectOverlayView {
 
         const overlay = document.createElement('div')
         overlay.className = 'be-block-multiselect-overlay'
+
+        const primary = getComputedStyle(document.documentElement)
+          .getPropertyValue('--primary-color')
+          .trim() || 'oklch(62.3% 0.214 259.815)'
+
         Object.assign(overlay.style, {
           position: 'absolute',
           top: `${top}px`,
           left: `${left}px`,
           width: `${width}px`,
           height: `${height}px`,
-          background: 'rgba(59, 130, 246, 0.08)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '3px',
+          background: `color-mix(in oklab, ${primary} 18%, transparent)`,
+          border: `1.5px solid ${primary}`,
+          boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${primary} 55%, transparent)`,
+          borderRadius: '4px',
           pointerEvents: 'none',
         })
         this.overlayContainer.appendChild(overlay)

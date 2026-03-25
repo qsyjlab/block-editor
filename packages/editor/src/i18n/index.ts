@@ -1,0 +1,45 @@
+import { enUS } from './en'
+import { zhCN } from './zh'
+import type { EditorI18n } from './types'
+
+export * from './types'
+export { zhCN, enUS }
+
+export function resolveEditorI18n(input?: string | Partial<EditorI18n> | null): EditorI18n {
+  if (!input) return zhCN
+
+  if (typeof input === 'string') {
+    return input.toLowerCase().startsWith('en') ? enUS : zhCN
+  }
+
+  const locale = (input.locale || zhCN.locale).toLowerCase()
+  const base = locale.startsWith('en') ? enUS : zhCN
+
+  return {
+    locale: input.locale || base.locale,
+    toolbar: {
+      ...base.toolbar,
+      ...(input.toolbar || {}),
+    },
+    outline: {
+      ...base.outline,
+      ...(input.outline || {}),
+    },
+    dialogs: {
+      ...base.dialogs,
+      ...(input.dialogs || {}),
+      insertLink: {
+        ...base.dialogs.insertLink,
+        ...(input.dialogs?.insertLink || {}),
+      },
+      insertImage: {
+        ...base.dialogs.insertImage,
+        ...(input.dialogs?.insertImage || {}),
+      },
+      versionHistory: {
+        ...base.dialogs.versionHistory,
+        ...(input.dialogs?.versionHistory || {}),
+      },
+    },
+  }
+}

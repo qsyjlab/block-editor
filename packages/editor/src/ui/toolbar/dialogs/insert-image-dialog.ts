@@ -2,6 +2,7 @@ import { Dialog } from '../../components/dialog';
 import { Tabs } from '../../components/tabs';
 import { createInput } from '../../components/input';
 import { createUploadZone } from '../../components/upload-zone';
+import type { InsertImageDialogI18n } from '../../../i18n';
 
 export class InsertImageDialog {
   private dialog: Dialog;
@@ -9,22 +10,37 @@ export class InsertImageDialog {
   private onSave: (url: string) => void;
   private previewContainer: HTMLElement;
   private saveBtn: HTMLButtonElement;
+  private i18n: InsertImageDialogI18n;
 
-  constructor(onSave: (url: string) => void) {
+  constructor(onSave: (url: string) => void, i18n?: InsertImageDialogI18n) {
     this.onSave = onSave;
+    this.i18n = i18n || {
+      title: '插入图片',
+      subtitle: '从URL或本地上传图片',
+      tabUrl: '图片链接',
+      tabUpload: '上传图片',
+      urlLabel: '图片地址',
+      urlPlaceholder: 'https://example.com/image.jpg',
+      preview: '预览',
+      invalidImage: '无效的图片链接',
+      cancel: '取消',
+      insert: '插入图片',
+      uploadHint: '拖拽图片到此处或',
+      uploadClick: '点击上传',
+      uploadSupport: '支持 JPG, PNG, GIF, WebP 格式',
+    };
 
-    // URL tab content
     const urlTabContent = document.createElement('div');
     const urlInput = createInput({
-      label: '图片地址',
-      placeholder: 'https://example.com/image.jpg',
+      label: this.i18n.urlLabel,
+      placeholder: this.i18n.urlPlaceholder,
       autoFocus: true,
       themeColor: 'purple',
       onChange: (val) => {
         this.imageUrl = val;
         this.updatePreview(val);
         this.updateSaveButton();
-      }
+      },
     });
     urlTabContent.appendChild(urlInput);
 
@@ -47,31 +63,37 @@ export class InsertImageDialog {
           };
           reader.readAsDataURL(file);
         }
-      }
+      },
+      hintText: this.i18n.uploadHint,
+      clickText: this.i18n.uploadClick,
+      supportText: this.i18n.uploadSupport,
     });
 
     const tabs = new Tabs([
-      { id: 'url', label: '图片链接', icon: 'link', content: urlTabContent },
-      { id: 'upload', label: '上传图片', icon: 'upload', content: uploadTabContent }
+      { id: 'url', label: this.i18n.tabUrl, icon: 'link', content: urlTabContent },
+      { id: 'upload', label: this.i18n.tabUpload, icon: 'upload', content: uploadTabContent },
     ]);
 
     const content = document.createElement('div');
     content.appendChild(tabs.getElement());
 
-    // Footer
     const footer = document.createElement('div');
     footer.className = 'be-flex be-justify-end be-gap-3 be-mt-6 be-pt-4 be-border-t be-border-gray-100 be-shrink-0';
 
     const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = '取消';
+    cancelBtn.textContent = this.i18n.cancel;
     cancelBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-gray-600 be-bg-transparent be-border be-border-gray-200 be-rounded-xl be-cursor-pointer be-transition-all';
     cancelBtn.style.fontFamily = 'inherit';
-    cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.background = '#f9fafb'; });
-    cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.background = ''; });
+    cancelBtn.addEventListener('mouseenter', () => {
+      cancelBtn.style.background = '#f9fafb';
+    });
+    cancelBtn.addEventListener('mouseleave', () => {
+      cancelBtn.style.background = '';
+    });
     cancelBtn.onclick = () => this.dialog.close();
 
     this.saveBtn = document.createElement('button');
-    this.saveBtn.textContent = '插入图片';
+    this.saveBtn.textContent = this.i18n.insert;
     this.saveBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-white be-rounded-xl be-cursor-pointer be-transition-all be-border-0';
     this.saveBtn.style.fontFamily = 'inherit';
     this.saveBtn.disabled = true;
@@ -93,12 +115,12 @@ export class InsertImageDialog {
     footer.appendChild(this.saveBtn);
 
     this.dialog = new Dialog({
-      title: '插入图片',
-      subtitle: '从URL或本地上传图片',
+      title: this.i18n.title,
+      subtitle: this.i18n.subtitle,
       icon: 'image',
       iconBgClass: 'be-bg-gradient-to-br be-from-purple-500 be-to-pink-500',
       onClose: () => {},
-      width: '520px'
+      width: '520px',
     });
 
     this.dialog.setContent(content);
@@ -112,14 +134,14 @@ export class InsertImageDialog {
     }
     this.previewContainer.style.display = 'block';
     this.previewContainer.innerHTML = `
-      <p class="be-text-xs be-text-gray-500 be-mb-2 be-m-0">预览</p>
+      <p class="be-text-xs be-text-gray-500 be-mb-2 be-m-0">${this.i18n.preview}</p>
       <img src="${url}" class="be-max-h-48 be-rounded-lg be-mx-auto be-block be-max-w-full" />
     `;
     const img = this.previewContainer.querySelector('img');
     if (img) {
       img.onerror = () => {
         img.src = '';
-        img.alt = '无效的图片链接';
+        img.alt = this.i18n.invalidImage;
       };
     }
   }

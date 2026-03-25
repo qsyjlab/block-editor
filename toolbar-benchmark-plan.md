@@ -4,7 +4,7 @@
 
 ---
 
-## 0. 进度总览（最后更新：2026-03-24）
+## 0. 进度总览（最后更新：2026-03-25）
 
 ### ✅ 已完成
 
@@ -37,6 +37,18 @@
 | DOCX 导入一致性 | `import/DocxImporter.ts` | Callout（6 种 Word 样式名）+ Indent（margin-left 转 data-indent）反序列化；图片 base64 导入 |
 | 评论闭环 | `extensions/Comment.ts` + `ui/CommentPanel.ts` | CommentStore 内存线程存储；评论面板：回复、解决、删除、跳转定位；toolbar 添加评论入口（⌥⌘M） |
 | 可访问性（ARIA） | 各组件 | Dialog: role=dialog/aria-modal/aria-labelledby；Toolbar: role=toolbar；SlashMenu: role=listbox/option；BlockHandle: role=button/menu/menuitem；ToolbarItem: aria-label/aria-pressed；DropdownItem: aria-selected |
+| 评论产品化（本地持久化） | `extensions/Comment.ts` + `ui/CommentPanel.ts` | 去掉 prompt，面板内创建评论，支持回复/解决/筛选（全部/未解决/已解决），localStorage 持久化 |
+| 块链接与锚点跳转 | `extensions/BlockAnchor.ts` + `extensions/block-handle.ts` + `ui/EditorUIRenderer.ts` | 支持“复制块链接”、hash 定位、同页链接点击跳转 |
+| 版本历史（最小闭环） | `core/VersionHistory.ts` + `ui/toolbar/dialogs/version-history-dialog.ts` | 自动快照 + 手动快照 + 本地回滚入口 |
+| 协作一期（多人+在线光标） | `core/EditorCore.ts` + `styles/index.css` + `apps/playground/src/App.vue` | Yjs + websocket provider，在线光标显示，playground 支持 room 联调 |
+| Markdown 导入导出 | `import/MarkdownImporter.ts` + `export/Exporter.ts` | 新增 md 导入导出，兼容 callout；并补齐任务列表与缩进标记的导入还原 |
+| 可配置布局渲染（LayoutBuilder） | `ui/EditorUIRenderer.ts` + `ui/Outline.ts` | 新增 `layoutBuilder`/`toolbarMode`/`scrollContainer` 槽位能力，支持将编辑器嵌入任意页面布局 |
+| 行内完整工具栏模式（Inline Toolbar） | `extensions/SelectionTooltip.ts` + `styles/index.css` + `core/EditorCore.ts` | 当无独立 toolbar 时，选区浮层可渲染完整工具栏项（button/dropdown/color），保持与常规 toolbar 同一命令逻辑 |
+| 自定义布局示例工程 | `apps/custom-layout-demo/*` | 基于 playground 复制改造：左侧大纲+自定义区块，右侧评论 Hub，中间编辑区，无顶部 toolbar，验证行内模式 |
+| 菜单/浮层容器适配 | `extensions/block-handle.ts` + `ui/menus/TableBubbleMenu.ts` + `ui/EditorUIRenderer.ts` | 通过 `data-be-*` 布局槽位标识适配 overlay / editor / scroll 容器，减少对固定 class 结构依赖 |
+| 块引用体系（预览+反向链接） | `ui/EditorUIRenderer.ts` + `ui/Outline.ts` | 内链 hover 预览目标块摘要；Outline 增加 Backlinks 区展示当前块反向链接并可跳转 |
+| Markdown 深兼容回归矩阵 | `utils/markdownRegression.ts` + `core/EditorCore.ts` + `ui/toolbar/defaultToolbarItems.ts` | 内置回归用例集与执行入口（Toolbar: Markdown 回归），可批量验证导入导出关键能力 |
+| 大文档压测与性能基线 | `utils/performanceBenchmark.ts` + `core/EditorCore.ts` + `ui/toolbar/defaultToolbarItems.ts` | 支持生成大文档并输出 setContent/selection/insert 基线指标，结果本地持久化 |
 
 ---
 
@@ -111,25 +123,20 @@
 - 块手柄：删除/复制/转标题/转列表
 - 导入导出：DOCX 导入、DOCX/PDF 导出
 
-## 3.2 关键缺口（按优先级）
+## 3.2 当前剩余缺口（按优先级）
 
-### P0（必须先做）
-1. **状态机缺失**：文本选区态 / 块多选态 / 表格态没有统一互斥管理
-2. **块多选能力缺失**：Shift 选块、批量操作不完整
-3. **链接交互不统一**：选区中仍有 prompt 风格交互
-4. **清除格式、缩进体系缺失或不完整**
-5. **快捷键覆盖不足**：入口存在但操作方式未完全对齐
+### P0（收口）
+1. **构建清零**：需持续保证 `pnpm -r build` 通过（不引入新的 TS 错误）
+2. **类型生态稳定**：第三方包类型声明与版本需持续对齐（尤其 Markdown / 协作相关依赖）
 
-### P1（重要）
-6. **Slash 菜单缺失**（虽然有 placeholder 提示）
-7. **高级块类型不足**：Callout/分割线/信息块
-8. **粘贴策略不足**：URL 卡片化、富文本粘贴清洗策略
-9. **图片体验弱**：对齐、尺寸、标题、环绕
+### P1（产品化）
+3. **评论/协作服务端化**：当前评论与版本历史为本地持久化，协作使用公共 demo 服务，缺正式后端与权限体系
+4. **版本历史增强**：目前是最小快照回滚，缺对比视图、命名版本、冲突处理
+5. **块链接体系增强**：已支持 hash 跳转，待补“块引用预览/反向引用”等知识管理能力
 
-### P2（增强）
-10. 评论闭环（评论面板、回复、跳转）
-11. 大文档性能（渲染/事件节流/菜单重算）
-12. 可访问性（键盘可达、ARIA）
+### P2（体验增强）
+6. **Markdown 深度兼容**：继续完善图片 caption、复杂嵌套块、更多自定义扩展的双向映射
+7. **性能压测与大文档优化**：需要在高节点数场景进行系统性压测与优化
 
 ---
 
@@ -270,60 +277,113 @@
 
 ---
 
-## 5. 对标矩阵（整体编辑器）
+## 5. 对齐矩阵（飞书 / 语雀）
 
-| 维度 | 当前 | 对标目标 | 优先级 | 关键文件 |
-|---|---|---|---|---|
-| 文本格式能力 | 高 | 高 | 维持 | `defaultToolbarItems.ts` |
-| 选区浮层 | 中 | 高 | P0 | `SelectionTooltip.ts` |
-| 块多选批量 | 低 | 高 | P0 | `block-handle.ts` + 新扩展 |
-| 状态互斥 | 低 | 高 | P0 | `EditorCore.ts` + 各菜单 |
-| Slash 菜单 | 低 | 高 | P1 | 新增 `SlashCommand.ts` |
-| 表格体验 | 中高 | 高 | P1 | `TableBubbleMenu.ts` |
-| 粘贴链路 | 中 | 高 | P1 | `EditorCore.ts` + 新扩展 |
-| 导入导出一致性 | 中 | 高 | P1 | `DocxImporter.ts`/`Exporter.ts` |
-| 评论闭环 | 低 | 中高 | P2 | `Comment.ts` + UI |
-| 性能稳定性 | 中 | 高 | P1/P2 | 全链路 |
-
----
-
-## 6. 里程碑（建议 4 周）
-
-### 第 1 周（P0）
-- 状态机雏形（菜单互斥）
-- 清除格式 + 缩进
-- 链接交互统一
-
-### 第 2 周（P0）
-- 块多选与批量操作
-- 选区态/块态冲突收敛
-
-### 第 3 周（P1）
-- Slash 菜单
-- Callout/分割线
-- 表格浮层行为统一
-
-### 第 4 周（P1/P2）
-- 粘贴策略与导入导出一致性
-- 性能与稳定性收口
+| 能力域 | 当前状态 | 对齐结论 | 仍未对齐点 |
+|---|---|---|---|
+| 基础富文本（标题/列表/引用/表格/快捷键） | 已完成 | **基本对齐** | 表格高级体验（复杂选区与批处理细节）仍有打磨空间 |
+| 菜单体系（Toolbar/Selection/Table/Slash） | 已完成 | **基本对齐** | 复杂冲突场景（多菜单并发边缘态）需持续回归 |
+| 块级交互（handle/块多选/批量操作/块链接） | 已完成 | **中高对齐** | 块引用预览、反向引用、跨文档块引用未实现 |
+| 大纲联动（点击跳转 + active 跟随） | 已完成 | **中高对齐** | 极端长文档/超密标题下阈值仍需压测调参 |
+| 评论系统 | 已完成（本地持久化） | **部分对齐** | @提及、通知、权限、服务端线程与审计未实现 |
+| 版本历史 | 已完成（本地快照/回滚） | **部分对齐** | diff 对比、命名版本、多人冲突策略未实现 |
+| 协作编辑 + 在线光标 | 已完成（Yjs） | **部分对齐** | 生产级协作后端、鉴权、房间隔离、断线恢复策略未实现 |
+| 导入导出（DOCX/PDF/Markdown） | 已完成 | **中高对齐** | Markdown 深度兼容（复杂嵌套与自定义扩展映射）未完全对齐 |
+| 性能与工程稳定性 | 构建/lint 已清零 | **中等对齐** | 大文档压测体系、分包策略、首屏体积优化待完成 |
 
 ---
 
-## 7. 验收标准（整体编辑器）
+## 6. 已完成 vs 未完成（仅保留差距项）
 
-1. **一致性**：同功能在工具栏/浮层/快捷键行为一致
-2. **可预期**：状态切换清晰，不出现双菜单打架
-3. **稳定性**：大文档、复杂表格、跨块操作不崩
-4. **可扩展**：新增命令可快速挂到三类入口
-5. **回归安全**：不破坏现有 DOCX/PDF 能力
+### 已完成（本轮确认）
+- 交互状态机与多菜单互斥
+- 块多选与批量转换/移动
+- 块链接复制与锚点跳转
+- 评论面板化与本地持久化
+- 版本历史（本地快照/回滚）
+- 协作一期（多人编辑 + 在线光标）
+- Markdown 导入导出（含 callout、任务列表、缩进标记）
+- 大纲联动与 handle 定位增强
+- 构建与 lint 清零（`pnpm -r build` 通过）
+
+### 仍未对齐（下一阶段）
+1. **协作生产化**：当前默认 `wss://demos.yjs.dev`，缺自有服务与鉴权、权限、租户隔离
+2. **评论生产化**：当前 `CommentStore` 基于 localStorage，缺服务端线程、@mention、通知、已读/未读
+3. **版本历史增强**：当前 `VersionHistory` 基于 localStorage 快照回滚，缺 diff、命名版本、多人冲突可视化
+4. **知识网络能力**：当前仅块 hash 跳转，缺块引用预览、反向链接、跨文档引用
+5. **Markdown 深兼容**：当前依赖 `[indent:N]` 与 callout 映射，复杂表格/深层嵌套/自定义扩展仍需保真回归
+6. **性能专项**：缺大文档压测基线与稳定性指标（输入延迟、菜单定位、滚动跟随）
 
 ---
 
-## 8. 下一步可直接执行（你现在就能开做）
+## 7. 差异分析结论（对标飞书 / 语雀）
 
-1. 在 `EditorCore.ts` 建立交互状态事件（`modeChange`）
-2. 在 `SelectionTooltip.ts` / `block-handle.ts` / `TableBubbleMenu.ts` 接入互斥显示
-3. 把链接交互统一为 dialog（去掉 prompt）
-4. 补齐清除格式与缩进按钮，并绑定快捷键
+### 7.1 当前已达到“可日常写作”
+- 文本编辑、块操作、菜单体系、导入导出主链路可用
+- 交互冲突（多菜单并发）已基本收敛
+- 对标结论：**基础编辑体验基本对齐**
 
-> 做完这 4 项，你的项目就从“工具栏可用”升级到“编辑器交互体系可用”。
+### 7.2 仍阻塞“生产替代”的核心差距（按优先级）
+
+| 优先级 | 差距项 | 当前现状 | 对标目标 |
+|---|---|---|---|
+| P0 | 协作后端与鉴权 | 使用 demo websocket，无权限模型 | 自有协作服务、鉴权、房间隔离、断线恢复 |
+| P0 | 评论/版本服务端化 | 评论与版本历史本地存储 | 服务端持久化、可审计、可跨端同步 |
+| P1 | 知识网络能力 | 仅支持块链接跳转 | 块引用预览、反向链接、跨文档引用 |
+| P1 | Markdown 深兼容 | 基础映射可用，复杂结构存在风险 | 导入/编辑/导出双向高保真 |
+| P2 | 性能工程化 | 仅有局部节流，无系统压测基线 | 万级节点稳定 + 可追踪性能指标 |
+
+---
+
+## 8. 启动任务（本轮已开始）
+
+### P0（进行中）
+- [ ] **任务 1：协作后端接入与鉴权方案落地**
+  - 交付：替换 demo 服务；支持 token 鉴权、房间隔离、基础重连策略
+- [ ] **任务 2：评论与版本历史服务端化最小闭环**
+  - 交付：评论线程与版本快照写入服务端，保留前端回滚入口
+
+### P1（本轮新增进展）
+- [x] **任务 3：布局适配层基础版（layoutBuilder + scrollContainer）**
+  - 交付：`EditorUIRenderer` 支持自定义布局槽位，`Outline` 支持注入滚动容器
+- [x] **任务 4：工具栏行内模式基础版（inline full toolbar）**
+  - 交付：无顶部 toolbar 时，选区浮层支持完整 toolbar 项能力
+- [x] **任务 5：自定义布局示例工程（custom-layout-demo）**
+  - 交付：与 playground 功能相似但布局不同，用于验证自定义布局方案
+- [x] **任务 6：菜单与浮层容器适配（block-handle / table menu）**
+  - 交付：支持 `data-be-overlay-container`、`data-be-editor-container`、`data-be-scroll-container` 槽位识别
+- [x] **任务 7：块引用体系（预览 / 反向链接）**
+  - 交付：链接 hover 预览 + Outline 反向链接列表跳转
+- [x] **任务 8：Markdown 深兼容回归矩阵（导入 / 导出双向）**
+  - 交付：回归样例集 + Toolbar 执行入口 + 控制台结果汇总
+
+### P2（持续优化）
+- [x] **任务 9：大文档压测与性能基线**
+  - 交付：可生成大文档并输出 setContent/getJSON/selection/insert 指标
+- [~] **任务 10：分包与首屏体积优化（进行中）**
+  - 已完成：
+    1. `Exporter` 的 `pdf/docx/markdown` 能力改为运行时动态加载依赖
+    2. `DocxImporter` 的 `mammoth` 改为运行时动态加载
+    3. `playground` / `custom-layout-demo` 增加 `manualChunks`：`vendor-editor` / `vendor-collab` / `vendor-docx` / `vendor-pdf`
+  - 当前构建观测（custom-layout-demo）：
+    - 入口 `index-*.js` ≈ 3.56kB（gzip 1.74kB）
+    - `editor-runtime` ≈ 163.68kB（gzip 43.14kB）
+    - `vendor-editor` ≈ 374.94kB（gzip 113.03kB）
+    - `vendor-docx` ≈ 462.07kB（gzip 136.45kB）
+    - `vendor-pdf` ≈ 982.47kB（gzip 285.53kB）
+    - `vendor-misc` ≈ 614.58kB（gzip 174.34kB）
+  - 下一步细化优化点：
+    1. 将 `vendor-misc` 再拆分（`turndown`、`file-saver`、UI utilities）
+    2. 协作能力改为“显式启用时才加载 extension/provider”
+    3. 工具栏导入导出相关 Dialog 改为点击时动态 import
+    4. 增加 `bundle report`（每次构建自动输出首屏关键 chunk 阈值告警）
+    5. 对 `@block-editor/editor` 建立“核心包 + 可选能力包”拆分路线（下一阶段）
+
+---
+
+## 9. 验收口径（下一轮）
+
+1. **生产可用**：协作/评论/历史不依赖本地存储与 demo 服务
+2. **保真度**：Markdown 与 DOCX 导入导出结构稳定、可逆性可验证
+3. **性能**：万级节点文档下交互不卡顿，关键操作响应稳定
+4. **一致性**：块级、菜单、目录、快捷键行为与飞书/语雀体验差异可控

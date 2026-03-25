@@ -276,7 +276,7 @@ function createSlashPlugin(editor: Editor) {
     },
 
     props: {
-      handleKeyDown(view, event) {
+      handleKeyDown(_view, event) {
         if (!menuView) return false
 
         if (menuView.isVisible()) {
@@ -325,9 +325,10 @@ function createSlashPlugin(editor: Editor) {
           const textTo = pos + text.length
           if (textTo >= textFrom) {
             setTimeout(() => {
-              if (!menuView || !slashStartPos) return
+              const startPos = slashStartPos
+              if (!menuView || startPos === null) return
               const { state: newState } = view
-              const query = newState.doc.textBetween(slashStartPos, newState.selection.from)
+              const query = newState.doc.textBetween(startPos, newState.selection.from)
               if (query.startsWith(' ') || query.includes('\n')) {
                 menuView.hide()
                 slashStartPos = null
@@ -343,19 +344,21 @@ function createSlashPlugin(editor: Editor) {
     },
 
     appendTransaction(_transactions, _oldState, newState) {
-      if (!menuView || !menuView.isVisible() || slashStartPos === null) return null
+      const startPos = slashStartPos
+      if (!menuView || !menuView.isVisible() || startPos === null) return null
 
       const pos = newState.selection.from
       // If cursor moved before slash, hide
-      if (pos < slashStartPos - 1) {
+      if (pos < startPos - 1) {
         menuView.hide()
         slashStartPos = null
+        return null
       }
 
       // Check if the "/" was deleted
       const textAtSlash = newState.doc.textBetween(
-        Math.max(0, slashStartPos - 1),
-        slashStartPos,
+        Math.max(0, startPos - 1),
+        startPos,
       )
       if (textAtSlash !== '/') {
         menuView.hide()

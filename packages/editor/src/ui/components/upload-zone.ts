@@ -3,6 +3,9 @@ import { icons } from '../toolbar/icons';
 export function createUploadZone(options: {
     onUpload: (files: FileList) => void;
     accept?: string;
+    hintText?: string;
+    clickText?: string;
+    supportText?: string;
 }): HTMLElement {
     const container = document.createElement('div');
     container.className = 'be-border-2 be-border-dashed be-border-gray-300 be-rounded-xl be-p-12 be-text-center be-hover:border-purple-400 be-transition-colors be-cursor-pointer';
@@ -23,12 +26,14 @@ export function createUploadZone(options: {
 
     const text = document.createElement('p');
     text.className = 'be-text-sm be-text-gray-600 be-mb-2';
-    text.innerHTML = '拖拽图片到此处或 <span class="be-text-purple-600 be-font-medium">点击上传</span>';
+    const hintText = options.hintText || '拖拽图片到此处或';
+    const clickText = options.clickText || '点击上传';
+    text.innerHTML = `${hintText} <span class="be-text-purple-600 be-font-medium">${clickText}</span>`;
     container.appendChild(text);
 
     const subtext = document.createElement('p');
     subtext.className = 'be-text-xs be-text-gray-400';
-    subtext.textContent = '支持 JPG, PNG, GIF, WebP 格式';
+    subtext.textContent = options.supportText || '支持 JPG, PNG, GIF, WebP 格式';
     container.appendChild(subtext);
 
     const fileInput = document.createElement('input');

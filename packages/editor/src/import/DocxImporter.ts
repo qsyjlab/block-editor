@@ -1,4 +1,3 @@
-import mammoth from 'mammoth'
 import { Editor } from '@tiptap/core'
 
 /**
@@ -94,6 +93,7 @@ export class DocxImporter {
 
   public async import(file: File): Promise<void> {
     const arrayBuffer = await file.arrayBuffer()
+    const mammoth = (await import('mammoth')).default
 
     /**
      * styleMap 说明：
