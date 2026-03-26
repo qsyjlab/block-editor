@@ -8,6 +8,12 @@ import { CommentPanel } from "./CommentPanel";
 import { resolveEditorI18n } from "../i18n";
 import type { EditorI18n } from "../i18n";
 import type { EditorUIConfig } from "./config/operation-bars";
+import type {
+  EditorUILayoutSchema,
+  EditorUIModuleDefinition,
+  EditorUIModuleId,
+  EditorUIModuleInstance,
+} from "./modules/contracts";
 
 export type ToolbarMode = "top" | "inline";
 export type EditorThemeMode = "light" | "dark" | "auto";
@@ -35,6 +41,8 @@ export interface EditorUIRendererOptions {
   outlineI18n?: Partial<OutlineI18n>;
   uiConfig?: EditorUIConfig;
   layoutBuilder?: (params: EditorUILayoutBuilderParams) => EditorUILayoutSlots;
+  layoutSchema?: EditorUILayoutSchema;
+  modules?: Partial<Record<EditorUIModuleId, EditorUIModuleDefinition>>;
 }
 
 export class EditorUIRenderer {
@@ -48,6 +56,13 @@ export class EditorUIRenderer {
   private linkPreviewEl: HTMLElement | null = null;
   private hoverAnchor: HTMLAnchorElement | null = null;
   private readonly i18n: EditorI18n;
+  private readonly moduleDefinitions: Record<
+    EditorUIModuleId,
+    EditorUIModuleDefinition
+  >;
+  private readonly mountedModules: Partial<
+    Record<EditorUIModuleId, EditorUIModuleInstance>
+  > = {};
 
   constructor(
     editorCore: EditorCore,
@@ -64,6 +79,8 @@ export class EditorUIRenderer {
       outlineI18n: options.outlineI18n,
       uiConfig: options.uiConfig,
       layoutBuilder: options.layoutBuilder,
+      layoutSchema: options.layoutSchema,
+      modules: options.modules,
     };
 
     this.i18n = resolveEditorI18n(this.options.i18n || this.editorCore.i18n);
@@ -76,23 +93,12 @@ export class EditorUIRenderer {
       }) || this.createDefaultLayout();
 
     this.commentPanelVisible = Boolean(this.options.commentPanelDefaultVisible);
+    this.applyLayoutSchemaToSlots();
     this.applyTheme();
     this.applyLayoutDataAttributes();
+    this.moduleDefinitions = this.buildModuleDefinitions(this.options.modules);
 
-    if (this.slots.toolbarContainer && this.options.toolbarMode === "top") {
-      this.renderToolbar(this.slots.toolbarContainer);
-    }
-
-    if (this.slots.outlineContainer) {
-      this.renderOutline(this.slots.outlineContainer);
-    }
-
-    if (this.slots.commentContainer) {
-      this.renderCommentPanel(this.slots.commentContainer);
-      this.applyCommentPanelVisibility();
-    }
-
-    this.renderMenus();
+    this.mountModules();
 
     this.editorCore.events.on("toggleCommentPanel", () =>
       this.toggleCommentPanel(),
@@ -131,6 +137,10 @@ export class EditorUIRenderer {
 
   private applyCommentPanelVisibility() {
     if (!this.slots.commentContainer) return;
+    if (this.options.layoutSchema?.regions?.comment?.visible === false) {
+      this.slots.commentContainer.style.display = "none";
+      return;
+    }
     this.slots.commentContainer.style.display = this.commentPanelVisible
       ? "block"
       : "none";
@@ -156,6 +166,34 @@ export class EditorUIRenderer {
           : "light"
         : preferred;
     this.container.dataset.beTheme = resolved;
+  }
+
+  private applyLayoutSchemaToSlots() {
+    const regions = this.options.layoutSchema?.regions;
+    if (!regions) return;
+
+    const applyRegion = (
+      el: HTMLElement | null | undefined,
+      region?: { visible?: boolean; width?: string | number; order?: number },
+    ) => {
+      if (!el || !region) return;
+      if (typeof region.visible === "boolean") {
+        el.style.display = region.visible ? "" : "none";
+      }
+      if (region.width !== undefined) {
+        el.style.width =
+          typeof region.width === "number" ? `${region.width}px` : region.width;
+      }
+      if (typeof region.order === "number") {
+        el.style.order = String(region.order);
+      }
+    };
+
+    applyRegion(this.slots.toolbarContainer, regions.toolbar);
+    applyRegion(this.slots.editorContainer, regions.editor);
+    applyRegion(this.slots.outlineContainer, regions.outline);
+    applyRegion(this.slots.commentContainer, regions.comment);
+    applyRegion(this.slots.overlayContainer, regions.overlay);
   }
 
   private createDefaultLayout(): EditorUILayoutSlots {
@@ -369,13 +407,94 @@ export class EditorUIRenderer {
     return true;
   }
 
-  private renderToolbar(toolbarContainer: HTMLElement) {
-    const toolbarConfig = this.options.uiConfig?.toolbar || this.editorCore.uiConfig?.toolbar;
-    new Toolbar(toolbarContainer, this.editorCore, this.i18n, toolbarConfig);
+  private buildModuleDefinitions(
+    overrides?: Partial<Record<EditorUIModuleId, EditorUIModuleDefinition>>,
+  ): Record<EditorUIModuleId, EditorUIModuleDefinition> {
+    const defaults: Record<EditorUIModuleId, EditorUIModuleDefinition> = {
+      toolbar: {
+        id: "toolbar",
+        defaultRegion: "toolbar",
+        mount: ({ slots, options }) => {
+          if (!slots.toolbarContainer || options.toolbarMode !== "top") return;
+          this.renderToolbar(slots.toolbarContainer);
+        },
+      },
+      outline: {
+        id: "outline",
+        defaultRegion: "outline",
+        mount: ({ slots }) => {
+          if (!slots.outlineContainer) return;
+          this.renderOutline(slots.outlineContainer);
+        },
+      },
+      commentPanel: {
+        id: "commentPanel",
+        defaultRegion: "comment",
+        mount: ({ slots }) => {
+          if (!slots.commentContainer) return;
+          this.renderCommentPanel(slots.commentContainer);
+          this.applyCommentPanelVisibility();
+        },
+      },
+      tableBubbleMenu: {
+        id: "tableBubbleMenu",
+        defaultRegion: "overlay",
+        mount: () => {
+          const instance = new TableBubbleMenu(this.editorCore);
+          return { unmount: () => instance.destroy() };
+        },
+      },
+      blockMultiSelectBar: {
+        id: "blockMultiSelectBar",
+        defaultRegion: "overlay",
+        mount: () => {
+          const instance = new BlockMultiSelectBar(this.editorCore);
+          return { unmount: () => instance.destroy() };
+        },
+      },
+    };
+
+    return {
+      ...defaults,
+      ...(overrides || {}),
+    };
   }
 
-  private renderOutline(outlineContainer: HTMLElement) {
-    new Outline(outlineContainer, this.editorCore, {
+  private mountModules() {
+    const moduleOrder: EditorUIModuleId[] = [
+      "toolbar",
+      "outline",
+      "commentPanel",
+      "tableBubbleMenu",
+      "blockMultiSelectBar",
+    ];
+
+    moduleOrder.forEach((id) => {
+      const cfg = this.options.layoutSchema?.modules?.[id];
+      if (cfg?.enabled === false) return;
+
+      const def = this.moduleDefinitions[id];
+      const instance =
+        def.mount({
+          id,
+          editorCore: this.editorCore,
+          renderer: this,
+          slots: this.slots,
+          i18n: this.i18n,
+          options: this.options,
+        }) || {};
+
+      this.mountedModules[id] = instance;
+    });
+  }
+
+  private renderToolbar(toolbarContainer: HTMLElement): Toolbar {
+    const toolbarConfig = this.options.uiConfig?.toolbar || this.editorCore.uiConfig?.toolbar;
+    return new Toolbar(toolbarContainer, this.editorCore, this.i18n, toolbarConfig);
+  }
+
+  private renderOutline(outlineContainer: HTMLElement): Outline {
+    return new Outline(outlineContainer, this.editorCore, {
       scrollArea: this.slots.scrollContainer || null,
       i18n: {
         ...this.i18n.outline,
@@ -384,12 +503,7 @@ export class EditorUIRenderer {
     });
   }
 
-  private renderCommentPanel(commentContainer: HTMLElement) {
-    new CommentPanel(this.editorCore, commentContainer, this.i18n.commentPanel);
-  }
-
-  private renderMenus() {
-    new TableBubbleMenu(this.editorCore);
-    new BlockMultiSelectBar(this.editorCore);
+  private renderCommentPanel(commentContainer: HTMLElement): CommentPanel {
+    return new CommentPanel(this.editorCore, commentContainer, this.i18n.commentPanel);
   }
 }

@@ -103,7 +103,7 @@
 
 ### Phase F：模块化与自定义布局
 
-- [ ] F1. 定义模块接口：`mount/unmount/update/defaultRegion/i18nKeys`。
+- [x] F1. 定义模块接口：`mount/unmount/update/defaultRegion/i18nKeys`。
 - [ ] F2. 将以下能力模块化：
 - [ ] F2.1 toolbar
 - [ ] F2.2 selection toolbar
@@ -213,3 +213,4 @@
 - 2026-03-26：继续推进 Phase B7（暗黑模式下拉一致性）。修复弹层主题继承：`ToolbarDropdown`、`ColorPicker`、`SlashMenu` 改为挂载到 overlay 容器（不再直接挂 `document.body`），避免脱离 `data-be-theme` 导致暗黑下拉发白；同时将 `code-block` 语言下拉改为主题变量色值，`TableBubbleMenu` 移除浅色强绑类。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
 - 2026-03-26：继续推进 Phase I/H4 文档收口。新增专题文档页：`reference/operation-bars.md`、`reference/layout-modules.md`、`reference/migration.md` 与 `guide/regression-checklist.md`，并更新 VitePress 导航与侧边栏；补充 docs-repo 启动/构建说明。验证：`docs-repo` 执行 `pnpm docs:build` 通过。状态更新：勾选 I5、H4、H1、H3 及“文档结构覆盖”验收项。
 - 2026-03-26：继续推进 Phase H2 回归支撑。Playground 新增 `regression` 场景（`/scenes/regression`），预置评论/链接锚点/表格/块手柄验证内容，集中用于关键交互回归（H2.1-H2.5）手工检查；`ScenarioPage` 支持场景级 `initialContent`。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：继续推进 Phase F（模块化骨架）。新增 `ui/modules/contracts.ts`，定义 `EditorUIModuleDefinition`、`EditorUILayoutSchema`、`EditorUIRegion`、`EditorUIModuleId` 契约；`EditorUIRenderer` 接入模块挂载管线（toolbar/outline/commentPanel/tableBubbleMenu/blockMultiSelectBar 默认模块）与 `layoutSchema` 区域可见性/宽度/order 兼容层，并保留 `layoutBuilder` 旧用法。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
