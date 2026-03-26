@@ -9,6 +9,7 @@ export default defineConfig({
     nav: [
       { text: "指南", link: "/guide/getting-started" },
       { text: "配置", link: "/reference/configuration" },
+      { text: "回归", link: "/guide/regression-checklist" },
       { text: "审计记录", link: "/ui-audit/color-hardcode-inventory" },
     ],
     sidebar: [
@@ -17,11 +18,17 @@ export default defineConfig({
         items: [
           { text: "介绍", link: "/" },
           { text: "快速开始", link: "/guide/getting-started" },
+          { text: "回归清单", link: "/guide/regression-checklist" },
         ],
       },
       {
         text: "参考",
-        items: [{ text: "配置说明", link: "/reference/configuration" }],
+        items: [
+          { text: "配置说明", link: "/reference/configuration" },
+          { text: "操作栏配置", link: "/reference/operation-bars" },
+          { text: "模块化布局", link: "/reference/layout-modules" },
+          { text: "迁移与接入", link: "/reference/migration" },
+        ],
       },
       {
         text: "审计文档",

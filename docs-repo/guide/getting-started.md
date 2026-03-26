@@ -15,11 +15,14 @@ pnpm --filter block-editor-playground dev
 ## 启动文档站
 
 ```bash
+cd docs-repo
+pnpm install
 pnpm docs:dev
 ```
 
 文档构建：
 
 ```bash
+cd docs-repo
 pnpm docs:build
 ```

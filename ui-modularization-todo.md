@@ -142,15 +142,15 @@
 
 ### Phase H：验证、回归、文档
 
-- [ ] H1. 全量构建通过（workspace + playground）。
+- [x] H1. 全量构建通过（workspace + playground）。
 - [ ] H2. 关键交互回归：
 - [ ] H2.1 评论（创建、定位、展开、引用跳转）
 - [ ] H2.2 链接（插入、预览、跳转）
 - [ ] H2.3 表格工具栏（i18n、操作）
 - [ ] H2.4 block handle 菜单
 - [ ] H2.5 selection tooltip
-- [ ] H3. 清理重复实现与死代码。
-- [ ] H4. 输出迁移文档（配置示例、布局示例、模块注册示例）。
+- [x] H3. 清理重复实现与死代码。
+- [x] H4. 输出迁移文档（配置示例、布局示例、模块注册示例）。
 
 验收标准：
 - [ ] 无阻断级回归。
@@ -165,12 +165,14 @@
 - [x] I3. 补齐基础页面：首页、快速开始、配置参考。
 - [x] I4. 接入现有审计文档到侧边栏导航。
 - [ ] I5. 增加“模块化/布局/操作栏配置”专题文档页（后续补齐）。
+- [x] I5. 增加“模块化/布局/操作栏配置”专题文档页（后续补齐）。
 - [x] I6. 文档拆分为独立仓库（`docs-repo`，独立 `package.json` + Git）。
 
 验收标准：
 - [ ] `pnpm docs:dev` 可启动。
 - [x] `pnpm docs:build` 可构建。
 - [ ] 文档结构可覆盖接入、配置、场景化验证与迁移说明。
+- [x] 文档结构可覆盖接入、配置、场景化验证与迁移说明。
 - [x] 文档可独立于主仓运行和构建。
 
 ## 3. 当前优先顺序（执行顺序）
@@ -211,3 +213,4 @@
 - 2026-03-26：继续推进 Phase D（第七批）。清理 `upload-zone` 组件默认中文 fallback，改为中立英文文案（仍优先使用外部 i18n 传入）。验证：`@block-editor/editor` 构建通过。遗留：仍有部分历史/重复文件中的硬编码文案（如旧版 `BlockMultiSelectBar.ts`）可在后续清理或下线。
 - 2026-03-26：继续推进 Phase H3（重复实现清理）。下线未被引用的旧版多选工具栏实现 `ui/menus/BlockMultiSelectBar.ts`，保留并统一使用 `ui/menus/block-multi-select-bar.ts`，减少重复维护面。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
 - 2026-03-26：继续推进 Phase B7（暗黑模式下拉一致性）。修复弹层主题继承：`ToolbarDropdown`、`ColorPicker`、`SlashMenu` 改为挂载到 overlay 容器（不再直接挂 `document.body`），避免脱离 `data-be-theme` 导致暗黑下拉发白；同时将 `code-block` 语言下拉改为主题变量色值，`TableBubbleMenu` 移除浅色强绑类。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：继续推进 Phase I/H4 文档收口。新增专题文档页：`reference/operation-bars.md`、`reference/layout-modules.md`、`reference/migration.md` 与 `guide/regression-checklist.md`，并更新 VitePress 导航与侧边栏；补充 docs-repo 启动/构建说明。验证：`docs-repo` 执行 `pnpm docs:build` 通过。状态更新：勾选 I5、H4、H1、H3 及“文档结构覆盖”验收项。
