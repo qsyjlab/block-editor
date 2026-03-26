@@ -16,6 +16,7 @@
 
 import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
+import type { ImageEnhancedI18n } from '../i18n/types'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -31,8 +32,28 @@ export type ImageAlign = 'left' | 'center' | 'right' | 'full'
 const MIN_WIDTH = 60
 const MAX_WIDTH = 1200
 
-export const ImageEnhanced = Image.extend({
+interface ImageEnhancedOptions {
+  HTMLAttributes: Record<string, any>
+  i18n: ImageEnhancedI18n
+}
+
+const DEFAULT_IMAGE_ENHANCED_I18N: ImageEnhancedI18n = {
+  captionPlaceholder: '添加图片说明…',
+  alignLeft: '左对齐',
+  alignCenter: '居中',
+  alignRight: '右对齐',
+  alignFull: '宽度铺满',
+}
+
+export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
   name: 'image',
+
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      i18n: DEFAULT_IMAGE_ENHANCED_I18N,
+    }
+  },
 
   addAttributes() {
     return {
@@ -181,7 +202,7 @@ export const ImageEnhanced = Image.extend({
       })
 
       // --- alignment toolbar (appears on click) ---
-      const alignBar = buildAlignBar((newAlign) => {
+      const alignBar = buildAlignBar(this.options.i18n, (newAlign) => {
         figure.setAttribute('data-align', newAlign)
         applyFigureAlign(figure, newAlign)
         editor.chain().updateAttributes('image', { align: newAlign }).run()
@@ -203,7 +224,7 @@ export const ImageEnhanced = Image.extend({
       figcaption.style.cssText =
         'display:block;text-align:center;font-size:13px;color:#6b7280;margin-top:6px;min-height:1em;outline:none;'
       figcaption.textContent = caption
-      figcaption.setAttribute('data-placeholder', '添加图片说明…')
+      figcaption.setAttribute('data-placeholder', this.options.i18n.captionPlaceholder)
 
       figcaption.addEventListener('input', () => {
         editor.chain().updateAttributes('image', { caption: figcaption.textContent || '' }).run()
@@ -263,7 +284,10 @@ function applyFigureAlign(figure: HTMLElement, align: ImageAlign) {
   }
 }
 
-function buildAlignBar(onAlign: (align: ImageAlign) => void): HTMLElement {
+function buildAlignBar(
+  i18n: ImageEnhancedI18n,
+  onAlign: (align: ImageAlign) => void,
+): HTMLElement {
   const bar = document.createElement('div')
   bar.style.cssText = `
     display:flex;gap:4px;justify-content:center;
@@ -272,10 +296,10 @@ function buildAlignBar(onAlign: (align: ImageAlign) => void): HTMLElement {
   `
 
   const opts: { align: ImageAlign; icon: string; title: string }[] = [
-    { align: 'left',   icon: '⬅',  title: '左对齐' },
-    { align: 'center', icon: '↔',  title: '居中' },
-    { align: 'right',  icon: '➡',  title: '右对齐' },
-    { align: 'full',   icon: '⬌',  title: '宽度铺满' },
+    { align: 'left',   icon: '⬅',  title: i18n.alignLeft },
+    { align: 'center', icon: '↔',  title: i18n.alignCenter },
+    { align: 'right',  icon: '➡',  title: i18n.alignRight },
+    { align: 'full',   icon: '⬌',  title: i18n.alignFull },
   ]
 
   opts.forEach(({ align, icon, title }) => {

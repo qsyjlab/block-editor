@@ -1,7 +1,9 @@
 import { Mark, mergeAttributes } from '@tiptap/core'
+import type { CommentExtensionI18n } from '../i18n/types'
 
 export interface CommentOptions {
   HTMLAttributes: Record<string, any>
+  i18n: CommentExtensionI18n
 }
 
 export interface CommentReply {
@@ -64,7 +66,7 @@ export class CommentStore {
     }
   }
 
-  addThread(id: string, text: string, author = '我', quoteText?: string) {
+  addThread(id: string, text: string, author = 'User', quoteText?: string) {
     this.threads.set(id, {
       id,
       author,
@@ -77,7 +79,7 @@ export class CommentStore {
     this.notify()
   }
 
-  addReply(threadId: string, text: string, author = '我') {
+  addReply(threadId: string, text: string, author = 'User') {
     const thread = this.threads.get(threadId)
     if (!thread) return
     thread.replies.push({
@@ -141,6 +143,11 @@ export const Comment = Mark.create<CommentOptions>({
       HTMLAttributes: {
         class: 'comment-mark',
       },
+      i18n: {
+        defaultAuthor: 'Me',
+        quickCommentFallback: 'New Comment',
+        quickCommentFromSelection: (selectionText: string) => `About "${selectionText}"`,
+      },
     }
   },
 
@@ -185,9 +192,11 @@ export const Comment = Mark.create<CommentOptions>({
           if (editor.state.selection.empty) return false
           const { from, to } = editor.state.selection
           const selected = editor.state.doc.textBetween(from, to, ' ').trim()
-          const text = selected ? `关于「${selected.slice(0, 30)}」` : '新评论'
+          const text = selected
+            ? this.options.i18n.quickCommentFromSelection(selected.slice(0, 30))
+            : this.options.i18n.quickCommentFallback
           const id = `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-          commentStore.addThread(id, text)
+          commentStore.addThread(id, text, this.options.i18n.defaultAuthor)
           return commands.setMark(this.name, { commentId: id })
         },
     }

@@ -7,6 +7,7 @@ import {
   hide,
 } from "@floating-ui/dom";
 import { EditorCore } from "../../../core/EditorCore";
+import type { ColorPickerI18n } from "../../../i18n/types";
 import { icons } from "../icons";
 import { STANDARD_COLORS } from "./color-palette";
 import { ColorSpectrum } from "./color-spectrum";
@@ -20,10 +21,12 @@ export class ColorPicker {
   private isOpen = false;
   private cleanupFloating: (() => void) | null = null;
   private spectrum: ColorSpectrum | null = null;
+  private readonly i18n: ColorPickerI18n;
 
   constructor(label: string, editorCore: EditorCore) {
     this.label = label;
     this.editorCore = editorCore;
+    this.i18n = this.editorCore.i18n.colorPicker;
     this.element = this.render();
 
     // Close on outside click
@@ -84,7 +87,7 @@ export class ColorPicker {
     paletteSection.className = "color-picker-section";
     const title = document.createElement("span");
     title.className = "color-picker-title";
-    title.textContent = "预设颜色"; // Match React text
+    title.textContent = this.i18n.presetColors;
     paletteSection.appendChild(title);
 
     const grid = document.createElement("div");
@@ -137,7 +140,7 @@ export class ColorPicker {
 
     const customTitle = document.createElement("span");
     customTitle.className = "color-picker-title";
-    customTitle.textContent = "自定义颜色";
+    customTitle.textContent = this.i18n.customColor;
     customSection.appendChild(customTitle);
 
     // Input container

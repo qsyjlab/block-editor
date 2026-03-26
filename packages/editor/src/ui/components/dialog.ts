@@ -6,6 +6,7 @@ export interface DialogOptions {
   icon?: string;
   iconBgClass?: string;
   width?: string;
+  closeAriaLabel?: string;
   onClose: () => void;
 }
 
@@ -89,7 +90,7 @@ export class Dialog {
     closeBtn.style.height = "32px";
     closeBtn.style.padding = "0";
     closeBtn.style.lineHeight = "0";
-    closeBtn.setAttribute("aria-label", "关闭对话框");
+    closeBtn.setAttribute("aria-label", this.options.closeAriaLabel || "Close dialog");
     closeBtn.innerHTML = icons.close || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
     const closeSvg = closeBtn.querySelector("svg") as SVGElement | null;
     if (closeSvg) {

@@ -22,6 +22,7 @@ export class InsertLinkDialog {
     this.i18n = i18n || {
       title: '插入链接',
       subtitle: '添加超链接到你的文档',
+      closeDialogAriaLabel: '关闭对话框',
       urlLabel: '链接地址',
       urlPlaceholder: 'https://example.com',
       textLabel: '显示文本',
@@ -100,6 +101,7 @@ export class InsertLinkDialog {
     this.dialog = new Dialog({
       title: this.i18n.title,
       subtitle: this.i18n.subtitle,
+      closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: 'link',
       iconBgClass: 'be-bg-gradient-to-br be-from-blue-500 be-to-blue-600',
       onClose: () => {},

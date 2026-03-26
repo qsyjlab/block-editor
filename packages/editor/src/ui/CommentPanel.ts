@@ -489,7 +489,7 @@ export class CommentPanel {
         e.stopPropagation();
         const text = input.value.trim();
         if (!text) return;
-        commentStore.addReply(thread.id, text);
+        commentStore.addReply(thread.id, text, this.i18n.currentUser);
         input.value = "";
       });
 

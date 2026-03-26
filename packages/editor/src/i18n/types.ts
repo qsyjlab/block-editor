@@ -68,6 +68,7 @@ export interface ToolbarI18n {
 export interface InsertLinkDialogI18n {
   title: string
   subtitle: string
+  closeDialogAriaLabel: string
   urlLabel: string
   urlPlaceholder: string
   textLabel: string
@@ -81,6 +82,7 @@ export interface InsertLinkDialogI18n {
 export interface InsertImageDialogI18n {
   title: string
   subtitle: string
+  closeDialogAriaLabel: string
   tabUrl: string
   tabUpload: string
   urlLabel: string
@@ -97,6 +99,7 @@ export interface InsertImageDialogI18n {
 export interface VersionHistoryDialogI18n {
   title: string
   subtitle: string
+  closeDialogAriaLabel: string
   tips: string
   saveSnapshot: string
   manualSnapshotLabel: string
@@ -198,6 +201,71 @@ export interface BlockMultiSelectBarI18n {
   selectedCount: (count: number) => string
 }
 
+export interface SlashCommandI18n {
+  menuAriaLabel: string
+  paragraphTitle: string
+  paragraphDescription: string
+  heading1Title: string
+  heading1Description: string
+  heading2Title: string
+  heading2Description: string
+  heading3Title: string
+  heading3Description: string
+  bulletListTitle: string
+  bulletListDescription: string
+  orderedListTitle: string
+  orderedListDescription: string
+  taskListTitle: string
+  taskListDescription: string
+  blockquoteTitle: string
+  blockquoteDescription: string
+  codeBlockTitle: string
+  codeBlockDescription: string
+  horizontalRuleTitle: string
+  horizontalRuleDescription: string
+  tableTitle: string
+  tableDescription: string
+  calloutTitle: string
+  calloutDescription: string
+}
+
+export interface ColorPickerI18n {
+  presetColors: string
+  customColor: string
+}
+
+export interface CommentExtensionI18n {
+  defaultAuthor: string
+  quickCommentFallback: string
+  quickCommentFromSelection: (selectionText: string) => string
+}
+
+export interface VersionHistoryCoreI18n {
+  defaultAuthorName: string
+  initialSnapshotLabel: string
+  autoSnapshotLabel: string
+  manualSnapshotLabel: string
+  beforeRestoreSnapshotLabel: string
+  unknownAuthor: string
+  emptyDocument: string
+}
+
+export interface ImageEnhancedI18n {
+  captionPlaceholder: string
+  alignLeft: string
+  alignCenter: string
+  alignRight: string
+  alignFull: string
+}
+
+export interface CalloutI18n {
+  infoLabel: string
+  successLabel: string
+  warningLabel: string
+  dangerLabel: string
+  switchTypeTitle: string
+}
+
 export interface EditorI18n {
   locale: string
   toolbar: ToolbarI18n
@@ -206,4 +274,10 @@ export interface EditorI18n {
   commentPanel: CommentPanelI18n
   blockHandle: BlockHandleI18n
   blockMultiSelectBar: BlockMultiSelectBarI18n
+  slashCommand: SlashCommandI18n
+  colorPicker: ColorPickerI18n
+  commentExtension: CommentExtensionI18n
+  versionHistoryCore: VersionHistoryCoreI18n
+  imageEnhanced: ImageEnhancedI18n
+  callout: CalloutI18n
 }

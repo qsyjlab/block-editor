@@ -53,5 +53,29 @@ export function resolveEditorI18n(input?: string | Partial<EditorI18n> | null): 
       ...base.blockMultiSelectBar,
       ...(input.blockMultiSelectBar || {}),
     },
+    slashCommand: {
+      ...base.slashCommand,
+      ...(input.slashCommand || {}),
+    },
+    colorPicker: {
+      ...base.colorPicker,
+      ...(input.colorPicker || {}),
+    },
+    commentExtension: {
+      ...base.commentExtension,
+      ...(input.commentExtension || {}),
+    },
+    versionHistoryCore: {
+      ...base.versionHistoryCore,
+      ...(input.versionHistoryCore || {}),
+    },
+    imageEnhanced: {
+      ...base.imageEnhanced,
+      ...(input.imageEnhanced || {}),
+    },
+    callout: {
+      ...base.callout,
+      ...(input.callout || {}),
+    },
   }
 }

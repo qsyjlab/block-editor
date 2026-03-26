@@ -1,6 +1,7 @@
 import { Extension, Editor } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
+import type { SlashCommandI18n } from '../i18n/types'
 
 // ── 命令定义 ──────────────────────────────────────────────────────────────────
 
@@ -12,92 +13,126 @@ export interface SlashCommandItem {
   command: (editor: Editor) => void
 }
 
-const defaultCommands: SlashCommandItem[] = [
+export interface SlashCommandOptions {
+  i18n: SlashCommandI18n
+}
+
+const DEFAULT_SLASH_I18N: SlashCommandI18n = {
+  menuAriaLabel: 'Slash 命令菜单',
+  paragraphTitle: '正文',
+  paragraphDescription: '普通文本段落',
+  heading1Title: '标题 1',
+  heading1Description: '大型标题',
+  heading2Title: '标题 2',
+  heading2Description: '中等标题',
+  heading3Title: '标题 3',
+  heading3Description: '小型标题',
+  bulletListTitle: '无序列表',
+  bulletListDescription: '点式列表',
+  orderedListTitle: '有序列表',
+  orderedListDescription: '数字列表',
+  taskListTitle: '任务列表',
+  taskListDescription: '带复选框的列表',
+  blockquoteTitle: '引用',
+  blockquoteDescription: '引用文本块',
+  codeBlockTitle: '代码块',
+  codeBlockDescription: '带语法高亮的代码',
+  horizontalRuleTitle: '分割线',
+  horizontalRuleDescription: '水平分隔线',
+  tableTitle: '表格',
+  tableDescription: '插入表格',
+  calloutTitle: 'Callout',
+  calloutDescription: '高亮信息块',
+}
+
+function createDefaultCommands(i18n: SlashCommandI18n): SlashCommandItem[] {
+  return [
   {
-    title: '正文',
-    description: '普通文本段落',
+    title: i18n.paragraphTitle,
+    description: i18n.paragraphDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>',
     keywords: ['正文', 'paragraph', 'text', 'p'],
     command: (editor) => editor.chain().focus().setParagraph().run(),
   },
   {
-    title: '标题 1',
-    description: '大型标题',
+    title: i18n.heading1Title,
+    description: i18n.heading1Description,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h8"/><path d="M4 6v12"/><path d="M12 6v12"/><path d="M17 10l-1 2h4l-1 2"/></svg>',
     keywords: ['h1', '标题1', 'heading1', 'title'],
     command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
   },
   {
-    title: '标题 2',
-    description: '中等标题',
+    title: i18n.heading2Title,
+    description: i18n.heading2Description,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h8"/><path d="M4 6v12"/><path d="M12 6v12"/><path d="M21 10a2 2 0 0 0-4 0c0 2 4 3 4 6h-4"/></svg>',
     keywords: ['h2', '标题2', 'heading2'],
     command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
   },
   {
-    title: '标题 3',
-    description: '小型标题',
+    title: i18n.heading3Title,
+    description: i18n.heading3Description,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h8"/><path d="M4 6v12"/><path d="M12 6v12"/><path d="M17 6a2 2 0 0 1 0 4h0a2 2 0 0 1 0 4H17"/></svg>',
     keywords: ['h3', '标题3', 'heading3'],
     command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
   },
   {
-    title: '无序列表',
-    description: '点式列表',
+    title: i18n.bulletListTitle,
+    description: i18n.bulletListDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>',
     keywords: ['ul', 'bullet', '无序', 'list'],
     command: (editor) => editor.chain().focus().toggleBulletList().run(),
   },
   {
-    title: '有序列表',
-    description: '数字列表',
+    title: i18n.orderedListTitle,
+    description: i18n.orderedListDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>',
     keywords: ['ol', '有序', 'ordered', 'number'],
     command: (editor) => editor.chain().focus().toggleOrderedList().run(),
   },
   {
-    title: '任务列表',
-    description: '带复选框的列表',
+    title: i18n.taskListTitle,
+    description: i18n.taskListDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>',
     keywords: ['task', 'todo', '任务', 'check', 'checkbox'],
     command: (editor) => editor.chain().focus().toggleTaskList().run(),
   },
   {
-    title: '引用',
-    description: '引用文本块',
+    title: i18n.blockquoteTitle,
+    description: i18n.blockquoteDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>',
     keywords: ['quote', 'blockquote', '引用'],
     command: (editor) => editor.chain().focus().toggleBlockquote().run(),
   },
   {
-    title: '代码块',
-    description: '带语法高亮的代码',
+    title: i18n.codeBlockTitle,
+    description: i18n.codeBlockDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
     keywords: ['code', 'codeblock', '代码', 'pre'],
     command: (editor) => editor.chain().focus().toggleCodeBlock().run(),
   },
   {
-    title: '分割线',
-    description: '水平分隔线',
+    title: i18n.horizontalRuleTitle,
+    description: i18n.horizontalRuleDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/></svg>',
     keywords: ['hr', 'divider', '分割线', 'rule'],
     command: (editor) => editor.chain().focus().setHorizontalRule().run(),
   },
   {
-    title: '表格',
-    description: '插入表格',
+    title: i18n.tableTitle,
+    description: i18n.tableDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
     keywords: ['table', '表格'],
     command: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3 }).run(),
   },
   {
-    title: 'Callout',
-    description: '高亮信息块',
+    title: i18n.calloutTitle,
+    description: i18n.calloutDescription,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
     keywords: ['callout', 'info', '信息块', '提示', 'alert'],
     command: (editor) => (editor.commands as any).insertCallout('info'),
   },
-]
+  ]
+}
 
 // ── Slash Menu View ────────────────────────────────────────────────────────────
 
@@ -110,15 +145,19 @@ class SlashMenuView {
   private view: EditorView
   private editor: Editor
   private slashPos: number | null = null
+  private i18n: SlashCommandI18n
+  private commands: SlashCommandItem[]
 
-  constructor(view: EditorView, editor: Editor) {
+  constructor(view: EditorView, editor: Editor, i18n: SlashCommandI18n) {
     this.view = view
     this.editor = editor
+    this.i18n = i18n
+    this.commands = createDefaultCommands(i18n)
 
     this.container = document.createElement('div')
     this.container.className = 'be-slash-menu'
     this.container.setAttribute('role', 'listbox')
-    this.container.setAttribute('aria-label', 'Slash 命令菜单')
+    this.container.setAttribute('aria-label', this.i18n.menuAriaLabel)
     this.container.style.cssText =
       'display:none;position:fixed;z-index:9999;background:white;border:1px solid #e8e8e8;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:4px;min-width:240px;max-height:320px;overflow-y:auto;'
 
@@ -151,8 +190,8 @@ class SlashMenuView {
 
   private getFilteredItems(): SlashCommandItem[] {
     const q = this.query.toLowerCase().trim()
-    if (!q) return defaultCommands
-    return defaultCommands.filter(
+    if (!q) return this.commands
+    return this.commands.filter(
       (item) =>
         item.title.toLowerCase().includes(q) ||
         item.description.toLowerCase().includes(q) ||
@@ -258,7 +297,7 @@ class SlashMenuView {
 
 const slashPluginKey = new PluginKey('slashCommand')
 
-function createSlashPlugin(editor: Editor) {
+function createSlashPlugin(editor: Editor, i18n: SlashCommandI18n) {
   let menuView: SlashMenuView | null = null
   let slashStartPos: number | null = null
 
@@ -266,7 +305,7 @@ function createSlashPlugin(editor: Editor) {
     key: slashPluginKey,
 
     view(editorView) {
-      menuView = new SlashMenuView(editorView, editor)
+      menuView = new SlashMenuView(editorView, editor, i18n)
       return {
         destroy() {
           menuView?.destroy()
@@ -372,10 +411,16 @@ function createSlashPlugin(editor: Editor) {
 
 // ── Extension ─────────────────────────────────────────────────────────────────
 
-export const SlashCommand = Extension.create({
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
+  addOptions() {
+    return {
+      i18n: DEFAULT_SLASH_I18N,
+    }
+  },
+
   addProseMirrorPlugins() {
-    return [createSlashPlugin(this.editor)]
+    return [createSlashPlugin(this.editor, this.options.i18n)]
   },
 })

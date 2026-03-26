@@ -1,4 +1,5 @@
 import { Editor, JSONContent } from "@tiptap/core";
+import type { VersionHistoryCoreI18n } from "../i18n/types";
 
 export interface VersionSnapshot {
   id: string;
@@ -49,10 +50,20 @@ export interface VersionHistoryOptions {
   autoSnapshotIntervalMs?: number;
   authorName?: string;
   getAuthorName?: () => string;
+  i18n?: VersionHistoryCoreI18n;
 }
 
 const DEFAULT_MAX_SNAPSHOTS = 30;
 const DEFAULT_INTERVAL = 15000;
+const DEFAULT_VERSION_HISTORY_CORE_I18N: VersionHistoryCoreI18n = {
+  defaultAuthorName: "Current User",
+  initialSnapshotLabel: "Initial Version",
+  autoSnapshotLabel: "Auto Save",
+  manualSnapshotLabel: "Manual Snapshot",
+  beforeRestoreSnapshotLabel: "Snapshot Before Restore",
+  unknownAuthor: "Unknown",
+  emptyDocument: "(Empty Document)",
+};
 
 export class VersionHistoryManager {
   private editor: Editor;
@@ -65,20 +76,22 @@ export class VersionHistoryManager {
   private storageKey: string;
   private authorName: string;
   private getAuthorName: (() => string) | null;
+  private i18n: VersionHistoryCoreI18n;
 
   constructor(editor: Editor, options: VersionHistoryOptions = {}) {
     this.editor = editor;
     this.maxSnapshots = options.maxSnapshots || DEFAULT_MAX_SNAPSHOTS;
     this.autoSnapshotIntervalMs = options.autoSnapshotIntervalMs || DEFAULT_INTERVAL;
     this.storageKey = this.buildStorageKey();
-    this.authorName = options.authorName || "当前用户";
+    this.i18n = options.i18n || DEFAULT_VERSION_HISTORY_CORE_I18N;
+    this.authorName = options.authorName || this.i18n.defaultAuthorName;
     this.getAuthorName = options.getAuthorName || null;
     this.load();
 
     if (this.snapshots.length > 0) {
       this.lastContentHash = JSON.stringify(this.snapshots[0].content);
     } else {
-      this.createSnapshot("初始版本", "manual", true);
+      this.createSnapshot(this.i18n.initialSnapshotLabel, "manual", true);
     }
   }
 
@@ -88,10 +101,10 @@ export class VersionHistoryManager {
     if (now - this.lastAutoSnapshotAt < this.autoSnapshotIntervalMs) return;
 
     this.lastAutoSnapshotAt = now;
-    this.createSnapshot("自动保存", "auto");
+    this.createSnapshot(this.i18n.autoSnapshotLabel, "auto");
   }
 
-  public createManualSnapshot(label = "手动快照") {
+  public createManualSnapshot(label = this.i18n.manualSnapshotLabel) {
     return this.createSnapshot(label, "manual", true);
   }
 
@@ -149,7 +162,7 @@ export class VersionHistoryManager {
           newLineNumber: null,
           oldText: line.text,
           newText: "",
-          authorName: base?.authorName || "未知",
+          authorName: base?.authorName || this.i18n.unknownAuthor,
           updatedAt: base?.createdAt || current.createdAt,
         });
         continue;
@@ -266,7 +279,7 @@ export class VersionHistoryManager {
     const target = this.snapshots.find((item) => item.id === snapshotId);
     if (!target) return false;
 
-    this.createSnapshot("回滚前快照", "restore", true);
+    this.createSnapshot(this.i18n.beforeRestoreSnapshotLabel, "restore", true);
 
     this.suspendAutoCapture = true;
     this.editor.commands.setContent(target.content, true);
@@ -313,7 +326,7 @@ export class VersionHistoryManager {
 
   private buildExcerpt() {
     const text = (this.editor.state.doc.textContent || "").replace(/\s+/g, " ").trim();
-    if (!text) return "（空文档）";
+    if (!text) return this.i18n.emptyDocument;
     return text.slice(0, 60);
   }
 
@@ -524,7 +537,7 @@ export class VersionHistoryManager {
         .filter((item) => item && item.id && item.content)
         .map((item) => ({
           ...item,
-          authorName: item.authorName || "未知",
+          authorName: item.authorName || this.i18n.unknownAuthor,
         }))
         .slice(0, this.maxSnapshots);
     } catch {

@@ -31,6 +31,7 @@ function sourceLabel(
 const DEFAULT_VERSION_HISTORY_I18N: VersionHistoryDialogI18n = {
   title: "版本历史",
   subtitle: "本地快照、逐行差异与 Blame",
+  closeDialogAriaLabel: "关闭对话框",
   tips: "支持按行查看增删改、作者与时间；点击快照可查看详细变更或 Blame。",
   saveSnapshot: "立即保存快照",
   manualSnapshotLabel: "手动快照",
@@ -117,6 +118,7 @@ export class VersionHistoryDialog {
     this.dialog = new Dialog({
       title: this.i18n.title,
       subtitle: this.i18n.subtitle,
+      closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: "fileText",
       iconBgClass: "be-bg-gradient-to-br be-from-indigo-500 be-to-violet-600",
       onClose: () => {},
@@ -728,6 +730,7 @@ export class VersionHistoryDialog {
         diff.baseSnapshot?.label || this.i18n.blankBase,
         formatTime(diff.currentSnapshot.createdAt, this.locale),
       ),
+      closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: "fileText",
       iconBgClass: "be-bg-gradient-to-br be-from-blue-500 be-to-indigo-600",
       onClose: () => {},

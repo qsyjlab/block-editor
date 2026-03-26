@@ -26,14 +26,14 @@ export function createUploadZone(options: {
 
     const text = document.createElement('p');
     text.className = 'be-text-sm be-text-gray-600 be-mb-2';
-    const hintText = options.hintText || '拖拽图片到此处或';
-    const clickText = options.clickText || '点击上传';
+    const hintText = options.hintText || 'Drag an image here or';
+    const clickText = options.clickText || 'click to upload';
     text.innerHTML = `${hintText} <span class="be-text-purple-600 be-font-medium">${clickText}</span>`;
     container.appendChild(text);
 
     const subtext = document.createElement('p');
     subtext.className = 'be-text-xs be-text-gray-400';
-    subtext.textContent = options.supportText || '支持 JPG, PNG, GIF, WebP 格式';
+    subtext.textContent = options.supportText || 'Supports JPG, PNG, GIF, WebP';
     container.appendChild(subtext);
 
     const fileInput = document.createElement('input');

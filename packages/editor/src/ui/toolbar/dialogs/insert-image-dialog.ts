@@ -17,6 +17,7 @@ export class InsertImageDialog {
     this.i18n = i18n || {
       title: '插入图片',
       subtitle: '从URL或本地上传图片',
+      closeDialogAriaLabel: '关闭对话框',
       tabUrl: '图片链接',
       tabUpload: '上传图片',
       urlLabel: '图片地址',
@@ -117,6 +118,7 @@ export class InsertImageDialog {
     this.dialog = new Dialog({
       title: this.i18n.title,
       subtitle: this.i18n.subtitle,
+      closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: 'image',
       iconBgClass: 'be-bg-gradient-to-br be-from-purple-500 be-to-pink-500',
       onClose: () => {},

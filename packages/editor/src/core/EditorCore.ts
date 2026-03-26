@@ -161,8 +161,12 @@ export class EditorCore {
       Placeholder.configure({
         placeholder: 'Type "/" for commands...',
       }),
-      Comment,
-      ImageEnhanced,
+      Comment.configure({
+        i18n: this.i18n.commentExtension,
+      }),
+      ImageEnhanced.configure({
+        i18n: this.i18n.imageEnhanced,
+      }),
       TaskList,
       TaskItem.configure({
         nested: true,
@@ -191,8 +195,12 @@ export class EditorCore {
       Superscript,
       InteractionState,
       Indent,
-      SlashCommand,
-      Callout,
+      SlashCommand.configure({
+        i18n: this.i18n.slashCommand,
+      }),
+      Callout.configure({
+        i18n: this.i18n.callout,
+      }),
       SmartPaste,
       BlockMultiSelect,
       BlockAnchor,
@@ -232,6 +240,7 @@ export class EditorCore {
     this.versionHistory = new VersionHistoryManager(this.editor, {
       authorName: user.name,
       getAuthorName: () => user.name,
+      i18n: this.i18n.versionHistoryCore,
     });
     this.syncInteractionMode(this.editor);
   }

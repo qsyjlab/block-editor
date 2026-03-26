@@ -1,6 +1,11 @@
 import { Node as TiptapNode, mergeAttributes } from '@tiptap/core'
+import type { CalloutI18n } from '../i18n/types'
 
 export type CalloutType = 'info' | 'success' | 'warning' | 'danger'
+
+interface CalloutOptions {
+  i18n: CalloutI18n
+}
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -11,40 +16,55 @@ declare module '@tiptap/core' {
   }
 }
 
-export const CALLOUT_STYLES: Record<
+const DEFAULT_CALLOUT_I18N: CalloutI18n = {
+  infoLabel: '信息',
+  successLabel: '成功',
+  warningLabel: '警告',
+  dangerLabel: '危险',
+  switchTypeTitle: '点击切换类型',
+}
+
+function buildCalloutStyles(i18n: CalloutI18n): Record<
   CalloutType,
   { bg: string; border: string; icon: string; label: string }
-> = {
-  info: {
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    icon: 'ℹ️',
-    label: '信息',
-  },
-  success: {
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
-    icon: '✅',
-    label: '成功',
-  },
-  warning: {
-    bg: '#fffbeb',
-    border: '#fde68a',
-    icon: '⚠️',
-    label: '警告',
-  },
-  danger: {
-    bg: '#fef2f2',
-    border: '#fecaca',
-    icon: '❌',
-    label: '危险',
-  },
+> {
+  return {
+    info: {
+      bg: '#eff6ff',
+      border: '#bfdbfe',
+      icon: 'ℹ️',
+      label: i18n.infoLabel,
+    },
+    success: {
+      bg: '#f0fdf4',
+      border: '#bbf7d0',
+      icon: '✅',
+      label: i18n.successLabel,
+    },
+    warning: {
+      bg: '#fffbeb',
+      border: '#fde68a',
+      icon: '⚠️',
+      label: i18n.warningLabel,
+    },
+    danger: {
+      bg: '#fef2f2',
+      border: '#fecaca',
+      icon: '❌',
+      label: i18n.dangerLabel,
+    },
+  }
 }
 
 const CALLOUT_TYPES: CalloutType[] = ['info', 'success', 'warning', 'danger']
 
 /** Build the floating type-switcher popup and attach it to `iconEl` */
-function attachTypeSwitcher(iconEl: HTMLElement, getEditor: () => any) {
+function attachTypeSwitcher(
+  iconEl: HTMLElement,
+  styles: Record<CalloutType, { bg: string; border: string; icon: string; label: string }>,
+  switchTypeTitle: string,
+  getEditor: () => any,
+) {
   let popup: HTMLElement | null = null
 
   const closePopup = () => {
@@ -69,6 +89,7 @@ function attachTypeSwitcher(iconEl: HTMLElement, getEditor: () => any) {
     }
 
     popup = document.createElement('div')
+    popup.setAttribute('aria-label', switchTypeTitle)
     Object.assign(popup.style, {
       position: 'fixed',
       zIndex: '99999',
@@ -82,7 +103,7 @@ function attachTypeSwitcher(iconEl: HTMLElement, getEditor: () => any) {
     })
 
     CALLOUT_TYPES.forEach((t) => {
-      const s = CALLOUT_STYLES[t]
+      const s = styles[t]
       const btn = document.createElement('button')
       Object.assign(btn.style, {
         display: 'flex',
@@ -134,8 +155,14 @@ function attachTypeSwitcher(iconEl: HTMLElement, getEditor: () => any) {
   })
 }
 
-export const Callout = TiptapNode.create({
+export const Callout = TiptapNode.create<CalloutOptions>({
   name: 'callout',
+
+  addOptions() {
+    return {
+      i18n: DEFAULT_CALLOUT_I18N,
+    }
+  },
 
   group: 'block',
 
@@ -159,7 +186,8 @@ export const Callout = TiptapNode.create({
 
   renderHTML({ HTMLAttributes, node }) {
     const type: CalloutType = node.attrs.calloutType || 'info'
-    const style = CALLOUT_STYLES[type]
+    const styles = buildCalloutStyles(this.options.i18n)
+    const style = styles[type]
 
     return [
       'div',
@@ -175,7 +203,7 @@ export const Callout = TiptapNode.create({
           style:
             'flex-shrink:0;font-size:16px;margin-top:1px;cursor:pointer;border-radius:4px;padding:1px 3px;transition:background 0.15s;',
           contenteditable: 'false',
-          title: '点击切换类型',
+          title: this.options.i18n.switchTypeTitle,
         },
         style.icon,
       ],
@@ -190,7 +218,8 @@ export const Callout = TiptapNode.create({
   addNodeView() {
     return ({ node, editor }) => {
       const type: CalloutType = node.attrs.calloutType || 'info'
-      const style = CALLOUT_STYLES[type]
+      const styles = buildCalloutStyles(this.options.i18n)
+      const style = styles[type]
 
       const dom = document.createElement('div')
       dom.className = 'be-callout'
@@ -201,7 +230,7 @@ export const Callout = TiptapNode.create({
       iconEl.className = 'be-callout-icon'
       iconEl.setAttribute('data-callout-switcher', 'true')
       iconEl.setAttribute('contenteditable', 'false')
-      iconEl.title = '点击切换类型'
+      iconEl.title = this.options.i18n.switchTypeTitle
       iconEl.style.cssText =
         'flex-shrink:0;font-size:16px;margin-top:1px;cursor:pointer;border-radius:4px;padding:1px 3px;transition:background 0.15s;user-select:none;'
       iconEl.textContent = style.icon
@@ -213,7 +242,7 @@ export const Callout = TiptapNode.create({
         iconEl.style.background = 'transparent'
       })
 
-      attachTypeSwitcher(iconEl, () => editor)
+      attachTypeSwitcher(iconEl, styles, this.options.i18n.switchTypeTitle, () => editor)
 
       const contentEl = document.createElement('div')
       contentEl.className = 'be-callout-content'
@@ -228,7 +257,7 @@ export const Callout = TiptapNode.create({
         update(updatedNode) {
           if (updatedNode.type.name !== 'callout') return false
           const newType: CalloutType = updatedNode.attrs.calloutType || 'info'
-          const newStyle = CALLOUT_STYLES[newType]
+          const newStyle = styles[newType]
           dom.setAttribute('data-callout-type', newType)
           dom.style.background = newStyle.bg
           dom.style.borderColor = newStyle.border
