@@ -47,7 +47,7 @@ function createEditor() {
 
   const core = new EditorCore({
     element: document.createElement("div"),
-    content: buildEditorContent(scene.value.title),
+    content: scene.value.initialContent || buildEditorContent(scene.value.title),
     collaboration: {
       enabled: true,
       roomName: `${room}-${sceneKey.value}`,

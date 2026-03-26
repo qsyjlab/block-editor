@@ -7,6 +7,7 @@ export const SCENE_KEYS = [
   "minimal",
   "custom-layout-a",
   "custom-layout-b",
+  "regression",
 ] as const;
 
 export type SceneKey = (typeof SCENE_KEYS)[number];
@@ -24,4 +25,3 @@ export const router = createRouter({
     },
   ],
 });
-
