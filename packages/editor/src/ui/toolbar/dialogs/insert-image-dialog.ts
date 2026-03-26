@@ -12,7 +12,11 @@ export class InsertImageDialog {
   private saveBtn: HTMLButtonElement;
   private i18n: InsertImageDialogI18n;
 
-  constructor(onSave: (url: string) => void, i18n?: InsertImageDialogI18n) {
+  constructor(
+    onSave: (url: string) => void,
+    i18n?: InsertImageDialogI18n,
+    host?: HTMLElement | null,
+  ) {
     this.onSave = onSave;
     this.i18n = i18n || {
       title: '插入图片',
@@ -46,7 +50,9 @@ export class InsertImageDialog {
     urlTabContent.appendChild(urlInput);
 
     this.previewContainer = document.createElement('div');
-    this.previewContainer.className = 'be-mt-4 be-p-4 be-bg-gray-50 be-rounded-xl';
+    this.previewContainer.className = 'be-mt-4 be-p-4 be-rounded-xl';
+    this.previewContainer.style.background = 'var(--surface-soft)';
+    this.previewContainer.style.border = '1px solid var(--border-color)';
     this.previewContainer.style.display = 'none';
     urlTabContent.appendChild(this.previewContainer);
 
@@ -79,32 +85,20 @@ export class InsertImageDialog {
     content.appendChild(tabs.getElement());
 
     const footer = document.createElement('div');
-    footer.className = 'be-flex be-justify-end be-gap-3 be-mt-6 be-pt-4 be-border-t be-border-gray-100 be-shrink-0';
+    footer.className = 'be-dialog-footer be-dialog-footer-row';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = this.i18n.cancel;
-    cancelBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-gray-600 be-bg-transparent be-border be-border-gray-200 be-rounded-xl be-cursor-pointer be-transition-all';
+    cancelBtn.className = 'be-dialog-btn be-dialog-btn--secondary';
     cancelBtn.style.fontFamily = 'inherit';
-    cancelBtn.addEventListener('mouseenter', () => {
-      cancelBtn.style.background = '#f9fafb';
-    });
-    cancelBtn.addEventListener('mouseleave', () => {
-      cancelBtn.style.background = '';
-    });
     cancelBtn.onclick = () => this.dialog.close();
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.textContent = this.i18n.insert;
-    this.saveBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-white be-rounded-xl be-cursor-pointer be-transition-all be-border-0';
+    this.saveBtn.className = 'be-dialog-btn be-dialog-btn--primary';
     this.saveBtn.style.fontFamily = 'inherit';
     this.saveBtn.disabled = true;
     this.updateSaveButton();
-    this.saveBtn.addEventListener('mouseenter', () => {
-      if (!this.saveBtn.disabled) this.saveBtn.style.boxShadow = '0 4px 12px rgba(139,92,246,0.4)';
-    });
-    this.saveBtn.addEventListener('mouseleave', () => {
-      if (!this.saveBtn.disabled) this.saveBtn.style.boxShadow = '0 1px 3px rgba(139,92,246,0.3)';
-    });
     this.saveBtn.onclick = () => {
       if (this.imageUrl) {
         this.onSave(this.imageUrl);
@@ -120,7 +114,8 @@ export class InsertImageDialog {
       subtitle: this.i18n.subtitle,
       closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: 'image',
-      iconBgClass: 'be-bg-gradient-to-br be-from-purple-500 be-to-pink-500',
+      iconBgClass: 'be-dialog-icon--primary',
+      host,
       onClose: () => {},
       width: '520px',
     });
@@ -136,7 +131,7 @@ export class InsertImageDialog {
     }
     this.previewContainer.style.display = 'block';
     this.previewContainer.innerHTML = `
-      <p class="be-text-xs be-text-gray-500 be-mb-2 be-m-0">${this.i18n.preview}</p>
+      <p class="be-text-xs be-mb-2 be-m-0" style="color:var(--text-muted)">${this.i18n.preview}</p>
       <img src="${url}" class="be-max-h-48 be-rounded-lg be-mx-auto be-block be-max-w-full" />
     `;
     const img = this.previewContainer.querySelector('img');
@@ -152,15 +147,9 @@ export class InsertImageDialog {
     const disabled = !this.imageUrl.trim();
     this.saveBtn.disabled = disabled;
     if (disabled) {
-      this.saveBtn.style.background = '#e5e7eb';
-      this.saveBtn.style.color = '#9ca3af';
-      this.saveBtn.style.cursor = 'not-allowed';
-      this.saveBtn.style.boxShadow = 'none';
+      this.saveBtn.classList.add('is-disabled');
     } else {
-      this.saveBtn.style.background = 'linear-gradient(135deg,#8b5cf6,#ec4899)';
-      this.saveBtn.style.color = 'white';
-      this.saveBtn.style.cursor = 'pointer';
-      this.saveBtn.style.boxShadow = '0 1px 3px rgba(139,92,246,0.3)';
+      this.saveBtn.classList.remove('is-disabled');
     }
   }
 

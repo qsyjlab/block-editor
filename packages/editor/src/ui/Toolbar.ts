@@ -37,6 +37,18 @@ export class Toolbar {
   private readonly moreMenuOwnerId: string;
   private readonly i18n: EditorI18n;
   private readonly groups: ToolbarItemType[][];
+  private readonly overlayHost: HTMLElement;
+  private readonly handleDocumentPointerDown = (event: Event) => {
+    const target = event.target as Node | null;
+    if (!target || !this.isMoreMenuOpen) return;
+    if (this.moreBtn.contains(target) || this.moreMenu.contains(target)) return;
+    this.closeMoreMenu();
+  };
+  private readonly handleDocumentKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && this.isMoreMenuOpen) {
+      this.closeMoreMenu();
+    }
+  };
 
   constructor(
     container: HTMLElement,
@@ -49,10 +61,18 @@ export class Toolbar {
     this.i18n = resolveEditorI18n(i18nInput || this.editorCore.i18n);
     this.tooltipManager = new TooltipManager(); // Initialize TooltipManager
     this.moreMenuOwnerId = `be-more-${++Toolbar.instanceCount}`;
+    this.overlayHost = this.resolveOverlayHost();
 
     this.groups = resolveToolbarGroups(this.i18n, config);
 
     this.render();
+  }
+
+  private resolveOverlayHost(): HTMLElement {
+    const host =
+      (this.container.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (this.container.closest('[data-be-ui-root="true"]') as HTMLElement | null);
+    return host || document.body;
   }
 
   private render() {
@@ -99,18 +119,24 @@ export class Toolbar {
     this.moreBtn.style.display = "none"; // Hidden by default
     this.moreBtn.dataset.tooltip = this.i18n.toolbar.more;
 
-    // Hover logic
-    this.moreBtn.addEventListener("mouseenter", () => this.openMoreMenu());
-    this.moreBtn.addEventListener("mouseleave", () =>
-      this.scheduleCloseMoreMenu(),
+    this.moreBtn.addEventListener("mousedown", (event) =>
+      event.stopPropagation(),
     );
+    this.moreBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (this.isMoreMenuOpen) {
+        this.closeMoreMenu();
+      } else {
+        this.openMoreMenu();
+      }
+    });
 
     this.container.appendChild(this.moreBtn);
   }
 
   private createMoreMenu() {
     this.moreMenu = document.createElement("div");
-    this.moreMenu.className = "toolbar-dropdown-menu"; // Reuse dropdown styles
+    this.moreMenu.className = "toolbar-dropdown-menu toolbar-more-menu"; // Reuse dropdown styles
     this.moreMenu.dataset.beMoreId = this.moreMenuOwnerId;
     this.moreMenu.style.display = "none";
     this.moreMenu.style.flexDirection = "row"; // Horizontal layout
@@ -137,7 +163,13 @@ export class Toolbar {
 
     this.isMoreMenuOpen = true;
     this.moreBtn.classList.add("active");
-    document.body.appendChild(this.moreMenu);
+    this.moreBtn.removeAttribute("data-tooltip");
+    document.addEventListener("mousedown", this.handleDocumentPointerDown);
+    document.addEventListener("touchstart", this.handleDocumentPointerDown, {
+      passive: true,
+    });
+    document.addEventListener("keydown", this.handleDocumentKeydown);
+    this.overlayHost.appendChild(this.moreMenu);
     this.moreMenu.style.display = "flex";
 
     // Update maxWidth dynamically based on container width
@@ -213,14 +245,18 @@ export class Toolbar {
   private closeMoreMenu() {
     this.isMoreMenuOpen = false;
     this.moreBtn.classList.remove("active");
+    this.moreBtn.dataset.tooltip = this.i18n.toolbar.more;
+    document.removeEventListener("mousedown", this.handleDocumentPointerDown);
+    document.removeEventListener("touchstart", this.handleDocumentPointerDown);
+    document.removeEventListener("keydown", this.handleDocumentKeydown);
 
     if (this.cleanupFloating) {
       this.cleanupFloating();
       this.cleanupFloating = null;
     }
 
-    if (this.moreMenu.parentElement === document.body) {
-      document.body.removeChild(this.moreMenu);
+    if (this.moreMenu.parentElement === this.overlayHost) {
+      this.overlayHost.removeChild(this.moreMenu);
     }
     this.moreMenu.style.display = "none";
   }
@@ -281,12 +317,27 @@ export class Toolbar {
     }
 
     if (overflowIndex !== -1) {
+      let startIndex = overflowIndex;
+      while (
+        startIndex < this.items.length &&
+        this.items[startIndex].classList.contains("divider")
+      ) {
+        startIndex += 1;
+      }
+
+      if (startIndex >= this.items.length) {
+        if (this.isMoreMenuOpen) this.closeMoreMenu();
+        this.moreBtn.style.display = "none";
+        return;
+      }
+
       this.moreBtn.style.display = "flex";
       // Move overflowing items to moreMenu
-      for (let i = overflowIndex; i < this.items.length; i++) {
+      for (let i = startIndex; i < this.items.length; i++) {
         this.moreMenu.appendChild(this.items[i]);
       }
     } else {
+      if (this.isMoreMenuOpen) this.closeMoreMenu();
       this.moreBtn.style.display = "none";
     }
   }

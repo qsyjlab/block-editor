@@ -9,13 +9,15 @@ import { ToolbarItemType } from '../toolbar/ToolbarRegistry'
 export class TableBubbleMenu {
   private element: HTMLElement
   private editorCore: EditorCore
+  private overlayContainer?: HTMLElement
   private isOpen = false
   private cleanupFloating: (() => void) | null = null
   private currentTable: HTMLElement | null = null
   private rafId: number | null = null
 
-  constructor(editorCore: EditorCore) {
+  constructor(editorCore: EditorCore, overlayContainer?: HTMLElement) {
     this.editorCore = editorCore
+    this.overlayContainer = overlayContainer
     this.element = this.render()
 
     this.getOverlayContainer().appendChild(this.element)
@@ -35,6 +37,7 @@ export class TableBubbleMenu {
   }
 
   private getOverlayContainer(): HTMLElement {
+    if (this.overlayContainer) return this.overlayContainer
     const editorRoot = this.editorCore.editor.options.element as HTMLElement
     const container =
       (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||

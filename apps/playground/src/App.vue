@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
-import { SCENE_KEYS, type SceneKey } from "./router";
-import { SCENE_CONFIGS } from "./scenes/config";
+import { SCENE_NAV_ITEMS } from "./router";
 
 const route = useRoute();
 const theme = computed(() => {
@@ -12,10 +11,10 @@ const theme = computed(() => {
 
 const links = computed(() => {
   const query = route.query;
-  return (SCENE_KEYS as readonly SceneKey[]).map((key) => ({
-    key,
-    title: SCENE_CONFIGS[key].title,
-    to: { path: `/scenes/${key}`, query },
+  return SCENE_NAV_ITEMS.map((item) => ({
+    key: item.key,
+    title: item.title,
+    to: { path: item.path, query },
   }));
 });
 

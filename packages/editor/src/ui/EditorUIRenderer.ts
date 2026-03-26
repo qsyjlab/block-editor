@@ -13,6 +13,7 @@ import type {
   EditorUIModuleDefinition,
   EditorUIModuleId,
   EditorUIModuleInstance,
+  EditorUIRegion,
 } from "./modules/contracts";
 
 export type ToolbarMode = "top" | "inline";
@@ -63,6 +64,12 @@ export class EditorUIRenderer {
   private readonly mountedModules: Partial<
     Record<EditorUIModuleId, EditorUIModuleInstance>
   > = {};
+  private readonly moduleMountPoints: Partial<
+    Record<EditorUIModuleId, HTMLElement>
+  > = {};
+  private commentPanelHost: HTMLElement | null = null;
+  private commentPanelRegion: EditorUIRegion = "comment";
+  private commentPanelFloating = false;
 
   constructor(
     editorCore: EditorCore,
@@ -98,8 +105,6 @@ export class EditorUIRenderer {
     this.applyLayoutDataAttributes();
     this.moduleDefinitions = this.buildModuleDefinitions(this.options.modules);
 
-    this.mountModules();
-
     this.editorCore.events.on("toggleCommentPanel", () =>
       this.toggleCommentPanel(),
     );
@@ -111,6 +116,7 @@ export class EditorUIRenderer {
     this.tiptapElement.dataset.beToolbarMode =
       this.options.toolbarMode || "top";
     this.slots.editorContainer.appendChild(this.tiptapElement);
+    this.mountModules();
 
     window.addEventListener("hashchange", this.handleHashChange);
     this.tiptapElement.addEventListener("click", this.handleEditorLinkClick);
@@ -124,37 +130,69 @@ export class EditorUIRenderer {
   }
 
   public toggleCommentPanel() {
-    if (!this.slots.commentContainer) return;
+    if (!this.commentPanelHost) return;
     this.commentPanelVisible = !this.commentPanelVisible;
     this.applyCommentPanelVisibility();
   }
 
   public openCommentPanel() {
-    if (!this.slots.commentContainer) return;
+    if (!this.commentPanelHost) return;
     this.commentPanelVisible = true;
     this.applyCommentPanelVisibility();
   }
 
   private applyCommentPanelVisibility() {
-    if (!this.slots.commentContainer) return;
-    if (this.options.layoutSchema?.regions?.comment?.visible === false) {
-      this.slots.commentContainer.style.display = "none";
+    if (!this.commentPanelHost) return;
+    if (
+      this.options.layoutSchema?.regions?.[this.commentPanelRegion]?.visible ===
+      false
+    ) {
+      this.commentPanelHost.style.display = "none";
       return;
     }
-    this.slots.commentContainer.style.display = this.commentPanelVisible
+    this.commentPanelHost.style.display = this.commentPanelVisible
       ? "block"
       : "none";
+  }
+
+  private configureFloatingCommentHost(host: HTMLElement) {
+    const overlayRoot = this.slots.overlayContainer || this.container;
+    const rootPosition = window.getComputedStyle(overlayRoot).position;
+    if (rootPosition === "static") {
+      overlayRoot.style.position = "relative";
+    }
+
+    host.dataset.beCommentHostFloating = "true";
+    host.style.position = "absolute";
+    host.style.top = "0";
+    host.style.right = "0";
+    host.style.bottom = "0";
+    host.style.width = "320px";
+    host.style.maxWidth = "min(86vw, 360px)";
+    host.style.zIndex = "20";
+    host.style.pointerEvents = "auto";
   }
 
   private applyLayoutDataAttributes() {
     this.container.dataset.beUiRoot = "true";
     this.slots.editorContainer.dataset.beEditorContainer = "true";
+    this.slots.editorContainer.dataset.beRegion = "editor";
     if (this.slots.scrollContainer) {
       this.slots.scrollContainer.dataset.beScrollContainer = "true";
+    }
+    if (this.slots.toolbarContainer) {
+      this.slots.toolbarContainer.dataset.beRegion = "toolbar";
+    }
+    if (this.slots.outlineContainer) {
+      this.slots.outlineContainer.dataset.beRegion = "outline";
+    }
+    if (this.slots.commentContainer) {
+      this.slots.commentContainer.dataset.beRegion = "comment";
     }
 
     const overlayHost = this.slots.overlayContainer || this.container;
     overlayHost.dataset.beOverlayContainer = "true";
+    overlayHost.dataset.beRegion = "overlay";
   }
 
   private applyTheme() {
@@ -194,6 +232,56 @@ export class EditorUIRenderer {
     applyRegion(this.slots.outlineContainer, regions.outline);
     applyRegion(this.slots.commentContainer, regions.comment);
     applyRegion(this.slots.overlayContainer, regions.overlay);
+  }
+
+  private resolveRegionContainer(region: EditorUIRegion): HTMLElement | null {
+    switch (region) {
+      case "toolbar":
+        return this.slots.toolbarContainer || this.container;
+      case "editor":
+        return this.slots.editorContainer || this.container;
+      case "outline":
+        return this.slots.outlineContainer || this.container;
+      case "comment":
+        return this.slots.commentContainer || this.container;
+      case "overlay":
+        return this.slots.overlayContainer || this.container;
+      default:
+        return this.container;
+    }
+  }
+
+  private resolveModuleRegion(
+    id: EditorUIModuleId,
+    fallbackRegion: EditorUIRegion,
+  ): EditorUIRegion {
+    return this.options.layoutSchema?.modules?.[id]?.region || fallbackRegion;
+  }
+
+  private createModuleMountPoint(
+    id: EditorUIModuleId,
+    region: EditorUIRegion,
+  ): HTMLElement | null {
+    const host = this.resolveRegionContainer(region);
+    if (!host) return null;
+
+    const mountPoint = document.createElement("div");
+    mountPoint.dataset.beModuleId = id;
+    mountPoint.dataset.beModuleRegion = region;
+    host.appendChild(mountPoint);
+    this.moduleMountPoints[id] = mountPoint;
+    return mountPoint;
+  }
+
+  private configureSelectionToolbarModule(
+    enabled: boolean,
+    region: EditorUIRegion,
+  ) {
+    if (!this.tiptapElement) return;
+    this.tiptapElement.dataset.beSelectionToolbarEnabled = enabled
+      ? "true"
+      : "false";
+    this.tiptapElement.dataset.beSelectionToolbarRegion = region;
   }
 
   private createDefaultLayout(): EditorUILayoutSlots {
@@ -354,8 +442,7 @@ export class EditorUIRenderer {
     if (this.linkPreviewEl) return this.linkPreviewEl;
 
     const el = document.createElement("div");
-    el.style.cssText =
-      "position:fixed;z-index:10020;max-width:320px;padding:8px 10px;background:#111827;color:#fff;border-radius:8px;font-size:12px;line-height:1.5;box-shadow:0 10px 24px rgba(0,0,0,0.22);pointer-events:none;display:none;";
+    el.className = "be-link-preview-tooltip";
     const host = this.slots.overlayContainer || this.container;
     host.appendChild(el);
     this.linkPreviewEl = el;
@@ -414,41 +501,75 @@ export class EditorUIRenderer {
       toolbar: {
         id: "toolbar",
         defaultRegion: "toolbar",
-        mount: ({ slots, options }) => {
-          if (!slots.toolbarContainer || options.toolbarMode !== "top") return;
-          this.renderToolbar(slots.toolbarContainer);
+        mount: ({ options, regionContainer }) => {
+          if (!regionContainer || options.toolbarMode !== "top") return;
+          this.renderToolbar(regionContainer);
+        },
+      },
+      selectionToolbar: {
+        id: "selectionToolbar",
+        defaultRegion: "overlay",
+        mount: ({ region }) => {
+          this.configureSelectionToolbarModule(true, region);
         },
       },
       outline: {
         id: "outline",
         defaultRegion: "outline",
-        mount: ({ slots }) => {
-          if (!slots.outlineContainer) return;
-          this.renderOutline(slots.outlineContainer);
+        mount: ({ regionContainer }) => {
+          if (!regionContainer) return;
+          this.renderOutline(regionContainer);
         },
       },
       commentPanel: {
         id: "commentPanel",
         defaultRegion: "comment",
-        mount: ({ slots }) => {
-          if (!slots.commentContainer) return;
-          this.renderCommentPanel(slots.commentContainer);
+        mount: ({ regionContainer, region }) => {
+          if (!regionContainer) return;
+          this.commentPanelRegion = region;
+          const hasDedicatedCommentSlot = Boolean(
+            this.slots.commentContainer &&
+              regionContainer === this.slots.commentContainer,
+          );
+          this.commentPanelFloating =
+            region === "comment" && !hasDedicatedCommentSlot;
+          if (this.commentPanelFloating) {
+            this.configureFloatingCommentHost(regionContainer);
+          } else {
+            delete regionContainer.dataset.beCommentHostFloating;
+            regionContainer.style.position = "";
+            regionContainer.style.top = "";
+            regionContainer.style.right = "";
+            regionContainer.style.bottom = "";
+            regionContainer.style.width = "";
+            regionContainer.style.maxWidth = "";
+            regionContainer.style.zIndex = "";
+            regionContainer.style.pointerEvents = "";
+          }
+          this.commentPanelHost = regionContainer;
+          this.renderCommentPanel(regionContainer);
           this.applyCommentPanelVisibility();
         },
       },
       tableBubbleMenu: {
         id: "tableBubbleMenu",
         defaultRegion: "overlay",
-        mount: () => {
-          const instance = new TableBubbleMenu(this.editorCore);
+        mount: ({ regionContainer }) => {
+          const instance = new TableBubbleMenu(
+            this.editorCore,
+            regionContainer || undefined,
+          );
           return { unmount: () => instance.destroy() };
         },
       },
       blockMultiSelectBar: {
         id: "blockMultiSelectBar",
         defaultRegion: "overlay",
-        mount: () => {
-          const instance = new BlockMultiSelectBar(this.editorCore);
+        mount: ({ regionContainer }) => {
+          const instance = new BlockMultiSelectBar(
+            this.editorCore,
+            regionContainer || undefined,
+          );
           return { unmount: () => instance.destroy() };
         },
       },
@@ -463,6 +584,7 @@ export class EditorUIRenderer {
   private mountModules() {
     const moduleOrder: EditorUIModuleId[] = [
       "toolbar",
+      "selectionToolbar",
       "outline",
       "commentPanel",
       "tableBubbleMenu",
@@ -471,12 +593,24 @@ export class EditorUIRenderer {
 
     moduleOrder.forEach((id) => {
       const cfg = this.options.layoutSchema?.modules?.[id];
-      if (cfg?.enabled === false) return;
-
       const def = this.moduleDefinitions[id];
+      const resolvedRegion = this.resolveModuleRegion(id, def.defaultRegion);
+      if (cfg?.enabled === false) {
+        if (id === "selectionToolbar") {
+          this.configureSelectionToolbarModule(false, resolvedRegion);
+        }
+        return;
+      }
+      const regionContainer =
+        id === "selectionToolbar"
+          ? this.resolveRegionContainer(resolvedRegion)
+          : this.createModuleMountPoint(id, resolvedRegion) ||
+            this.resolveRegionContainer(resolvedRegion);
       const instance =
         def.mount({
           id,
+          region: resolvedRegion,
+          regionContainer,
           editorCore: this.editorCore,
           renderer: this,
           slots: this.slots,

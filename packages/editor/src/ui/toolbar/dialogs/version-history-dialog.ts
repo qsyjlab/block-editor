@@ -88,24 +88,24 @@ export class VersionHistoryDialog {
     this.listRoot.className = "be-space-y-2";
 
     this.detailRoot = document.createElement("div");
-    this.detailRoot.className =
-      "be-mt-3 be-border be-border-gray-200 be-rounded-xl be-overflow-hidden";
+    this.detailRoot.className = "be-mt-3 be-rounded-xl be-overflow-hidden";
+    this.detailRoot.style.border = "1px solid var(--border-color)";
     this.detailRoot.style.display = "none";
 
     const content = document.createElement("div");
     content.className = "be-space-y-4";
 
     const tips = document.createElement("div");
-    tips.className = "be-text-xs be-text-gray-500";
+    tips.className = "be-text-xs";
+    tips.style.color = "var(--text-muted)";
     tips.textContent = this.i18n.tips;
     content.appendChild(tips);
 
     const createBtn = document.createElement("button");
     createBtn.textContent = this.i18n.saveSnapshot;
     createBtn.className =
-      "be-px-4 be-py-2 be-text-sm be-font-medium be-text-white be-rounded-lg be-border-0 be-cursor-pointer";
-    createBtn.style.cssText =
-      "font-family:inherit;background:linear-gradient(135deg,#3b82f6,#2563eb);";
+      "be-dialog-btn be-dialog-btn--primary";
+    createBtn.style.cssText = "font-family:inherit;padding:8px 16px;border-radius:10px;";
     createBtn.onclick = () => {
       this.editorCore.versionHistory.createManualSnapshot(this.i18n.manualSnapshotLabel);
       this.renderList();
@@ -120,7 +120,10 @@ export class VersionHistoryDialog {
       subtitle: this.i18n.subtitle,
       closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: "fileText",
-      iconBgClass: "be-bg-gradient-to-br be-from-indigo-500 be-to-violet-600",
+      iconBgClass: "be-dialog-icon--primary",
+      host: (this.editorCore.editor.options.element as HTMLElement).closest(
+        '[data-be-ui-root="true"]',
+      ) as HTMLElement | null,
       onClose: () => {},
       width: "860px",
     });
@@ -135,7 +138,8 @@ export class VersionHistoryDialog {
 
     if (snapshots.length === 0) {
       const empty = document.createElement("div");
-      empty.className = "be-text-sm be-text-gray-500 be-py-3";
+      empty.className = "be-text-sm be-py-3";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.noSnapshots;
       this.listRoot.appendChild(empty);
       this.detailRoot.innerHTML = "";
@@ -165,10 +169,10 @@ export class VersionHistoryDialog {
       const previousSnapshotId = previousSnapshot?.id;
 
       const row = document.createElement("div");
-      row.className =
-        "be-border be-border-gray-200 be-rounded-xl be-overflow-hidden";
+      row.className = "be-rounded-xl be-overflow-hidden";
+      row.style.border = "1px solid var(--border-color)";
       if (snapshot.id === this.activeSnapshotId) {
-        row.style.borderColor = "#93c5fd";
+        row.style.borderColor = "color-mix(in srgb, var(--primary-color) 45%, var(--border-color))";
       }
 
       const header = document.createElement("div");
@@ -178,7 +182,7 @@ export class VersionHistoryDialog {
       header.style.gap = "12px";
       header.style.padding = "10px 12px";
       header.style.cursor = "pointer";
-      header.style.background = expanded ? "#f6f8fa" : "#fff";
+      header.style.background = expanded ? "var(--surface-soft)" : "var(--paper-bg)";
       header.addEventListener("click", () => {
         this.activeSnapshotId = snapshot.id;
         this.expandedSnapshotId = expanded ? null : snapshot.id;
@@ -192,13 +196,15 @@ export class VersionHistoryDialog {
       left.style.flexDirection = "column";
 
       const title = document.createElement("div");
-      title.className = "be-text-sm be-font-medium be-text-gray-900";
+      title.className = "be-text-sm be-font-medium";
+      title.style.color = "var(--text-color)";
       title.textContent = `${expanded ? "▾" : "▸"} ${snapshot.label} · ${formatTime(snapshot.createdAt, this.locale)}`;
 
       const stats = this.getDiffStats(snapshot.id, previousSnapshotId);
 
       const meta = document.createElement("div");
-      meta.className = "be-text-xs be-text-gray-500 be-mt-1 be-truncate";
+      meta.className = "be-text-xs be-mt-1 be-truncate";
+      meta.style.color = "var(--text-muted)";
       meta.textContent = `${sourceLabel(snapshot.source, this.i18n)} · ${snapshot.authorName} · +${stats.added}/-${stats.deleted}/~${stats.modified} · ${snapshot.excerpt}`;
 
       left.appendChild(title);
@@ -210,8 +216,9 @@ export class VersionHistoryDialog {
       const detailBtn = document.createElement("button");
       detailBtn.type = "button";
       detailBtn.textContent = expanded ? this.i18n.collapse : this.i18n.viewChanges;
-      detailBtn.className =
-        "be-px-3 be-py-1.5 be-text-xs be-font-medium be-rounded-md be-border be-border-blue-200 be-bg-blue-50 be-cursor-pointer";
+      detailBtn.className = "be-dialog-btn be-dialog-btn--secondary";
+      detailBtn.style.cssText =
+        "padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;";
       detailBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.activeSnapshotId = snapshot.id;
@@ -223,8 +230,9 @@ export class VersionHistoryDialog {
       const restoreBtn = document.createElement("button");
       restoreBtn.type = "button";
       restoreBtn.textContent = this.i18n.restoreToThis;
-      restoreBtn.className =
-        "be-px-3 be-py-1.5 be-text-xs be-font-medium be-rounded-md be-border be-border-gray-200 be-bg-white be-cursor-pointer";
+      restoreBtn.className = "be-dialog-btn be-dialog-btn--secondary";
+      restoreBtn.style.cssText =
+        "padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;";
       restoreBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const ok = window.confirm(this.i18n.restoreConfirm);
@@ -241,15 +249,15 @@ export class VersionHistoryDialog {
 
       if (expanded) {
         const previewWrap = document.createElement("div");
-        previewWrap.style.borderTop = "1px solid #d0d7de";
-        previewWrap.style.background = "#fff";
+        previewWrap.style.borderTop = "1px solid var(--border-color)";
+        previewWrap.style.background = "var(--paper-bg)";
 
         const previewHeader = document.createElement("div");
         previewHeader.style.padding = "6px 10px";
         previewHeader.style.fontSize = "12px";
-        previewHeader.style.color = "#57606a";
-        previewHeader.style.background = "#f6f8fa";
-        previewHeader.style.borderBottom = "1px solid #d0d7de";
+        previewHeader.style.color = "var(--text-secondary)";
+        previewHeader.style.background = "var(--surface-soft)";
+        previewHeader.style.borderBottom = "1px solid var(--border-color)";
         const previousLabel = previousSnapshot?.label || this.i18n.blankBase;
         previewHeader.textContent = this.i18n.restoreCompareTip(previousLabel);
         previewWrap.appendChild(previewHeader);
@@ -259,7 +267,7 @@ export class VersionHistoryDialog {
           const empty = document.createElement("div");
           empty.style.padding = "10px";
           empty.style.fontSize = "12px";
-          empty.style.color = "#6b7280";
+          empty.style.color = "var(--text-muted)";
           empty.textContent = this.i18n.noChanges;
           previewWrap.appendChild(empty);
         } else {
@@ -271,11 +279,11 @@ export class VersionHistoryDialog {
             lineRow.style.fontSize = "12px";
             lineRow.style.fontFamily =
               "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-            lineRow.style.borderBottom = "1px solid #f3f4f6";
+            lineRow.style.borderBottom = "1px solid color-mix(in srgb, var(--border-color) 70%, transparent)";
 
             const oldNo = document.createElement("div");
             oldNo.style.padding = "3px 8px";
-            oldNo.style.color = "#8c959f";
+            oldNo.style.color = "var(--text-muted)";
             oldNo.textContent =
               line.oldLineNumber === null ? "" : String(line.oldLineNumber);
 
@@ -284,13 +292,13 @@ export class VersionHistoryDialog {
             oldText.style.whiteSpace = "nowrap";
             oldText.style.overflow = "hidden";
             oldText.style.textOverflow = "ellipsis";
-            oldText.style.color = "#24292f";
-            oldText.style.borderRight = "1px solid #e5e7eb";
+            oldText.style.color = "var(--text-color)";
+            oldText.style.borderRight = "1px solid var(--border-color)";
             oldText.textContent = line.type === "added" ? "" : line.oldText;
 
             const newNo = document.createElement("div");
             newNo.style.padding = "3px 8px";
-            newNo.style.color = "#8c959f";
+            newNo.style.color = "var(--text-muted)";
             newNo.textContent =
               line.newLineNumber === null ? "" : String(line.newLineNumber);
 
@@ -299,20 +307,20 @@ export class VersionHistoryDialog {
             newText.style.whiteSpace = "nowrap";
             newText.style.overflow = "hidden";
             newText.style.textOverflow = "ellipsis";
-            newText.style.color = "#24292f";
+            newText.style.color = "var(--text-color)";
             newText.textContent = line.type === "deleted" ? "" : line.newText;
 
             if (line.type === "deleted") {
-              oldNo.style.background = "#ffebe9";
-              oldText.style.background = "#ffebe9";
+              oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+              oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
             } else if (line.type === "added") {
-              newNo.style.background = "#dafbe1";
-              newText.style.background = "#dafbe1";
+              newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+              newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
             } else {
-              oldNo.style.background = "#ffebe9";
-              oldText.style.background = "#ffebe9";
-              newNo.style.background = "#dafbe1";
-              newText.style.background = "#dafbe1";
+              oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+              oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+              newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+              newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
             }
 
             lineRow.appendChild(oldNo);
@@ -324,13 +332,14 @@ export class VersionHistoryDialog {
 
           const footer = document.createElement("div");
           footer.style.padding = "8px 10px";
-          footer.style.background = "#fff";
+          footer.style.background = "var(--paper-bg)";
 
           const fullBtn = document.createElement("button");
           fullBtn.type = "button";
           fullBtn.textContent = this.i18n.fullDiff;
-          fullBtn.className =
-            "be-px-2.5 be-py-1 be-text-xs be-font-medium be-rounded-md be-border be-border-blue-200 be-bg-white be-cursor-pointer";
+          fullBtn.className = "be-dialog-btn be-dialog-btn--secondary";
+          fullBtn.style.cssText =
+            "padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;";
           fullBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             this.openFullDiffDialog(snapshot.id, previousSnapshotId);
@@ -351,7 +360,8 @@ export class VersionHistoryDialog {
 
     if (!this.activeSnapshotId) {
       const empty = document.createElement("div");
-      empty.className = "be-p-3 be-text-sm be-text-gray-500";
+      empty.className = "be-p-3 be-text-sm";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.selectSnapshotDetail;
       this.detailRoot.appendChild(empty);
       return;
@@ -362,7 +372,8 @@ export class VersionHistoryDialog {
     );
     if (!diff) {
       const empty = document.createElement("div");
-      empty.className = "be-p-3 be-text-sm be-text-gray-500";
+      empty.className = "be-p-3 be-text-sm";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.detailUnavailable;
       this.detailRoot.appendChild(empty);
       return;
@@ -374,10 +385,13 @@ export class VersionHistoryDialog {
 
     const header = document.createElement("div");
     header.className =
-      "be-flex be-items-center be-justify-between be-gap-2 be-px-3 be-py-2 be-bg-gray-50 be-border-b be-border-gray-200";
+      "be-flex be-items-center be-justify-between be-gap-2 be-px-3 be-py-2";
+    header.style.background = "var(--surface-soft)";
+    header.style.borderBottom = "1px solid var(--border-color)";
 
     const summary = document.createElement("div");
-    summary.className = "be-text-xs be-text-gray-600";
+    summary.className = "be-text-xs";
+    summary.style.color = "var(--text-secondary)";
     summary.textContent = this.buildDiffSummary(diff);
 
     const tabWrap = document.createElement("div");
@@ -427,9 +441,9 @@ export class VersionHistoryDialog {
     btn.textContent = label;
     btn.className =
       "be-px-2.5 be-py-1 be-text-xs be-rounded-md be-border be-cursor-pointer";
-    btn.style.borderColor = active ? "#93c5fd" : "#e5e7eb";
-    btn.style.background = active ? "#dbeafe" : "#fff";
-    btn.style.color = active ? "#1d4ed8" : "#4b5563";
+    btn.style.borderColor = active ? "color-mix(in srgb, var(--primary-color) 45%, var(--border-color))" : "var(--border-color)";
+    btn.style.background = active ? "color-mix(in srgb, var(--primary-color) 18%, var(--paper-bg))" : "var(--paper-bg)";
+    btn.style.color = active ? "var(--primary-color)" : "var(--text-secondary)";
     btn.onclick = onClick;
     return btn;
   }
@@ -445,7 +459,8 @@ export class VersionHistoryDialog {
   private renderDiffBody(root: HTMLElement, diff: SnapshotDiffResult) {
     if (diff.lines.length === 0) {
       const empty = document.createElement("div");
-      empty.className = "be-p-3 be-text-gray-500";
+      empty.className = "be-p-3";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.noDiff;
       root.appendChild(empty);
       return;
@@ -457,27 +472,29 @@ export class VersionHistoryDialog {
       row.style.gridTemplateColumns = "52px 52px 1fr 170px";
       row.style.gap = "8px";
       row.style.padding = "4px 8px";
-      row.style.borderBottom = "1px solid #f3f4f6";
+      row.style.borderBottom = "1px solid color-mix(in srgb, var(--border-color) 70%, transparent)";
       row.style.alignItems = "start";
 
-      if (line.type === "added") row.style.background = "#ecfdf5";
-      if (line.type === "deleted") row.style.background = "#fef2f2";
-      if (line.type === "modified") row.style.background = "#eff6ff";
+      if (line.type === "added") row.style.background = "color-mix(in srgb, #22c55e 12%, var(--paper-bg))";
+      if (line.type === "deleted") row.style.background = "color-mix(in srgb, var(--danger-color) 12%, var(--paper-bg))";
+      if (line.type === "modified")
+        row.style.background =
+          "color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg))";
 
       const oldNo = document.createElement("span");
-      oldNo.style.color = "#9ca3af";
+      oldNo.style.color = "var(--text-muted)";
       oldNo.textContent =
         line.oldLineNumber === null ? "" : String(line.oldLineNumber);
 
       const newNo = document.createElement("span");
-      newNo.style.color = "#9ca3af";
+      newNo.style.color = "var(--text-muted)";
       newNo.textContent =
         line.newLineNumber === null ? "" : String(line.newLineNumber);
 
       const text = document.createElement("div");
       text.style.whiteSpace = "pre-wrap";
       text.style.wordBreak = "break-word";
-      text.style.color = "#111827";
+      text.style.color = "var(--text-color)";
       text.textContent =
         line.type === "deleted"
           ? `- ${line.oldText}`
@@ -488,7 +505,7 @@ export class VersionHistoryDialog {
               : `  ${line.newText}`;
 
       const meta = document.createElement("span");
-      meta.style.color = "#6b7280";
+      meta.style.color = "var(--text-muted)";
       meta.style.fontSize = "11px";
       meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`;
 
@@ -503,7 +520,8 @@ export class VersionHistoryDialog {
   private renderBlameBody(root: HTMLElement, blame: SnapshotBlameLine[]) {
     if (blame.length === 0) {
       const empty = document.createElement("div");
-      empty.className = "be-p-3 be-text-gray-500";
+      empty.className = "be-p-3";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.noBlameLines;
       root.appendChild(empty);
       return;
@@ -515,22 +533,22 @@ export class VersionHistoryDialog {
       row.style.gridTemplateColumns = "48px 170px 1fr";
       row.style.gap = "8px";
       row.style.padding = "4px 8px";
-      row.style.borderBottom = "1px solid #f3f4f6";
+      row.style.borderBottom = "1px solid color-mix(in srgb, var(--border-color) 70%, transparent)";
       row.style.alignItems = "start";
 
       const no = document.createElement("span");
-      no.style.color = "#9ca3af";
+      no.style.color = "var(--text-muted)";
       no.textContent = String(line.lineNumber);
 
       const meta = document.createElement("span");
-      meta.style.color = "#6b7280";
+      meta.style.color = "var(--text-muted)";
       meta.style.fontSize = "11px";
       meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`;
 
       const text = document.createElement("div");
       text.style.whiteSpace = "pre-wrap";
       text.style.wordBreak = "break-word";
-      text.style.color = "#111827";
+      text.style.color = "var(--text-color)";
       text.textContent = line.text || " ";
 
       row.appendChild(no);
@@ -602,16 +620,16 @@ export class VersionHistoryDialog {
     const content = document.createElement("div");
     content.style.maxHeight = "70vh";
     content.style.overflow = "auto";
-    content.style.border = "1px solid #d0d7de";
+    content.style.border = "1px solid var(--border-color)";
     content.style.borderRadius = "8px";
-    content.style.background = "#fff";
+    content.style.background = "var(--paper-bg)";
 
     const head = document.createElement("div");
     head.style.padding = "6px 10px";
     head.style.fontSize = "12px";
-    head.style.color = "#57606a";
-    head.style.background = "#f6f8fa";
-    head.style.borderBottom = "1px solid #d0d7de";
+    head.style.color = "var(--text-secondary)";
+    head.style.background = "var(--surface-soft)";
+    head.style.borderBottom = "1px solid var(--border-color)";
     head.textContent = this.i18n.fullDiffHeader(
       diff.baseSnapshot?.label || this.i18n.blankBase,
     );
@@ -621,7 +639,7 @@ export class VersionHistoryDialog {
       const empty = document.createElement("div");
       empty.style.padding = "10px";
       empty.style.fontSize = "12px";
-      empty.style.color = "#6b7280";
+      empty.style.color = "var(--text-muted)";
       empty.textContent = this.i18n.noChanges;
       content.appendChild(empty);
     } else {
@@ -634,18 +652,18 @@ export class VersionHistoryDialog {
       const summary = document.createElement("div");
       summary.style.padding = "6px 10px";
       summary.style.fontSize = "12px";
-      summary.style.color = "#57606a";
-      summary.style.borderBottom = "1px solid #d0d7de";
+      summary.style.color = "var(--text-secondary)";
+      summary.style.borderBottom = "1px solid var(--border-color)";
       summary.textContent = `+${stats.added}  -${stats.deleted}  ~${stats.modified}`;
       content.appendChild(summary);
 
       const splitHead = document.createElement("div");
       splitHead.style.display = "grid";
       splitHead.style.gridTemplateColumns = "56px 1fr 56px 1fr";
-      splitHead.style.borderBottom = "1px solid #d0d7de";
-      splitHead.style.background = "#f6f8fa";
+      splitHead.style.borderBottom = "1px solid var(--border-color)";
+      splitHead.style.background = "var(--surface-soft)";
       splitHead.style.fontSize = "12px";
-      splitHead.style.color = "#57606a";
+      splitHead.style.color = "var(--text-secondary)";
 
       const oldHeadNo = document.createElement("div");
       oldHeadNo.style.padding = "6px 8px";
@@ -673,11 +691,11 @@ export class VersionHistoryDialog {
         row.style.fontSize = "12px";
         row.style.fontFamily =
           "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-        row.style.borderBottom = "1px solid #f3f4f6";
+        row.style.borderBottom = "1px solid color-mix(in srgb, var(--border-color) 70%, transparent)";
 
         const oldNo = document.createElement("div");
         oldNo.style.padding = "3px 8px";
-        oldNo.style.color = "#8c959f";
+        oldNo.style.color = "var(--text-muted)";
         oldNo.textContent =
           line.oldLineNumber === null ? "" : String(line.oldLineNumber);
 
@@ -685,13 +703,13 @@ export class VersionHistoryDialog {
         oldText.style.padding = "3px 8px";
         oldText.style.whiteSpace = "pre-wrap";
         oldText.style.wordBreak = "break-word";
-        oldText.style.color = "#24292f";
-        oldText.style.borderRight = "1px solid #e5e7eb";
+        oldText.style.color = "var(--text-color)";
+        oldText.style.borderRight = "1px solid var(--border-color)";
         oldText.textContent = line.type === "added" ? "" : line.oldText;
 
         const newNo = document.createElement("div");
         newNo.style.padding = "3px 8px";
-        newNo.style.color = "#8c959f";
+        newNo.style.color = "var(--text-muted)";
         newNo.textContent =
           line.newLineNumber === null ? "" : String(line.newLineNumber);
 
@@ -699,20 +717,20 @@ export class VersionHistoryDialog {
         newText.style.padding = "3px 8px";
         newText.style.whiteSpace = "pre-wrap";
         newText.style.wordBreak = "break-word";
-        newText.style.color = "#24292f";
+        newText.style.color = "var(--text-color)";
         newText.textContent = line.type === "deleted" ? "" : line.newText;
 
         if (line.type === "deleted") {
-          oldNo.style.background = "#ffebe9";
-          oldText.style.background = "#ffebe9";
+          oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+          oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
         } else if (line.type === "added") {
-          newNo.style.background = "#dafbe1";
-          newText.style.background = "#dafbe1";
+          newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+          newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
         } else {
-          oldNo.style.background = "#ffebe9";
-          oldText.style.background = "#ffebe9";
-          newNo.style.background = "#dafbe1";
-          newText.style.background = "#dafbe1";
+          oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+          oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
+          newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+          newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
         }
 
         row.appendChild(oldNo);
@@ -732,7 +750,10 @@ export class VersionHistoryDialog {
       ),
       closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: "fileText",
-      iconBgClass: "be-bg-gradient-to-br be-from-blue-500 be-to-indigo-600",
+      iconBgClass: "be-dialog-icon--primary",
+      host: (this.editorCore.editor.options.element as HTMLElement).closest(
+        '[data-be-ui-root="true"]',
+      ) as HTMLElement | null,
       onClose: () => {},
       width: "70%",
     });

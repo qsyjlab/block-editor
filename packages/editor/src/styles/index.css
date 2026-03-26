@@ -85,6 +85,7 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   background-color: #000;
   /* Removed border, just color block */
 }
@@ -290,32 +291,32 @@
   cursor: pointer;
   border-radius: 4px;
   font-size: 13px;
-  color: #262626;
+  color: var(--text-color);
   transition: all 0.2s;
 }
 
 .color-action-item:hover {
-  background: #f5f5f5;
+  background: var(--surface-soft);
 }
 
 .color-action-item.active {
-  background: #e6f7ff;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg));
   color: var(--color-blue-500);
 }
 
 .no-color-icon {
   width: 20px;
   height: 20px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: linear-gradient(
     to bottom right,
     transparent calc(50% - 1px),
-    #ff4d4f calc(50% - 1px),
-    #ff4d4f calc(50% + 1px),
+    var(--danger-color) calc(50% - 1px),
+    var(--danger-color) calc(50% + 1px),
     transparent calc(50% + 1px)
   );
-  background-color: white;
+  background-color: var(--paper-bg);
 }
 
 /* More Colors Trigger */
@@ -353,7 +354,7 @@ body {
 
 .sidebar {
   width: 240px;
-  background: #fff;
+  background: var(--paper-bg);
   border-right: 1px solid var(--border-color);
   padding: 16px;
   display: flex;
@@ -364,7 +365,7 @@ body {
 
 .sidebar h3 {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--text-muted);
   margin-top: 0;
   margin-bottom: 12px;
   text-transform: uppercase;
@@ -392,6 +393,9 @@ body {
   flex-wrap: nowrap;
   overflow-x: auto;
   flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 40%, transparent)
+    transparent;
 }
 
 .editor-scroll-area {
@@ -865,6 +869,27 @@ ul[data-type="taskList"] li > div {
   flex: 0 0 auto;
 }
 
+.be-selection-tooltip .icon-btn,
+.be-selection-tooltip .toolbar-dropdown-trigger,
+.be-selection-tooltip .color-picker-trigger {
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+.be-selection-tooltip .icon-btn:hover,
+.be-selection-tooltip .toolbar-dropdown-trigger:hover,
+.be-selection-tooltip .color-picker-trigger:hover {
+  color: var(--text-color);
+}
+
+[data-be-theme="dark"] .be-selection-tooltip .icon-btn,
+[data-be-theme="dark"] .be-selection-tooltip .toolbar-dropdown-trigger,
+[data-be-theme="dark"] .be-selection-tooltip .color-picker-trigger {
+  background: color-mix(in srgb, var(--surface-soft) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 68%, transparent);
+  color: var(--text-secondary);
+}
+
 .be-inline-toolbar {
   max-width: min(1200px, calc(100vw - 16px));
   padding: 6px;
@@ -946,10 +971,22 @@ ul[data-type="taskList"] li > div {
   border-right: none;
 }
 
+.toolbar .icon-btn,
+.toolbar .toolbar-dropdown-trigger,
+.toolbar .dropdown-item {
+  color: var(--text-secondary);
+}
+
+[data-be-theme="dark"] .toolbar .icon-btn,
+[data-be-theme="dark"] .toolbar .toolbar-dropdown-trigger {
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 65%, transparent);
+}
+
 /* UI Components */
 .icon-btn {
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
   border-radius: 8px; /* Rounded-lg */
   width: 32px; /* Slightly larger */
   height: 32px;
@@ -967,29 +1004,36 @@ ul[data-type="taskList"] li > div {
   margin: 0 2px;
 }
 
-.icon-btn i {
-  color: currentColor;
-  width: 18px; /* Slightly larger icons */
+.icon-btn svg,
+.toolbar-dropdown-trigger svg,
+.dropdown-item svg {
+  width: 18px;
   height: 18px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
 }
 
 .icon-btn:hover {
-  background: var(--btn-hover-bg);
+  background: color-mix(in srgb, var(--btn-hover-bg) 80%, var(--paper-bg));
   color: var(--text-color);
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
 }
 
-.icon-btn:hover i {
-  color: var(--text-color);
+.icon-btn:disabled,
+.icon-btn.disabled {
+  opacity: 0.42;
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--border-color) 40%, transparent);
+  cursor: not-allowed;
+  background: transparent;
+  box-shadow: none;
 }
 
 .icon-btn.active {
   background: var(--btn-active-bg);
   color: var(--btn-active-color);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 10%, transparent);
-}
-
-.icon-btn.active i {
-  color: var(--btn-active-color);
 }
 
 /* Global Tooltip */
@@ -1001,7 +1045,11 @@ ul[data-type="taskList"] li > div {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
-  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  max-width: min(260px, calc(100vw - 24px));
   pointer-events: none;
   z-index: 200000;
   opacity: 0;
@@ -1010,6 +1058,7 @@ ul[data-type="taskList"] li > div {
     opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
     transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
   box-shadow: var(--shadow-elevated);
+  backdrop-filter: blur(6px);
 }
 
 .global-tooltip.visible {
@@ -1025,6 +1074,7 @@ ul[data-type="taskList"] li > div {
 }
 
 .tooltip-text {
+  color: var(--tooltip-text);
   font-weight: 500;
   line-height: 1.4;
 }
@@ -1058,7 +1108,7 @@ ul[data-type="taskList"] li > div {
   height: 100%;
   padding: 0 8px;
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
   background: transparent;
   color: var(--btn-text-color);
   font-size: 14px;
@@ -1073,8 +1123,9 @@ ul[data-type="taskList"] li > div {
 }
 
 .toolbar-dropdown-trigger:hover {
-  background: var(--btn-hover-bg);
+  background: color-mix(in srgb, var(--btn-hover-bg) 80%, var(--paper-bg));
   color: var(--text-color);
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
 }
 
 .toolbar-dropdown-trigger:focus-visible {
@@ -1084,27 +1135,66 @@ ul[data-type="taskList"] li > div {
 .toolbar-dropdown-wrapper.open .toolbar-dropdown-trigger {
   background: var(--primary-color);
   color: var(--btn-active-color);
+  border-color: var(--primary-color);
+}
+
+.dropdown-label,
+.dropdown-chevron {
+  color: inherit;
 }
 
 /* Floating menu – base styles; position/display controlled by JS */
 .toolbar-dropdown-menu {
   background: var(--paper-bg);
+  color: var(--text-color);
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--text-color) 12%, transparent), 0 10px 24px -4px color-mix(in srgb, var(--text-color) 18%, transparent);
   border: 1px solid var(--border-color);
   padding: 4px;
   min-width: 120px;
+  max-height: min(360px, calc(100vh - 24px));
+  overflow-y: auto;
   display: none; /* toggled by JS */
   z-index: 10000;
   /* transform-origin set from top to match the slide-down animation */
   transform-origin: top left;
   will-change: opacity, transform;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 42%, transparent)
+    transparent;
+}
+
+.toolbar-more-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.toolbar-more-menu .icon-btn,
+.toolbar-more-menu .toolbar-dropdown-trigger,
+.toolbar-more-menu .color-picker-trigger {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.toolbar-more-menu .toolbar-dropdown-wrapper {
+  height: 32px;
+}
+
+.toolbar-more-menu .divider {
+  height: 22px;
+  margin: 0 2px;
 }
 
 .dropdown-item {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
   padding: 7px 12px;
   font-size: 13px;
-  color: var(--btn-text-color);
+  color: var(--text-color);
   cursor: pointer;
   border-radius: 6px;
   transition: background 0.1s, color 0.1s;
@@ -1112,6 +1202,20 @@ ul[data-type="taskList"] li > div {
   outline: none;
   /* smooth touch tap */
   -webkit-tap-highlight-color: transparent;
+}
+
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.toolbar-dropdown-menu .dropdown-item > div {
+  width: 100%;
+  color: inherit;
+}
+
+.toolbar-dropdown-menu .dropdown-item span {
+  color: inherit;
 }
 
 .dropdown-item:hover {
@@ -1127,14 +1231,43 @@ ul[data-type="taskList"] li > div {
 }
 
 .dropdown-item.active {
-  background: var(--btn-active-bg);
-  color: var(--btn-active-color);
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--paper-bg));
+  color: var(--text-color);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
 }
 
 .dropdown-item.disabled {
   opacity: 0.45;
   pointer-events: none;
   cursor: not-allowed;
+}
+
+[data-be-theme="dark"] .toolbar-dropdown-menu {
+  background: color-mix(in srgb, var(--paper-bg) 94%, black);
+  border-color: color-mix(in srgb, var(--border-color) 86%, var(--primary-color) 14%);
+  box-shadow:
+    0 10px 26px -12px color-mix(in srgb, black 66%, transparent),
+    0 6px 16px -8px color-mix(in srgb, black 58%, transparent);
+}
+
+[data-be-theme="dark"] .toolbar-more-menu .icon-btn,
+[data-be-theme="dark"] .toolbar-more-menu .toolbar-dropdown-trigger,
+[data-be-theme="dark"] .toolbar-more-menu .color-picker-trigger {
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 65%, transparent);
+  color: var(--text-secondary);
+}
+
+[data-be-theme="dark"] .toolbar-dropdown-menu .dropdown-item:hover,
+[data-be-theme="dark"] .toolbar-dropdown-menu .dropdown-item.keyboard-focus {
+  background: color-mix(in srgb, var(--primary-color) 16%, var(--surface-soft));
+  color: var(--text-color);
+}
+
+[data-be-theme="dark"] .toolbar-dropdown-menu .dropdown-item.active {
+  background: color-mix(in srgb, var(--primary-color) 34%, var(--surface-strong));
+  color: #f8fbff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 62%, transparent);
 }
 
 /* Block Handle Menu (align with toolbar dropdown style) */
@@ -1241,7 +1374,7 @@ ul[data-type="taskList"] li > div {
 .divider {
   width: 1px;
   height: 20px;
-  background: var(--border-color);
+  background: color-mix(in srgb, var(--border-color) 75%, transparent);
   margin: 0 4px;
 }
 
@@ -1374,7 +1507,7 @@ ul[data-type="taskList"] li > div {
   display: block;
   text-align: center;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-top: 6px;
   min-height: 1em;
   outline: none;
@@ -1383,7 +1516,7 @@ ul[data-type="taskList"] li > div {
 
 .be-image-caption:empty::before {
   content: attr(data-placeholder);
-  color: #d1d5db;
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--paper-bg));
   pointer-events: none;
 }
 
@@ -1391,7 +1524,7 @@ ul[data-type="taskList"] li > div {
    Callout hover highlight on icon
    ========================================================= */
 .be-callout-icon:hover {
-  background: rgba(0, 0, 0, 0.07);
+  background: color-mix(in srgb, var(--text-color) 8%, transparent);
   border-radius: 4px;
 }
 
@@ -1407,11 +1540,12 @@ ul[data-type="taskList"] li > div {
   display: none;
   align-items: center;
   gap: 4px;
-  background: #1f2937;
-  color: #fff;
+  background: var(--paper-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 6px 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-elevated);
   font-size: 13px;
   white-space: nowrap;
   user-select: none;
@@ -1419,14 +1553,14 @@ ul[data-type="taskList"] li > div {
 
 .be-multiselect-bar__count {
   font-weight: 600;
-  color: #93c5fd;
+  color: var(--primary-color);
   padding-right: 8px;
 }
 
 .be-multiselect-bar__divider {
   width: 1px;
   height: 16px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-color);
   margin: 0 4px;
   flex-shrink: 0;
 }
@@ -1441,7 +1575,7 @@ ul[data-type="taskList"] li > div {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #e5e7eb;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
@@ -1450,13 +1584,369 @@ ul[data-type="taskList"] li > div {
 }
 
 .be-multiselect-bar__btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--surface-soft);
+  color: var(--text-color);
 }
 
 .be-multiselect-bar__btn.danger:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
+  background: var(--danger-soft-bg);
+  color: var(--danger-color);
+}
+
+/* =========================================================
+   Dialog / Popup Shared
+   ========================================================= */
+.be-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, black 48%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.be-dialog {
+  background: var(--paper-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-elevated);
+  padding: 24px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.be-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.be-dialog-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.be-dialog-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--paper-bg));
+}
+
+.be-dialog-icon svg {
+  color: var(--btn-active-color);
+}
+
+.be-dialog-icon--primary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 92%, #7c3aed),
+    var(--primary-color)
+  );
+}
+
+.be-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.be-dialog-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.be-dialog-close {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.be-dialog-close:hover {
+  background: var(--surface-soft);
+  color: var(--text-color);
+}
+
+.be-dialog-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.be-dialog-footer-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.be-dialog-btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.be-dialog-btn--secondary {
+  background: var(--paper-bg);
+  color: var(--text-secondary);
+}
+
+.be-dialog-btn--secondary:hover {
+  background: var(--surface-soft);
+  color: var(--text-color);
+}
+
+.be-dialog-btn--primary {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--btn-active-color);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 34%, transparent);
+}
+
+.be-dialog-btn--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.be-dialog-btn.is-disabled,
+.be-dialog-btn:disabled {
+  background: var(--surface-soft);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.be-input-label-muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.be-tabs-header {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: var(--surface-soft);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.be-tabs-btn {
+  flex: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.be-tabs-btn:hover {
+  color: var(--text-color);
+}
+
+.be-tabs-btn.is-active {
+  background: var(--paper-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 10%, transparent);
+}
+
+.be-tabs-btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.be-upload-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 48px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.be-upload-zone:hover,
+.be-upload-zone.is-dragover {
+  border-color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--paper-bg));
+}
+
+.be-upload-zone__icon-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--primary-color) 14%, var(--paper-bg));
+}
+
+.be-upload-zone__text {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.be-upload-zone__text-action {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.be-upload-zone__subtext {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.be-link-preview-tooltip {
+  position: fixed;
+  z-index: 10020;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: var(--shadow-elevated);
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  pointer-events: none;
+  display: none;
+}
+
+/* =========================================================
+   Callout
+   ========================================================= */
+.be-callout {
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 4px 0;
+  display: flex;
+  gap: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-color);
+}
+
+.be-callout[data-callout-type="info"] {
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg));
+  border-color: color-mix(in srgb, var(--primary-color) 36%, var(--border-color));
+}
+
+.be-callout[data-callout-type="success"] {
+  background: color-mix(in srgb, #22c55e 12%, var(--paper-bg));
+  border-color: color-mix(in srgb, #22c55e 34%, var(--border-color));
+}
+
+.be-callout[data-callout-type="warning"] {
+  background: color-mix(in srgb, #f59e0b 14%, var(--paper-bg));
+  border-color: color-mix(in srgb, #f59e0b 34%, var(--border-color));
+}
+
+.be-callout[data-callout-type="danger"] {
+  background: color-mix(in srgb, var(--danger-color) 12%, var(--paper-bg));
+  border-color: color-mix(in srgb, var(--danger-color) 34%, var(--border-color));
+}
+
+.be-callout-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  margin-top: 1px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 3px;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.be-callout-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.be-callout-switcher-menu {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-elevated);
+  background: var(--paper-bg);
+  padding: 4px;
+  display: flex;
+  gap: 2px;
+}
+
+.be-callout-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: border-color 0.1s;
+  min-width: 44px;
+}
+
+.be-callout-type-btn__label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: inherit;
+}
+
+.be-callout-type-btn--info {
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg));
+}
+.be-callout-type-btn--success {
+  background: color-mix(in srgb, #22c55e 12%, var(--paper-bg));
+}
+.be-callout-type-btn--warning {
+  background: color-mix(in srgb, #f59e0b 14%, var(--paper-bg));
+}
+.be-callout-type-btn--danger {
+  background: color-mix(in srgb, var(--danger-color) 12%, var(--paper-bg));
+}
+.be-callout-type-btn--info:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 36%, var(--border-color));
+}
+.be-callout-type-btn--success:hover {
+  border-color: color-mix(in srgb, #22c55e 34%, var(--border-color));
+}
+.be-callout-type-btn--warning:hover {
+  border-color: color-mix(in srgb, #f59e0b 34%, var(--border-color));
+}
+.be-callout-type-btn--danger:hover {
+  border-color: color-mix(in srgb, var(--danger-color) 34%, var(--border-color));
 }
 
 /* =========================================================

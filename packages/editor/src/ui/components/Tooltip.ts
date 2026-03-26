@@ -11,6 +11,7 @@ export class GlobalTooltip {
   private tooltip: HTMLElement;
   private arrowElement: HTMLElement;
   private cleanup: (() => void) | null = null;
+  private host: HTMLElement | null = null;
 
   constructor() {
     this.tooltip = document.createElement("div");
@@ -18,10 +19,31 @@ export class GlobalTooltip {
     this.arrowElement = document.createElement("div");
     this.arrowElement.className = "tooltip-arrow";
     this.tooltip.appendChild(this.arrowElement);
-    document.body.appendChild(this.tooltip);
+  }
+
+  private syncTheme(target?: HTMLElement) {
+    const source =
+      (target?.closest("[data-be-theme]") as HTMLElement | null) ||
+      (document.querySelector("[data-be-theme]") as HTMLElement | null);
+    const theme = source?.dataset.beTheme;
+    if (theme) {
+      this.tooltip.dataset.beTheme = theme;
+      return;
+    }
+    delete this.tooltip.dataset.beTheme;
+  }
+
+  private ensureHost(target?: HTMLElement) {
+    const nextHost = document.body;
+    this.syncTheme(target);
+
+    if (this.host === nextHost && this.tooltip.parentElement === nextHost) return;
+    this.host = nextHost;
+    this.host.appendChild(this.tooltip);
   }
 
   public show(target: HTMLElement, text: string, shortcut?: string | null) {
+    this.ensureHost(target);
     this.tooltip.innerHTML = "";
 
     const content = document.createElement("div");

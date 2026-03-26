@@ -168,11 +168,15 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
         icon: 'image',
         command: 'addImage',
         onExecute: (core: EditorCore) => {
+          const host = (core.editor.options.element as HTMLElement).closest(
+            '[data-be-ui-root="true"]',
+          ) as HTMLElement | null
           new InsertImageDialog(
             (url) => {
               core.editor.chain().focus().setImage({ src: url }).run()
             },
             i18n.dialogs.insertImage,
+            host,
           ).show()
         },
       },
@@ -183,6 +187,9 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
         command: 'addLink',
         isActive: (editor) => editor.isActive('link'),
         onExecute: (core: EditorCore) => {
+          const host = (core.editor.options.element as HTMLElement).closest(
+            '[data-be-ui-root="true"]',
+          ) as HTMLElement | null
           const { from, to } = core.editor.state.selection
           const text = core.editor.state.doc.textBetween(from, to, ' ')
 
@@ -202,6 +209,7 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
             text,
             '',
             i18n.dialogs.insertLink,
+            host,
           ).show()
         },
       },

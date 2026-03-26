@@ -15,6 +15,7 @@ export class InsertLinkDialog {
     initialText: string = '',
     initialUrl: string = '',
     i18n?: InsertLinkDialogI18n,
+    host?: HTMLElement | null,
   ) {
     this.onSave = onSave;
     this.text = initialText;
@@ -51,7 +52,7 @@ export class InsertLinkDialog {
     content.appendChild(urlInput);
 
     const textInput = createInput({
-      label: `${this.i18n.textLabel} <span style="color:#9ca3af;font-weight:400">${this.i18n.textOptionalHint}</span>`,
+      label: `${this.i18n.textLabel} <span class="be-input-label-muted">${this.i18n.textOptionalHint}</span>`,
       placeholder: this.i18n.textPlaceholder,
       value: initialText,
       themeColor: 'blue',
@@ -62,32 +63,20 @@ export class InsertLinkDialog {
     content.appendChild(textInput);
 
     const footer = document.createElement('div');
-    footer.className = 'be-flex be-justify-end be-gap-3 be-mt-6 be-pt-4 be-border-t be-border-gray-100 be-shrink-0';
+    footer.className = 'be-dialog-footer be-dialog-footer-row';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = this.i18n.cancel;
-    cancelBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-gray-600 be-bg-transparent be-border be-border-gray-200 be-rounded-xl be-cursor-pointer be-transition-all';
+    cancelBtn.className = 'be-dialog-btn be-dialog-btn--secondary';
     cancelBtn.style.fontFamily = 'inherit';
-    cancelBtn.addEventListener('mouseenter', () => {
-      cancelBtn.style.background = '#f9fafb';
-    });
-    cancelBtn.addEventListener('mouseleave', () => {
-      cancelBtn.style.background = '';
-    });
     cancelBtn.onclick = () => this.dialog.close();
 
     this.saveBtn = document.createElement('button');
     this.saveBtn.textContent = initialUrl ? this.i18n.update : this.i18n.insert;
-    this.saveBtn.className = 'be-px-5 be-py-2.5 be-text-sm be-font-medium be-text-white be-rounded-xl be-cursor-pointer be-transition-all be-border-0';
-    this.saveBtn.style.cssText = 'font-family:inherit;background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 1px 3px rgba(59,130,246,0.3);';
+    this.saveBtn.className = 'be-dialog-btn be-dialog-btn--primary';
+    this.saveBtn.style.cssText = 'font-family:inherit;';
     this.saveBtn.disabled = !this.url.trim();
     this.updateSaveButton();
-    this.saveBtn.addEventListener('mouseenter', () => {
-      if (!this.saveBtn.disabled) this.saveBtn.style.boxShadow = '0 4px 12px rgba(59,130,246,0.4)';
-    });
-    this.saveBtn.addEventListener('mouseleave', () => {
-      if (!this.saveBtn.disabled) this.saveBtn.style.boxShadow = '0 1px 3px rgba(59,130,246,0.3)';
-    });
     this.saveBtn.onclick = () => {
       if (this.url) {
         this.onSave(this.url, this.text || this.url);
@@ -103,7 +92,8 @@ export class InsertLinkDialog {
       subtitle: this.i18n.subtitle,
       closeAriaLabel: this.i18n.closeDialogAriaLabel,
       icon: 'link',
-      iconBgClass: 'be-bg-gradient-to-br be-from-blue-500 be-to-blue-600',
+      iconBgClass: 'be-dialog-icon--primary',
+      host,
       onClose: () => {},
       width: '480px',
     });
@@ -116,15 +106,9 @@ export class InsertLinkDialog {
     const disabled = !this.url.trim();
     this.saveBtn.disabled = disabled;
     if (disabled) {
-      this.saveBtn.style.background = '#e5e7eb';
-      this.saveBtn.style.color = '#9ca3af';
-      this.saveBtn.style.cursor = 'not-allowed';
-      this.saveBtn.style.boxShadow = 'none';
+      this.saveBtn.classList.add('is-disabled');
     } else {
-      this.saveBtn.style.background = 'linear-gradient(135deg,#3b82f6,#2563eb)';
-      this.saveBtn.style.color = 'white';
-      this.saveBtn.style.cursor = 'pointer';
-      this.saveBtn.style.boxShadow = '0 1px 3px rgba(59,130,246,0.3)';
+      this.saveBtn.classList.remove('is-disabled');
     }
   }
 

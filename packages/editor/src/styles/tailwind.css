@@ -5,17 +5,21 @@
 
 /* Custom styles for Block Handle */
 .be-block-handle {
-  @apply be-absolute be-flex be-items-center be-justify-center be-cursor-pointer be-text-gray-400 be-transition-colors be-bg-white;
+  @apply be-absolute be-flex be-items-center be-justify-center be-cursor-pointer be-transition-colors;
   width: 1.5rem;
   height: 1.5rem;
   /* left is set by JS */
   border-radius: 0.25rem;
   z-index: 50;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  color: var(--text-muted);
+  background: var(--paper-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text-color) 16%, transparent);
 }
 
 .be-block-handle:hover {
-  @apply be-bg-gray-100 be-text-gray-600;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
 }
 
 /* Current Line Highlight */

@@ -9,10 +9,12 @@ export class BlockMultiSelectBar {
   private bar: HTMLElement
   private countLabel: HTMLElement
   private editorCore: EditorCore
+  private mountContainer?: HTMLElement
   private rafId: number | null = null
 
-  constructor(editorCore: EditorCore) {
+  constructor(editorCore: EditorCore, mountContainer?: HTMLElement) {
     this.editorCore = editorCore
+    this.mountContainer = mountContainer
 
     this.bar = document.createElement('div')
     this.bar.className = 'be-multiselect-bar'
@@ -93,7 +95,7 @@ export class BlockMultiSelectBar {
     this.bar.appendChild(divider)
     this.bar.appendChild(btnClear)
 
-    document.body.appendChild(this.bar)
+    this.getMountContainer().appendChild(this.bar)
 
     editorCore.editor.on('transaction', () => this.scheduleUpdate())
     document.addEventListener('keydown', this.handleKeyDown)
@@ -139,6 +141,15 @@ export class BlockMultiSelectBar {
     btn.setAttribute('aria-label', title)
     btn.innerHTML = html
     return btn
+  }
+
+  private getMountContainer(): HTMLElement {
+    if (this.mountContainer) return this.mountContainer
+    const editorRoot = this.editorCore.editor.options.element as HTMLElement
+    const container =
+      (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
+    return container || document.body
   }
 
   destroy() {

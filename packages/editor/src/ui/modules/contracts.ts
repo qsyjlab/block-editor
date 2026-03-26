@@ -15,6 +15,7 @@ export type EditorUIRegion =
 
 export type EditorUIModuleId =
   | "toolbar"
+  | "selectionToolbar"
   | "outline"
   | "commentPanel"
   | "tableBubbleMenu"
@@ -41,6 +42,8 @@ export interface EditorUILayoutSchema {
 
 export interface EditorUIModuleMountContext {
   id: EditorUIModuleId;
+  region: EditorUIRegion;
+  regionContainer: HTMLElement | null;
   editorCore: EditorCore;
   renderer: EditorUIRenderer;
   slots: EditorUILayoutSlots;
@@ -58,4 +61,3 @@ export interface EditorUIModuleDefinition {
   defaultRegion: EditorUIRegion;
   mount: (ctx: EditorUIModuleMountContext) => EditorUIModuleInstance | void;
 }
-

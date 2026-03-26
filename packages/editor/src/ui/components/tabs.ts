@@ -20,7 +20,7 @@ export class Tabs {
     
     this.container = document.createElement('div');
     this.header = document.createElement('div');
-    this.header.className = 'be-flex be-gap-2 be-mb-6 be-bg-gray-100 be-p-1 be-rounded-xl';
+    this.header.className = 'be-tabs-header';
     
     this.content = document.createElement('div');
     
@@ -35,10 +35,10 @@ export class Tabs {
     this.items.forEach(item => {
         const btn = document.createElement('button');
         const isActive = item.id === this.activeTabId;
-        btn.className = `be-flex-1 be-py-2.5 be-rounded-lg be-text-sm be-font-medium be-transition-all ${isActive ? 'be-bg-white be-text-gray-900 be-shadow-sm' : 'be-text-gray-600 be-hover:text-gray-900'}`;
+        btn.className = `be-tabs-btn${isActive ? ' is-active' : ''}`;
         
         const inner = document.createElement('div');
-        inner.className = 'be-flex be-items-center be-justify-center be-gap-2';
+        inner.className = 'be-tabs-btn-inner';
         
         if (item.icon && icons[item.icon]) {
             const iconSpan = document.createElement('span');

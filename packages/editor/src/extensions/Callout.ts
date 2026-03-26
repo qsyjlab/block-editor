@@ -26,30 +26,22 @@ const DEFAULT_CALLOUT_I18N: CalloutI18n = {
 
 function buildCalloutStyles(i18n: CalloutI18n): Record<
   CalloutType,
-  { bg: string; border: string; icon: string; label: string }
+  { icon: string; label: string }
 > {
   return {
     info: {
-      bg: '#eff6ff',
-      border: '#bfdbfe',
       icon: 'ℹ️',
       label: i18n.infoLabel,
     },
     success: {
-      bg: '#f0fdf4',
-      border: '#bbf7d0',
       icon: '✅',
       label: i18n.successLabel,
     },
     warning: {
-      bg: '#fffbeb',
-      border: '#fde68a',
       icon: '⚠️',
       label: i18n.warningLabel,
     },
     danger: {
-      bg: '#fef2f2',
-      border: '#fecaca',
       icon: '❌',
       label: i18n.dangerLabel,
     },
@@ -61,7 +53,7 @@ const CALLOUT_TYPES: CalloutType[] = ['info', 'success', 'warning', 'danger']
 /** Build the floating type-switcher popup and attach it to `iconEl` */
 function attachTypeSwitcher(
   iconEl: HTMLElement,
-  styles: Record<CalloutType, { bg: string; border: string; icon: string; label: string }>,
+  styles: Record<CalloutType, { icon: string; label: string }>,
   switchTypeTitle: string,
   getEditor: () => any,
 ) {
@@ -89,47 +81,17 @@ function attachTypeSwitcher(
     }
 
     popup = document.createElement('div')
+    popup.className = 'be-callout-switcher-menu'
     popup.setAttribute('aria-label', switchTypeTitle)
-    Object.assign(popup.style, {
-      position: 'fixed',
-      zIndex: '99999',
-      background: 'white',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.08), 0 10px 24px -4px rgba(0,0,0,0.14)',
-      padding: '4px',
-      display: 'flex',
-      gap: '2px',
-    })
+    popup.style.position = 'fixed'
+    popup.style.zIndex = '99999'
 
     CALLOUT_TYPES.forEach((t) => {
       const s = styles[t]
       const btn = document.createElement('button')
-      Object.assign(btn.style, {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '2px',
-        padding: '6px 10px',
-        border: '1px solid transparent',
-        borderRadius: '6px',
-        background: s.bg,
-        cursor: 'pointer',
-        fontSize: '18px',
-        lineHeight: '1',
-        transition: 'border-color 0.1s',
-        minWidth: '44px',
-      })
+      btn.className = `be-callout-type-btn be-callout-type-btn--${t}`
       btn.title = s.label
-      btn.innerHTML = `<span>${s.icon}</span><span style="font-size:10px;color:#6b7280;font-family:inherit;">${s.label}</span>`
-
-      btn.addEventListener('mouseenter', () => {
-        btn.style.borderColor = s.border
-      })
-      btn.addEventListener('mouseleave', () => {
-        btn.style.borderColor = 'transparent'
-      })
+      btn.innerHTML = `<span class="be-callout-type-btn__icon">${s.icon}</span><span class="be-callout-type-btn__label">${s.label}</span>`
       btn.addEventListener('mousedown', (ev) => {
         ev.preventDefault()
         ev.stopPropagation()
@@ -139,7 +101,11 @@ function attachTypeSwitcher(
       popup!.appendChild(btn)
     })
 
-    document.body.appendChild(popup)
+    const host =
+      (iconEl.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (iconEl.closest('[data-be-ui-root="true"]') as HTMLElement | null) ||
+      document.body
+    host.appendChild(popup)
 
     // Position below the icon
     const rect = iconEl.getBoundingClientRect()
@@ -193,15 +159,13 @@ export const Callout = TiptapNode.create<CalloutOptions>({
       'div',
       mergeAttributes(HTMLAttributes, {
         class: 'be-callout',
-        style: `background:${style.bg};border:1px solid ${style.border};border-radius:6px;padding:12px 16px;margin:4px 0;display:flex;gap:10px;`,
+        'data-callout-type': type,
       }),
       [
         'span',
         {
           class: 'be-callout-icon',
           'data-callout-switcher': 'true',
-          style:
-            'flex-shrink:0;font-size:16px;margin-top:1px;cursor:pointer;border-radius:4px;padding:1px 3px;transition:background 0.15s;',
           contenteditable: 'false',
           title: this.options.i18n.switchTypeTitle,
         },
@@ -224,23 +188,13 @@ export const Callout = TiptapNode.create<CalloutOptions>({
       const dom = document.createElement('div')
       dom.className = 'be-callout'
       dom.setAttribute('data-callout-type', type)
-      dom.style.cssText = `background:${style.bg};border:1px solid ${style.border};border-radius:6px;padding:12px 16px;margin:4px 0;display:flex;gap:10px;`
 
       const iconEl = document.createElement('span')
       iconEl.className = 'be-callout-icon'
       iconEl.setAttribute('data-callout-switcher', 'true')
       iconEl.setAttribute('contenteditable', 'false')
       iconEl.title = this.options.i18n.switchTypeTitle
-      iconEl.style.cssText =
-        'flex-shrink:0;font-size:16px;margin-top:1px;cursor:pointer;border-radius:4px;padding:1px 3px;transition:background 0.15s;user-select:none;'
       iconEl.textContent = style.icon
-
-      iconEl.addEventListener('mouseenter', () => {
-        iconEl.style.background = 'rgba(0,0,0,0.07)'
-      })
-      iconEl.addEventListener('mouseleave', () => {
-        iconEl.style.background = 'transparent'
-      })
 
       attachTypeSwitcher(iconEl, styles, this.options.i18n.switchTypeTitle, () => editor)
 
@@ -259,8 +213,6 @@ export const Callout = TiptapNode.create<CalloutOptions>({
           const newType: CalloutType = updatedNode.attrs.calloutType || 'info'
           const newStyle = styles[newType]
           dom.setAttribute('data-callout-type', newType)
-          dom.style.background = newStyle.bg
-          dom.style.borderColor = newStyle.border
           iconEl.textContent = newStyle.icon
           return true
         },

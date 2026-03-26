@@ -106,7 +106,7 @@
 - [x] F1. 定义模块接口：`mount/unmount/update/defaultRegion/i18nKeys`。
 - [ ] F2. 将以下能力模块化：
 - [ ] F2.1 toolbar
-- [ ] F2.2 selection toolbar
+- [x] F2.2 selection toolbar
 - [ ] F2.3 comment panel
 - [ ] F2.4 outline
 - [ ] F2.5 table bubble menu
@@ -214,3 +214,12 @@
 - 2026-03-26：继续推进 Phase I/H4 文档收口。新增专题文档页：`reference/operation-bars.md`、`reference/layout-modules.md`、`reference/migration.md` 与 `guide/regression-checklist.md`，并更新 VitePress 导航与侧边栏；补充 docs-repo 启动/构建说明。验证：`docs-repo` 执行 `pnpm docs:build` 通过。状态更新：勾选 I5、H4、H1、H3 及“文档结构覆盖”验收项。
 - 2026-03-26：继续推进 Phase H2 回归支撑。Playground 新增 `regression` 场景（`/scenes/regression`），预置评论/链接锚点/表格/块手柄验证内容，集中用于关键交互回归（H2.1-H2.5）手工检查；`ScenarioPage` 支持场景级 `initialContent`。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
 - 2026-03-26：继续推进 Phase F（模块化骨架）。新增 `ui/modules/contracts.ts`，定义 `EditorUIModuleDefinition`、`EditorUILayoutSchema`、`EditorUIRegion`、`EditorUIModuleId` 契约；`EditorUIRenderer` 接入模块挂载管线（toolbar/outline/commentPanel/tableBubbleMenu/blockMultiSelectBar 默认模块）与 `layoutSchema` 区域可见性/宽度/order 兼容层，并保留 `layoutBuilder` 旧用法。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：继续推进 Phase F（模块区域控制增强）。`selectionToolbar` 已纳入 `layoutSchema.modules`（支持 `enabled/region`），`SelectionTooltip` 新增模块开关判定与 append 容器解析，避免弹层脱离主题容器；`EditorUIRenderer` 为区域容器统一打 `data-be-region` 标记，新增 playground 场景 `modular-layout` 用于验证模块换位。验证：先构建 `@block-editor/editor`，再构建 `block-editor-playground` 均通过（并行构建会因类型先后顺序出现瞬时报错，串行已通过）。
+- 2026-03-26：按“普通页面代码”重构 playground 场景组织。移除集中式 `SCENE_CONFIGS` 与 `/:scene` 动态页面，改为 `scenes/pages/*.vue` 独立页面路由，每个场景在页面内直接编写 `EditorCore + EditorUIRenderer` 初始化逻辑；新增 `useSceneEditor`（仅生命周期复用）与 `SceneFrame`（页面壳层）以减少重复。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：继续推进暗黑模式补齐（组件与工具链路）。`Dialog/Tooltip/Toolbar more menu/Callout switcher` 改为挂载到编辑器主题容器并使用主题变量；`insert-link`、`insert-image`、`version-history` 弹窗按钮与面板样式统一到主题语义色；`tabs/upload-zone/link-preview/code-block/block-handle/multi-select bar` 完成主题变量收口。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：按“工具栏优先”继续做暗黑适配。增强 `toolbar/icon-btn/dropdown/divider/color-preview` 的暗黑可见度（强制 SVG 跟随 `currentColor`、补齐边框与禁用态、提升 hover/active 对比度、分割线与滚动条细化），并修复 `Toolbar` 的 more 菜单关闭时宿主容器移除逻辑。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：继续推进工具栏弹层修复。针对暗黑模式下拉“文字不可见/状态不清晰”与 tooltip 裁切问题，强化 `toolbar-dropdown-menu` 与 `dropdown-item` 的显式对比色、hover/active/focus 态和暗黑专属边框阴影；`GlobalTooltip` 改为挂载到 `document.body` 并按触发节点同步 `data-be-theme`，避免场景容器 `overflow` 导致提示被截断。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：修复 `更多` 弹层交互与样式一致性。`Toolbar` 的 more 按钮从 hover 打开改为 click 切换，并增加 outside click / `Esc` 关闭；打开时隐藏自身 tooltip，关闭时恢复；溢出搬运时跳过 leading divider，避免菜单首项出现孤立分割线。样式侧新增 `.toolbar-more-menu`，统一其中 `icon-btn/dropdown/color-trigger/divider` 的间距与暗黑主题可读性。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：修复行内选区工具栏暗黑可见性。为 `be-selection-tooltip` 补齐独立的按钮/下拉/颜色触发器颜色基线（默认 `text-secondary`、hover `text-color`）和暗黑边框背景，避免仅 hover 项可见、其余图标“空壳化”。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：修复“无专用评论区布局”下评论面板无法弹出。`EditorUIRenderer` 在 `comment` 区域缺少 `commentContainer` 时，自动将评论模块宿主降级为右侧浮层（绝对定位 + 宽度限制 + 顶层定位兜底），确保 `openCommentPanel` 在极简/自定义布局中可见，不再出现“事件触发但面板在视区外”的情况。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。
+- 2026-03-26：按“示例可验证性”调整默认 Playground 场景。`default` 页面改为 `basic` 顶部工具栏（降低溢出干扰），并保留行内选区评论能力（`selectionToolbar: SELECTION_COMPACT_ITEMS`）；评论侧栏默认展开，便于直接验证“添加评论 -> 面板联动”路径。验证：`@block-editor/editor` 与 `block-editor-playground` 构建通过。

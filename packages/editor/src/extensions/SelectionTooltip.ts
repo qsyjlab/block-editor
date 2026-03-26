@@ -17,6 +17,7 @@ import {
   resolveSelectionToolbarItems,
   type EditorUIConfig,
 } from "../ui/config/operation-bars";
+import type { EditorUIRegion } from "../ui/modules/contracts";
 import type { EditorCore } from "../core/EditorCore";
 import { resolveEditorI18n } from "../i18n";
 import type { EditorI18n } from "../i18n";
@@ -117,6 +118,9 @@ function createTooltipItems(i18n: EditorI18n): ToolbarItemType[] {
         const { from, to } = core.editor.state.selection;
         const selectedText = core.editor.state.doc.textBetween(from, to, " ");
         const previousUrl = core.editor.getAttributes("link").href || "";
+        const host = (core.editor.options.element as HTMLElement).closest(
+          '[data-be-ui-root="true"]',
+        ) as HTMLElement | null;
 
         new InsertLinkDialog(
           (url, linkText) => {
@@ -158,6 +162,7 @@ function createTooltipItems(i18n: EditorI18n): ToolbarItemType[] {
           selectedText,
           previousUrl,
           i18n.dialogs.insertLink,
+          host,
         ).show();
       },
     },
@@ -172,6 +177,45 @@ function getToolbarMode(editor: Editor): ToolbarMode {
   const element = editor.options.element as HTMLElement | null;
   const mode = element?.dataset.beToolbarMode;
   return mode === "inline" ? "inline" : "top";
+}
+
+function isSelectionToolbarEnabled(editor: Editor): boolean {
+  const element = editor.options.element as HTMLElement | null;
+  return element?.dataset.beSelectionToolbarEnabled !== "false";
+}
+
+function resolveSelectionToolbarRegion(editor: Editor): EditorUIRegion {
+  const element = editor.options.element as HTMLElement | null;
+  const region = element?.dataset.beSelectionToolbarRegion || "overlay";
+  const allowedRegions: EditorUIRegion[] = [
+    "toolbar",
+    "editor",
+    "outline",
+    "comment",
+    "overlay",
+  ];
+  return allowedRegions.includes(region as EditorUIRegion)
+    ? (region as EditorUIRegion)
+    : "overlay";
+}
+
+function resolveSelectionToolbarAppendTarget(editor: Editor): HTMLElement {
+  const editorRoot = editor.options.element as HTMLElement | null;
+  if (!editorRoot) return document.body;
+
+  const uiRoot = editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null;
+  const region = resolveSelectionToolbarRegion(editor);
+  if (uiRoot) {
+    const regionHost = uiRoot.querySelector(
+      `[data-be-region="${region}"]`,
+    ) as HTMLElement | null;
+    if (regionHost) return regionHost;
+  }
+
+  const overlayHost =
+    (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+    uiRoot;
+  return overlayHost || document.body;
 }
 
 function getMockCore(editor: Editor): EditorCore {
@@ -272,6 +316,7 @@ export const SelectionTooltip = Extension.create({
         editor: this.editor,
         element,
         shouldShow: ({ editor, from, to }) => {
+          if (!isSelectionToolbarEnabled(editor)) return false;
           const state = editor.storage.interactionState as
             | {
                 mode?:
@@ -306,6 +351,7 @@ export const SelectionTooltip = Extension.create({
           arrow: false,
           theme: "be-selection-toolbar",
           maxWidth: "none",
+          appendTo: () => resolveSelectionToolbarAppendTarget(this.editor),
         },
       } as BubbleMenuPluginProps),
     ];
