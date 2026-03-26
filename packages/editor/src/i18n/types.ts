@@ -49,6 +49,20 @@ export interface ToolbarI18n {
   performanceBaseline: string
   performanceBaselineResult: (setContentMs: number, selectionMs: number) => string
   addComment: string
+  tableToolbar: string
+  tableBackgroundColor: string
+  tableColumnOperations: string
+  tableRowOperations: string
+  tableOperations: string
+  addColumnBefore: string
+  addColumnAfter: string
+  deleteColumn: string
+  addRowBefore: string
+  addRowAfter: string
+  deleteRow: string
+  mergeCells: string
+  splitCell: string
+  deleteTable: string
 }
 
 export interface InsertLinkDialogI18n {
@@ -103,6 +117,15 @@ export interface VersionHistoryDialogI18n {
   newLine: string
   oldVersion: string
   blankBase: string
+  selectSnapshotDetail: string
+  diffView: string
+  blameView: string
+  blankBaseline: string
+  diffSummary: (baseLabel: string, added: number, deleted: number, modified: number) => string
+  noDiff: string
+  noBlameLines: string
+  fullDiffHeader: (baseLabel: string) => string
+  fullDiffSubtitle: (currentLabel: string, baseLabel: string, timeText: string) => string
 }
 
 export interface DialogI18n {
@@ -111,9 +134,76 @@ export interface DialogI18n {
   versionHistory: VersionHistoryDialogI18n
 }
 
+export interface CommentPanelI18n {
+  panelAriaLabel: string
+  title: string
+  filterAll: string
+  filterOpen: string
+  filterResolved: string
+  filterAriaPrefix: string
+  draftPlaceholder: string
+  draftAriaLabel: string
+  createButton: string
+  createButtonAriaLabel: string
+  selectionQuoteAriaLabel: string
+  selectionQuoteTitle: string
+  selectionQuotePrefix: string
+  selectionHintEmpty: string
+  selectionHintReady: string
+  emptyNoComments: string
+  emptyResolved: string
+  threadJumpTitle: string
+  resolveAction: string
+  reopenAction: string
+  deleteAction: string
+  replyPlaceholder: string
+  replyAriaLabel: string
+  replyButton: string
+  replyButtonAriaLabel: string
+  currentUser: string
+}
+
+export interface BlockHandleI18n {
+  handleAriaLabel: string
+  menuAriaLabel: string
+  moveUp: string
+  moveDown: string
+  duplicateBlock: string
+  copyBlockLink: string
+  deleteBlock: string
+  toParagraph: string
+  toHeading1: string
+  toHeading2: string
+  toHeading3: string
+  toBulletList: string
+  toOrderedList: string
+  toTaskList: string
+  toBlockquote: string
+  addToMultiSelect: string
+  copyLinkPromptTitle: string
+}
+
+export interface BlockMultiSelectBarI18n {
+  toolbarAriaLabel: string
+  moveUp: string
+  moveDown: string
+  deleteSelected: string
+  toParagraph: string
+  toBlockquote: string
+  toTaskList: string
+  toBulletList: string
+  toOrderedList: string
+  toCallout: string
+  clearSelection: string
+  selectedCount: (count: number) => string
+}
+
 export interface EditorI18n {
   locale: string
   toolbar: ToolbarI18n
   outline: OutlineI18n
   dialogs: DialogI18n
+  commentPanel: CommentPanelI18n
+  blockHandle: BlockHandleI18n
+  blockMultiSelectBar: BlockMultiSelectBarI18n
 }

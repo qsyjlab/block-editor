@@ -17,7 +17,7 @@ export class BlockMultiSelectBar {
     this.bar = document.createElement('div')
     this.bar.className = 'be-multiselect-bar'
     this.bar.setAttribute('role', 'toolbar')
-    this.bar.setAttribute('aria-label', '块多选操作栏')
+    this.bar.setAttribute('aria-label', this.editorCore.i18n.blockMultiSelectBar.toolbarAriaLabel)
     Object.assign(this.bar.style, {
       display: 'none',
     })
@@ -25,19 +25,19 @@ export class BlockMultiSelectBar {
     this.countLabel = document.createElement('span')
     this.countLabel.className = 'be-multiselect-bar__count'
 
-    const btnMoveUp = this.createBtn('↑', '整体上移')
+    const btnMoveUp = this.createBtn('↑', this.editorCore.i18n.blockMultiSelectBar.moveUp)
     btnMoveUp.addEventListener('click', () => {
       editorCore.editor.commands.moveSelectedBlocks('up')
     })
 
-    const btnMoveDown = this.createBtn('↓', '整体下移')
+    const btnMoveDown = this.createBtn('↓', this.editorCore.i18n.blockMultiSelectBar.moveDown)
     btnMoveDown.addEventListener('click', () => {
       editorCore.editor.commands.moveSelectedBlocks('down')
     })
 
     const btnDelete = this.createBtn(
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
-      '删除选中块',
+      this.editorCore.i18n.blockMultiSelectBar.deleteSelected,
       true,
     )
     btnDelete.addEventListener('click', () => {
@@ -49,23 +49,23 @@ export class BlockMultiSelectBar {
       editorCore.editor.commands.clearBlockSelection()
     }
 
-    const btnToParagraph = this.createBtn('¶', '转为正文')
+    const btnToParagraph = this.createBtn('¶', this.editorCore.i18n.blockMultiSelectBar.toParagraph)
     btnToParagraph.style.fontWeight = '600'
     btnToParagraph.addEventListener('click', () => applyConvert('paragraph'))
 
-    const btnToQuote = this.createBtn('❝', '转为引用')
+    const btnToQuote = this.createBtn('❝', this.editorCore.i18n.blockMultiSelectBar.toBlockquote)
     btnToQuote.addEventListener('click', () => applyConvert('blockquote'))
 
-    const btnToTask = this.createBtn('☑', '转为任务列表')
+    const btnToTask = this.createBtn('☑', this.editorCore.i18n.blockMultiSelectBar.toTaskList)
     btnToTask.addEventListener('click', () => applyConvert('taskList'))
 
-    const btnToBullet = this.createBtn('•', '转为无序列表')
+    const btnToBullet = this.createBtn('•', this.editorCore.i18n.blockMultiSelectBar.toBulletList)
     btnToBullet.addEventListener('click', () => applyConvert('bulletList'))
 
-    const btnToOrdered = this.createBtn('1.', '转为有序列表')
+    const btnToOrdered = this.createBtn('1.', this.editorCore.i18n.blockMultiSelectBar.toOrderedList)
     btnToOrdered.addEventListener('click', () => applyConvert('orderedList'))
 
-    const btnToCallout = this.createBtn('ℹ', '转为 Callout')
+    const btnToCallout = this.createBtn('ℹ', this.editorCore.i18n.blockMultiSelectBar.toCallout)
     btnToCallout.addEventListener('click', () => applyConvert('callout', { calloutType: 'info' }))
 
     const divider = document.createElement('div')
@@ -73,7 +73,7 @@ export class BlockMultiSelectBar {
 
     const btnClear = this.createBtn(
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-      '取消多选',
+      this.editorCore.i18n.blockMultiSelectBar.clearSelection,
     )
     btnClear.addEventListener('click', () => {
       editorCore.editor.commands.clearBlockSelection()
@@ -128,7 +128,7 @@ export class BlockMultiSelectBar {
       return
     }
 
-    this.countLabel.textContent = `已选 ${count} 块`
+    this.countLabel.textContent = this.editorCore.i18n.blockMultiSelectBar.selectedCount(count)
     this.bar.style.display = 'flex'
   }
 

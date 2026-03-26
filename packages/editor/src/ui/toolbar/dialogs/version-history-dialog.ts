@@ -51,6 +51,17 @@ const DEFAULT_VERSION_HISTORY_I18N: VersionHistoryDialogI18n = {
   newLine: "新行",
   oldVersion: "旧版本",
   blankBase: "初始空白",
+  selectSnapshotDetail: "请选择一个快照查看详情",
+  diffView: "变更视图",
+  blameView: "Blame 视图",
+  blankBaseline: "空白基线",
+  diffSummary: (baseLabel, added, deleted, modified) =>
+    `对比基线：${baseLabel} · +${added} / -${deleted} / ~${modified}`,
+  noDiff: "无差异",
+  noBlameLines: "当前快照无可展示行",
+  fullDiffHeader: (baseLabel) => `完整 Diff（对比：${baseLabel}）`,
+  fullDiffSubtitle: (currentLabel, baseLabel, timeText) =>
+    `${currentLabel} · 对比 ${baseLabel} · ${timeText}`,
 };
 
 export class VersionHistoryDialog {
@@ -89,7 +100,7 @@ export class VersionHistoryDialog {
     content.appendChild(tips);
 
     const createBtn = document.createElement("button");
-    createBtn.textContent = "立即保存快照";
+    createBtn.textContent = this.i18n.saveSnapshot;
     createBtn.className =
       "be-px-4 be-py-2 be-text-sm be-font-medium be-text-white be-rounded-lg be-border-0 be-cursor-pointer";
     createBtn.style.cssText =
@@ -237,8 +248,8 @@ export class VersionHistoryDialog {
         previewHeader.style.color = "#57606a";
         previewHeader.style.background = "#f6f8fa";
         previewHeader.style.borderBottom = "1px solid #d0d7de";
-        const previousLabel = previousSnapshot?.label || "初始空白";
-        previewHeader.textContent = `Diff preview（对比上一版：${previousLabel}）`;
+        const previousLabel = previousSnapshot?.label || this.i18n.blankBase;
+        previewHeader.textContent = this.i18n.restoreCompareTip(previousLabel);
         previewWrap.appendChild(previewHeader);
 
         const lines = this.getPreviewDiffLines(snapshot.id, previousSnapshotId);
@@ -339,7 +350,7 @@ export class VersionHistoryDialog {
     if (!this.activeSnapshotId) {
       const empty = document.createElement("div");
       empty.className = "be-p-3 be-text-sm be-text-gray-500";
-      empty.textContent = "请选择一个快照查看详情";
+      empty.textContent = this.i18n.selectSnapshotDetail;
       this.detailRoot.appendChild(empty);
       return;
     }
@@ -371,7 +382,7 @@ export class VersionHistoryDialog {
     tabWrap.className = "be-flex be-gap-1";
 
     const diffBtn = this.createTabBtn(
-      "变更视图",
+      this.i18n.diffView,
       this.detailTab === "diff",
       () => {
         this.detailTab = "diff";
@@ -379,7 +390,7 @@ export class VersionHistoryDialog {
       },
     );
     const blameBtn = this.createTabBtn(
-      "Blame 视图",
+      this.i18n.blameView,
       this.detailTab === "blame",
       () => {
         this.detailTab = "blame";
@@ -425,15 +436,15 @@ export class VersionHistoryDialog {
     const added = diff.lines.filter((l) => l.type === "added").length;
     const deleted = diff.lines.filter((l) => l.type === "deleted").length;
     const modified = diff.lines.filter((l) => l.type === "modified").length;
-    const base = diff.baseSnapshot ? `${diff.baseSnapshot.label}` : "空白基线";
-    return `对比基线：${base} · +${added} / -${deleted} / ~${modified}`;
+    const base = diff.baseSnapshot ? `${diff.baseSnapshot.label}` : this.i18n.blankBaseline;
+    return this.i18n.diffSummary(base, added, deleted, modified);
   }
 
   private renderDiffBody(root: HTMLElement, diff: SnapshotDiffResult) {
     if (diff.lines.length === 0) {
       const empty = document.createElement("div");
       empty.className = "be-p-3 be-text-gray-500";
-      empty.textContent = "无差异";
+      empty.textContent = this.i18n.noDiff;
       root.appendChild(empty);
       return;
     }
@@ -491,7 +502,7 @@ export class VersionHistoryDialog {
     if (blame.length === 0) {
       const empty = document.createElement("div");
       empty.className = "be-p-3 be-text-gray-500";
-      empty.textContent = "当前快照无可展示行";
+      empty.textContent = this.i18n.noBlameLines;
       root.appendChild(empty);
       return;
     }
@@ -599,7 +610,9 @@ export class VersionHistoryDialog {
     head.style.color = "#57606a";
     head.style.background = "#f6f8fa";
     head.style.borderBottom = "1px solid #d0d7de";
-    head.textContent = `完整 Diff（对比：${diff.baseSnapshot?.label || this.i18n.blankBase}）`;
+    head.textContent = this.i18n.fullDiffHeader(
+      diff.baseSnapshot?.label || this.i18n.blankBase,
+    );
     content.appendChild(head);
 
     if (changed.length === 0) {
@@ -710,7 +723,11 @@ export class VersionHistoryDialog {
 
     const modal = new Dialog({
       title: this.i18n.completeDiffTitle,
-      subtitle: `${diff.currentSnapshot.label} · 对比 ${diff.baseSnapshot?.label || this.i18n.blankBase} · ${formatTime(diff.currentSnapshot.createdAt, this.locale)}`,
+      subtitle: this.i18n.fullDiffSubtitle(
+        diff.currentSnapshot.label,
+        diff.baseSnapshot?.label || this.i18n.blankBase,
+        formatTime(diff.currentSnapshot.createdAt, this.locale),
+      ),
       icon: "fileText",
       iconBgClass: "be-bg-gradient-to-br be-from-blue-500 be-to-indigo-600",
       onClose: () => {},

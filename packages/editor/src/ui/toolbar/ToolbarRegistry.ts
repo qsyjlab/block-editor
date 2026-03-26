@@ -3,7 +3,9 @@ import { EditorCore } from '../../core/EditorCore'
 
 export interface ToolbarItemConfig {
   type: 'button'
+  id?: string
   label: string
+  tooltip?: string
   icon?: string
   command?: string
   args?: any
@@ -17,7 +19,9 @@ export interface ToolbarItemConfig {
 }
 
 export interface DropdownOptionConfig {
+  id?: string
   label: string
+  tooltip?: string
   icon?: string
   value: string
   command?: string
@@ -29,7 +33,9 @@ export interface DropdownOptionConfig {
 
 export interface ToolbarDropdownConfig {
   type: 'dropdown'
+  id?: string
   label: string
+  tooltip?: string
   icon?: string
   width?: string
   options: DropdownOptionConfig[]
@@ -39,7 +45,9 @@ export interface ToolbarDropdownConfig {
 
 export interface ToolbarColorConfig {
   type: 'color'
+  id?: string
   label: string
+  tooltip?: string
   command: string
   isDisabled?: (editor: Editor) => boolean
 }

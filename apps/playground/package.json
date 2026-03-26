@@ -11,7 +11,8 @@
   "dependencies": {
     "@block-editor/editor": "workspace:*",
     "@tiptap/extension-bubble-menu": "^2.27.2",
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

@@ -1,35 +1,70 @@
 @import "./code-block.css";
 
 :root {
-  /* Core Colors */
-  --primary-color: #3b82f6; /* Blue-500 equivalent */
-  --primary-hover: #2563eb; /* Slightly darker blue */
-  --text-color: var(--color-gray-900); /* Gray-700 equivalent */
-  --bg-color: #f9fafb; /* Gray-50 */
-  --border-color: #e5e7eb; /* Gray-200 */
+  /* Semantic tokens - light */
+  --primary-color: #4f7cff;
+  --primary-hover: #3d6df7;
+  --text-color: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --bg-color: #f3f4f6;
+  --border-color: #e5e7eb;
   --paper-bg: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-muted: #f9fafb;
+  --surface-strong: #eef2ff;
+  --focus-ring: color-mix(in srgb, var(--primary-color) 18%, white);
+  --tooltip-bg: #1f2937;
+  --tooltip-text: #ffffff;
+  --danger-color: #ef4444;
+  --danger-soft-bg: #fff1f2;
+  --danger-soft-border: #fecdd3;
+  --danger-hover-color: #dc2626;
+  --shadow-elevated: 0 4px 12px color-mix(in srgb, var(--text-color) 18%, transparent);
 
-  /* Color Palette */
-  --color-blue-500: #3b82f6;
-  --color-gray-100: #f3f4f6;
-  --color-gray-900: #111827; /* Dark gray/black for text */
+  /* Backward compatible palette aliases */
+  --color-blue-500: var(--primary-color);
+  --color-gray-100: var(--surface-soft);
+  --color-gray-900: var(--text-color);
 
   /* Toolbar Button Colors */
-  --btn-hover-bg: var(--color-gray-100);
-  --btn-active-bg: var(--color-blue-500);
+  --btn-hover-bg: var(--surface-soft);
+  --btn-active-bg: var(--primary-color);
   --btn-active-color: #ffffff;
-  --btn-text-color: var(--color-gray-900); /* Default text color */
+  --btn-text-color: var(--text-color);
 
   /* Layout */
   --toolbar-height: 48px;
   --sidebar-width: 240px;
 }
 
+[data-be-theme="dark"] {
+  --primary-color: #7aa2ff;
+  --primary-hover: #8eb0ff;
+  --text-color: #e5e7eb;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --bg-color: #0f172a;
+  --border-color: #334155;
+  --paper-bg: #111827;
+  --surface-soft: #1f2937;
+  --surface-muted: #1f2937;
+  --surface-strong: #1e293b;
+  --focus-ring: color-mix(in srgb, var(--primary-color) 25%, black);
+  --tooltip-bg: #0b1220;
+  --tooltip-text: #e5e7eb;
+  --danger-color: #f87171;
+  --danger-soft-bg: color-mix(in srgb, #ef4444 22%, #111827);
+  --danger-soft-border: color-mix(in srgb, #ef4444 45%, #111827);
+  --danger-hover-color: #fca5a5;
+  --shadow-elevated: 0 6px 16px color-mix(in srgb, black 45%, transparent);
+}
+
 /* Color Picker Styles Inlined */
 .color-picker-trigger {
   padding: 4px; /* Reduced padding */
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--paper-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -42,8 +77,8 @@
 }
 
 .color-picker-trigger:hover {
-  border-color: #d1d5db;
-  background: #f9fafb;
+  border-color: var(--primary-color);
+  background: var(--surface-soft);
 }
 
 .color-preview-box {
@@ -55,7 +90,7 @@
 }
 
 .color-picker-icon-lucide {
-  color: #9ca3af;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
 }
@@ -67,12 +102,12 @@
 
 /* Dropdown */
 .color-picker-dropdown {
-  background: white;
+  background: var(--paper-bg);
   border-radius: 12px;
   box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Softer shadow */
-  border: 1px solid #e5e7eb;
+    0 10px 15px -3px color-mix(in srgb, var(--text-color) 12%, transparent),
+    0 4px 6px -2px color-mix(in srgb, var(--text-color) 8%, transparent);
+  border: 1px solid var(--border-color);
   width: 240px; /* Slightly narrower */
   display: none;
   flex-direction: column;
@@ -88,7 +123,7 @@
 .color-picker-title {
   font-size: 13px; /* Slightly larger text */
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
   margin-bottom: 12px; /* More spacing */
   display: block;
 }
@@ -126,7 +161,7 @@
   /* Active state logic: ring or border? React code used border-color logic but design shows ring/outline feel */
   /* Let's use a box-shadow ring to match modern look or border */
   box-shadow:
-    0 0 0 2px white,
+    0 0 0 2px var(--paper-bg),
     0 0 0 4px var(--color-blue-500); /* Double ring effect for selection */
   /* Reset border */
   border: none;
@@ -158,7 +193,7 @@
   width: 40px; /* Matches height */
   height: 40px;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -181,11 +216,11 @@
   flex: 1;
   padding: 0 12px;
   height: 40px; /* Match color box height */
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 14px;
   outline: none;
-  color: #374151;
+  color: var(--text-secondary);
   font-family: monospace; /* For hex code */
   transition: border-color 0.2s;
 }
@@ -211,7 +246,7 @@
   /* React code has: border-2 hover:scale-110 transition-transform */
   /* And style={{ borderColor: value === color.value ? '#3B82F6' : '#E5E7EB' }} */
   /* So default border is #E5E7EB (gray-200) */
-  border-color: #e5e7eb;
+  border-color: var(--border-color);
   position: relative;
   transition: transform 0.2s; /* duration-200 usually, React code just says transition-transform */
 }
@@ -346,14 +381,14 @@ body {
 
 .toolbar {
   min-height: 40px;
-  background: #fff;
+  background: var(--paper-bg);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   padding: 8px 16px;
   gap: 8px;
   z-index: 5;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 10%, transparent);
   flex-wrap: nowrap;
   overflow-x: auto;
   flex-shrink: 0;
@@ -369,7 +404,7 @@ body {
 /* Tiptap/ProseMirror Container */
 .editor-container {
   background: var(--paper-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text-color) 14%, transparent);
   box-sizing: border-box;
   border-radius: 2px;
   position: relative;
@@ -380,7 +415,7 @@ body {
   outline: none;
   font-size: 16px;
   line-height: 1.8;
-  color: #262626;
+  color: var(--text-color);
   min-height: 500px;
 }
 
@@ -398,7 +433,7 @@ body {
 
 /* Placeholder */
 .ProseMirror p.is-editor-empty:first-child::before {
-  color: #bfbfbf;
+  color: var(--text-muted);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -407,31 +442,31 @@ body {
 
 /* Comments */
 .comment-mark {
-  background-color: #fff1f0; /* Light red/pinkish highlight for comments */
-  border-bottom: 2px solid #ffccc7;
+  background-color: color-mix(in srgb, var(--danger-color) 15%, var(--paper-bg));
+  border-bottom: 2px solid var(--danger-soft-border);
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .comment-mark:hover {
-  background-color: #ffccc7;
+  background-color: color-mix(in srgb, var(--danger-color) 25%, var(--paper-bg));
 }
 
 /* Comment Panel */
 .comment-panel {
   width: 320px;
-  background: #fff;
+  background: var(--paper-bg);
   border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   padding: 16px;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.02);
+  box-shadow: -2px 0 8px color-mix(in srgb, var(--text-color) 12%, transparent);
   z-index: 10;
 }
 
 .comment-item {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 12px;
@@ -440,13 +475,250 @@ body {
 
 .comment-date {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
 .comment-content {
-  color: #595959;
+  color: var(--text-secondary);
   line-height: 1.5;
+}
+
+/* Base panel card */
+.be-panel-card {
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.be-panel-card--clickable {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.be-panel-card--clickable:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color));
+}
+
+/* Base UI tag */
+.be-tag {
+  border: 1px solid var(--border-color);
+  background: var(--paper-bg);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.be-tag:hover {
+  border-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.be-tag.is-active {
+  background: color-mix(in srgb, var(--primary-color) 14%, white);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Base quote preview */
+.be-quote-preview {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, white);
+  border-left: 3px solid var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  border-radius: 8px;
+  padding: 7px 8px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.18s ease;
+}
+
+.be-quote-preview:hover {
+  background: color-mix(in srgb, var(--primary-color) 12%, white);
+}
+
+/* Base input */
+.be-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.be-input-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.be-input-wrapper {
+  position: relative;
+}
+
+.be-input-wrapper.has-icon .be-input-control {
+  padding-left: 38px;
+}
+
+.be-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.be-input-control {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text-color);
+  font-size: 13px;
+  outline: none;
+  background: var(--paper-bg);
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.be-input-control::placeholder {
+  color: var(--text-muted);
+}
+
+.be-input-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.be-input-control--textarea {
+  min-height: 56px;
+  max-height: 140px;
+  resize: vertical;
+}
+
+.comment-reply-input .be-input-control {
+  min-height: 30px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* Base UI button */
+.be-btn {
+  border: 1px solid var(--border-color);
+  background: var(--paper-bg);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.be-btn:hover {
+  background: var(--surface-soft);
+  border-color: var(--primary-color);
+}
+
+.be-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.be-btn--md {
+  font-size: 13px;
+  padding: 7px 12px;
+}
+
+.be-btn--sm {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.be-btn--xs {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.be-btn--pill {
+  border-radius: 999px;
+}
+
+.be-btn--icon-only {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 2px 5px;
+}
+
+.be-btn--primary {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+
+.be-btn--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.be-btn--danger {
+  background: var(--danger-soft-bg);
+  border-color: var(--danger-soft-border);
+  color: var(--danger-color);
+}
+
+.be-btn--danger:hover {
+  background: color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg));
+  border-color: var(--danger-color);
+}
+
+.be-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.be-btn--ghost:hover {
+  background: var(--surface-soft);
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.comment-filter-btn.is-active {
+  background: color-mix(in srgb, var(--primary-color) 14%, white);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.comment-action-btn--success:hover {
+  color: var(--primary-color);
+}
+
+.comment-action-btn--primary:hover {
+  color: var(--primary-color);
+}
+
+.comment-action-btn--danger:hover {
+  color: var(--danger-color);
 }
 
 /* Styles for new extensions */
@@ -482,7 +754,7 @@ ul[data-type="taskList"] li > div {
 }
 
 .ProseMirror img.ProseMirror-selectednode {
-  outline: 3px solid #68cef8;
+  outline: 3px solid var(--primary-color);
 }
 
 /* Table - Yuque Style Refined */
@@ -492,13 +764,13 @@ ul[data-type="taskList"] li > div {
   width: 100%;
   margin: 0;
   overflow: hidden;
-  border: 1px solid #e8e8e8; /* 外边框更细淡 */
+  border: 1px solid var(--border-color);
 }
 
 .ProseMirror td,
 .ProseMirror th {
   min-width: 1em;
-  border: 1px solid #e8e8e8; /* 内部边框细淡 */
+  border: 1px solid var(--border-color);
   padding: 8px 10px; /* 增加内边距 */
   vertical-align: top;
   box-sizing: border-box;
@@ -508,8 +780,8 @@ ul[data-type="taskList"] li > div {
 .ProseMirror th {
   font-weight: 600;
   text-align: left;
-  background-color: #f7f9fa; /* 语雀风格表头背景 */
-  color: #262626;
+  background-color: var(--surface-soft);
+  color: var(--text-color);
 }
 
 /* 选中单元格效果 */
@@ -521,9 +793,9 @@ ul[data-type="taskList"] li > div {
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(0, 185, 107, 0.1); /* 语雀绿选中态 */
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
   pointer-events: none;
-  border: 1px solid #00b96b;
+  border: 1px solid var(--primary-color);
 }
 
 /* 列宽调整手柄 */
@@ -533,31 +805,31 @@ ul[data-type="taskList"] li > div {
   top: 0;
   bottom: -2px;
   width: 4px;
-  background-color: #adf;
+  background-color: color-mix(in srgb, var(--primary-color) 55%, white);
   pointer-events: none;
 }
 
 /* Link */
 .ProseMirror a {
-  color: #00b96b; /* 语雀绿链接 */
+  color: var(--primary-color);
   text-decoration: none;
   cursor: pointer;
   border-bottom: 1px solid transparent;
 }
 
 .ProseMirror a:hover {
-  border-bottom-color: #00b96b;
+  border-bottom-color: var(--primary-color);
 }
 
 /* Blockquote */
 .ProseMirror blockquote {
-  border-left: 3px solid #00b96b;
+  border-left: 3px solid var(--primary-color);
   margin: 0.5em 0;
   margin-left: 0;
   padding: 8px 16px;
-  color: #666;
+  color: var(--text-secondary);
   font-style: italic;
-  background: #f9f9f9;
+  background: var(--surface-soft);
   border-radius: 0 4px 4px 0;
 }
 
@@ -578,10 +850,10 @@ ul[data-type="taskList"] li > div {
   align-items: center;
   gap: 4px;
   flex-wrap: nowrap;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: var(--paper-bg);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--text-color) 18%, transparent);
   padding: 4px;
   max-width: calc(100vw - 16px);
   overflow-x: auto;
@@ -611,10 +883,10 @@ ul[data-type="taskList"] li > div {
 /* Table Bubble Menu */
 .table-bubble-menu {
   display: flex;
-  background: white;
+  background: var(--paper-bg);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--text-color) 18%, transparent);
+  border: 1px solid var(--border-color);
   padding: 4px;
   align-items: center;
 }
@@ -634,14 +906,14 @@ ul[data-type="taskList"] li > div {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #595959;
+  color: var(--text-secondary);
   padding: 0;
   transition: all 0.2s;
 }
 
 .table-menu-group button:hover {
-  background: #f5f5f5;
-  color: #262626;
+  background: var(--surface-soft);
+  color: var(--text-color);
 }
 
 .table-menu-group button:disabled {
@@ -650,14 +922,14 @@ ul[data-type="taskList"] li > div {
 }
 
 .table-menu-group button.danger:hover {
-  background: #fff1f0;
-  color: #ff4d4f;
+  background: color-mix(in srgb, var(--danger-color) 16%, var(--paper-bg));
+  color: var(--danger-color);
 }
 
 .table-menu-divider {
   width: 1px;
   height: 16px;
-  background: #e8e8e8;
+  background: var(--border-color);
   margin: 0 6px;
 }
 
@@ -665,7 +937,7 @@ ul[data-type="taskList"] li > div {
 .toolbar-group {
   padding-right: 8px;
   margin-right: 8px;
-  border-right: 1px solid #eee;
+  border-right: 1px solid var(--border-color);
   display: flex;
   gap: 2px;
 }
@@ -713,7 +985,7 @@ ul[data-type="taskList"] li > div {
 .icon-btn.active {
   background: var(--btn-active-bg);
   color: var(--btn-active-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 10%, transparent);
 }
 
 .icon-btn.active i {
@@ -724,8 +996,8 @@ ul[data-type="taskList"] li > div {
 .global-tooltip {
   position: fixed;
   display: none;
-  background: #262626; /* Darker background for Yuque style */
-  color: #fff;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
@@ -737,10 +1009,7 @@ ul[data-type="taskList"] li > div {
   transition:
     opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
     transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow:
-    0 3px 6px -4px rgba(0, 0, 0, 0.12),
-    0 6px 16px 0 rgba(0, 0, 0, 0.08),
-    0 9px 28px 8px rgba(0, 0, 0, 0.05); /* Soft deep shadow */
+  box-shadow: var(--shadow-elevated);
 }
 
 .global-tooltip.visible {
@@ -761,7 +1030,7 @@ ul[data-type="taskList"] li > div {
 }
 
 .tooltip-shortcut {
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--tooltip-text) 70%, transparent);
   font-size: 11px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
@@ -773,7 +1042,7 @@ ul[data-type="taskList"] li > div {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: #262626;
+  background: var(--tooltip-bg);
   transform: rotate(45deg);
 }
 
@@ -819,10 +1088,10 @@ ul[data-type="taskList"] li > div {
 
 /* Floating menu – base styles; position/display controlled by JS */
 .toolbar-dropdown-menu {
-  background: white;
+  background: var(--paper-bg);
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 10px 24px -4px rgba(0, 0, 0, 0.12);
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--text-color) 12%, transparent), 0 10px 24px -4px color-mix(in srgb, var(--text-color) 18%, transparent);
+  border: 1px solid var(--border-color);
   padding: 4px;
   min-width: 120px;
   display: none; /* toggled by JS */
@@ -868,6 +1137,52 @@ ul[data-type="taskList"] li > div {
   cursor: not-allowed;
 }
 
+/* Block Handle Menu (align with toolbar dropdown style) */
+.be-block-handle-menu {
+  min-width: 240px;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+}
+
+.be-block-handle-menu .be-block-handle-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.be-block-handle-menu .be-block-handle-menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.be-block-handle-menu .be-block-handle-menu-item.danger {
+  color: var(--danger-color);
+}
+
+.be-block-handle-menu .be-block-handle-menu-item.danger:hover {
+  background: color-mix(in srgb, var(--danger-color) 14%, var(--paper-bg));
+  color: var(--danger-hover-color);
+}
+
+.be-block-handle-menu .be-block-handle-menu-item.danger .be-block-handle-menu-icon {
+  color: var(--danger-color);
+}
+
+.be-block-handle-menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-color);
+}
+
 .color-picker-wrapper {
   position: relative;
   width: 28px;
@@ -880,7 +1195,7 @@ ul[data-type="taskList"] li > div {
 }
 
 .color-picker-wrapper:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--surface-soft);
 }
 
 .color-input {
@@ -894,13 +1209,13 @@ ul[data-type="taskList"] li > div {
 
 .text-btn {
   background: transparent;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 4px 12px;
   height: 32px;
   cursor: pointer;
   font-size: 14px;
-  color: #595959;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -919,14 +1234,14 @@ ul[data-type="taskList"] li > div {
 }
 
 .text-btn.primary:hover {
-  background: #009456;
-  border-color: #009456;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .divider {
   width: 1px;
   height: 20px;
-  background: #e8e8e8;
+  background: var(--border-color);
   margin: 0 4px;
 }
 
@@ -935,14 +1250,14 @@ ul[data-type="taskList"] li > div {
   border: none;
   font-size: 36px;
   font-weight: 700;
-  color: #262626;
+  color: var(--text-color);
   margin-bottom: 24px;
   outline: none;
   padding: 0;
 }
 
 .doc-title-input::placeholder {
-  color: #bfbfbf;
+  color: var(--text-muted);
 }
 
 /* Print / PDF Export Styles */

@@ -296,7 +296,7 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
         command: 'addComment',
         shortcut: '⌥⌘M',
         onExecute: (core: EditorCore) => {
-          core.events.emit('toggleCommentPanel')
+          core.events.emit('openCommentPanel')
         },
       },
     ],

@@ -15,6 +15,7 @@ export interface CommentThread {
   id: string
   author: string
   text: string
+  quoteText?: string
   createdAt: number
   resolved: boolean
   replies: CommentReply[]
@@ -63,11 +64,12 @@ export class CommentStore {
     }
   }
 
-  addThread(id: string, text: string, author = '我') {
+  addThread(id: string, text: string, author = '我', quoteText?: string) {
     this.threads.set(id, {
       id,
       author,
       text,
+      quoteText,
       createdAt: Date.now(),
       resolved: false,
       replies: [],

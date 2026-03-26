@@ -55,6 +55,7 @@ import {
 } from "../utils/performanceBenchmark";
 import { resolveEditorI18n } from "../i18n";
 import type { EditorI18n } from "../i18n";
+import type { EditorUIConfig } from "../ui/config/operation-bars";
 
 // Simple Event Bus
 type Listener = (...args: any[]) => void;
@@ -94,6 +95,7 @@ export interface EditorCoreOptions {
   onUpdate?: (editor: Editor) => void;
   collaboration?: CollaborationOptions;
   i18n?: string | Partial<EditorI18n>;
+  uiConfig?: EditorUIConfig;
 }
 
 export class EditorCore {
@@ -105,11 +107,13 @@ export class EditorCore {
   public versionHistory: VersionHistoryManager;
   public provider: WebsocketProvider | null = null;
   public i18n: EditorI18n;
+  public uiConfig?: EditorUIConfig;
   private ydoc: Y.Doc | null = null;
 
   constructor(options: EditorCoreOptions) {
     this.events = new EventBus();
     this.i18n = resolveEditorI18n(options.i18n);
+    this.uiConfig = options.uiConfig;
 
     const collaborationEnabled = Boolean(options.collaboration?.enabled);
     const roomName = options.collaboration?.roomName || "block-editor-room";
@@ -192,7 +196,9 @@ export class EditorCore {
       SmartPaste,
       BlockMultiSelect,
       BlockAnchor,
-      BlockHandle,
+      BlockHandle.configure({
+        i18n: this.i18n.blockHandle,
+      }),
       CurrentLineHighlight,
       SelectionTooltip,
     ];
@@ -201,21 +207,22 @@ export class EditorCore {
       element: options.element,
       extensions,
       content: options.content,
-      onUpdate: ({ editor }) => {
+      onUpdate: ({ editor }: { editor: Editor }) => {
         options.onUpdate?.(editor);
         this.syncInteractionMode(editor);
         this.versionHistory.captureAutoSnapshot();
         this.events.emit("update", editor);
       },
-      onSelectionUpdate: ({ editor }) => {
+      onSelectionUpdate: ({ editor }: { editor: Editor }) => {
         this.syncInteractionMode(editor);
         this.events.emit("selectionUpdate", editor);
       },
-      onTransaction: ({ editor }) => {
+      onTransaction: ({ editor }: { editor: Editor }) => {
         this.syncInteractionMode(editor);
         this.events.emit("transaction", editor);
       },
-    });
+      ...(this.uiConfig ? ({ uiConfig: this.uiConfig } as any) : {}),
+    } as any);
 
     (this.editor as Editor & { __core?: EditorCore }).__core = this;
 

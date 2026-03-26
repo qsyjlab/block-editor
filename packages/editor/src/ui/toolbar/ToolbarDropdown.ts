@@ -2,6 +2,12 @@ import { computePosition, flip, shift, offset, autoUpdate, hide } from '@floatin
 import { EditorCore } from '../../core/EditorCore'
 import { icons } from './icons'
 import { ToolbarDropdownConfig, DropdownOptionConfig } from './ToolbarRegistry'
+import {
+  createDropdownItem,
+  createDropdownMenu,
+  focusDropdownItem,
+  getFocusableDropdownItems,
+} from "../components/DropdownMenu";
 
 export type ToolbarDropdownProps = ToolbarDropdownConfig
 
@@ -93,7 +99,9 @@ export class ToolbarDropdown {
     this.trigger.className = 'toolbar-dropdown-trigger'
     this.trigger.setAttribute('aria-haspopup', 'listbox')
     this.trigger.setAttribute('aria-expanded', 'false')
-    if (this.props.label) this.trigger.dataset.tooltip = this.props.label
+    if (this.props.tooltip || this.props.label) {
+      this.trigger.dataset.tooltip = this.props.tooltip || this.props.label
+    }
     if (this.props.width) this.trigger.style.width = this.props.width
 
     const labelSpan = document.createElement('span')
@@ -133,22 +141,10 @@ export class ToolbarDropdown {
     })
 
     // ── Menu container ─────────────────────────────────────────────────────────
-    this.menu = document.createElement('div')
-    this.menu.className = 'toolbar-dropdown-menu'
-    this.menu.setAttribute('role', 'listbox')
-    this.menu.style.display = 'none'
-
-    // Avoid bubbling to global outside-click handlers of other floating UIs
-    const stopEvent = (e: Event) => e.stopPropagation()
-    this.menu.addEventListener('mousedown', stopEvent)
-    this.menu.addEventListener('click', stopEvent)
-    this.menu.addEventListener('touchstart', stopEvent, { passive: true })
-
-    if (this.props.layout === 'row') {
-      this.menu.style.flexDirection = 'row'
-      this.menu.style.padding = '4px'
-      this.menu.style.gap = '4px'
-    }
+    this.menu = createDropdownMenu({
+      role: "listbox",
+      layout: this.props.layout === "row" ? "row" : "list",
+    })
 
     wrapper.appendChild(this.trigger)
     return wrapper
@@ -295,18 +291,11 @@ export class ToolbarDropdown {
   }
 
   private getFocusableItems(): HTMLElement[] {
-    return Array.from(
-      this.menu.querySelectorAll<HTMLElement>('.dropdown-item:not([disabled])')
-    )
+    return getFocusableDropdownItems(this.menu)
   }
 
   private focusItem(index: number) {
-    const items = this.getFocusableItems()
-    items.forEach((item, i) => {
-      item.classList.toggle('keyboard-focus', i === index)
-    })
-    this.focusedIndex = index
-    items[index]?.scrollIntoView({ block: 'nearest' })
+    this.focusedIndex = focusDropdownItem(this.menu, index)
   }
 
   // ── Menu item rendering ──────────────────────────────────────────────────────
@@ -315,36 +304,6 @@ export class ToolbarDropdown {
     this.menu.innerHTML = ''
 
     this.props.options.forEach((opt) => {
-      const item = document.createElement('div')
-      item.className = 'dropdown-item'
-      item.setAttribute('role', 'option')
-      item.setAttribute('tabindex', '-1')
-      item.setAttribute('aria-label', opt.label)
-      item.setAttribute('aria-selected', 'false')
-      item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;'
-
-      const content = document.createElement('div')
-      content.style.cssText = 'display:flex;align-items:center;gap:8px;'
-
-      if (opt.icon && icons[opt.icon]) {
-        const iconSpan = document.createElement('span')
-        iconSpan.innerHTML = icons[opt.icon]
-        iconSpan.style.display = 'flex'
-        content.appendChild(iconSpan)
-
-        if (this.props.layout !== 'row') {
-          const textSpan = document.createElement('span')
-          textSpan.textContent = opt.label
-          content.appendChild(textSpan)
-        } else {
-          item.title = opt.label
-          item.dataset.tooltip = opt.label
-        }
-      } else {
-        content.textContent = opt.label
-      }
-      item.appendChild(content)
-
       // Active state
       let isActive = false
       if (opt.isActive) {
@@ -354,19 +313,32 @@ export class ToolbarDropdown {
         isActive = this.editorCore.editor.isActive(name, opt.args)
       }
 
+      const isDisabled = Boolean(opt.isDisabled?.(this.editorCore.editor))
+      const item = createDropdownItem({
+        label: opt.label,
+        iconHtml: opt.icon && icons[opt.icon] ? icons[opt.icon] : undefined,
+        active: isActive,
+        disabled: isDisabled,
+        tooltip: this.props.layout === "row" ? (opt.tooltip || opt.label) : undefined,
+        title: this.props.layout === "row" ? (opt.tooltip || opt.label) : undefined,
+      })
+
       if (this.props.layout === 'row') {
         item.style.justifyContent = 'center'
         item.style.padding = '4px'
         item.style.minWidth = '28px'
         item.style.minHeight = '28px'
+        const text = item.querySelector('span:last-child') as HTMLElement | null
+        if (text) text.style.display = 'none'
         if (isActive) {
-          item.classList.add('active')
           item.style.backgroundColor = 'var(--btn-active-bg)'
           item.style.color = 'var(--btn-active-color)'
         }
       } else {
+        item.style.display = 'flex'
+        item.style.alignItems = 'center'
+        item.style.justifyContent = 'space-between'
         if (isActive) {
-          item.classList.add('active')
           item.style.backgroundColor = 'var(--btn-active-bg)'
           item.style.color = 'var(--btn-active-color)'
           item.style.fontWeight = '500'
@@ -374,10 +346,7 @@ export class ToolbarDropdown {
         }
       }
 
-      // Disabled state
-      if (opt.isDisabled?.(this.editorCore.editor)) {
-        item.setAttribute('disabled', 'true')
-        item.classList.add('disabled')
+      if (isDisabled) {
         item.style.opacity = '0.5'
         item.style.pointerEvents = 'none'
       }

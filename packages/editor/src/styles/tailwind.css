@@ -20,8 +20,14 @@
 
 /* Current Line Highlight */
 .be-active-block {
-  @apply be-bg-blue-50/30; /* Very subtle highlight */
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
   border-radius: 4px;
+}
+
+@supports not (color: color-mix(in srgb, white 50%, black)) {
+  .be-active-block {
+    background: rgba(59, 130, 246, 0.14);
+  }
 }
 
 /* Ensure the editor has relative positioning for the handle */

@@ -28,7 +28,7 @@ export class ToolbarItem {
     if (this.props.command) {
         btn.dataset.command = this.props.command
     }
-    btn.dataset.tooltip = this.props.label
+    btn.dataset.tooltip = this.props.tooltip || this.props.label
     if (this.props.shortcut) {
       btn.dataset.shortcut = this.props.shortcut
     }

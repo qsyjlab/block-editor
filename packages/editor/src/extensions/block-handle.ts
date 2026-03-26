@@ -1,6 +1,8 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import type { BlockHandleI18n } from "../i18n/types";
+import { createDropdownItem } from "../ui/components/DropdownMenu";
 
 /** Simple throttle: fire at most once per `ms` milliseconds */
 function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
@@ -16,7 +18,28 @@ function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
 
 export interface BlockHandleOptions {
   width: number;
+  i18n: BlockHandleI18n;
 }
+
+const DEFAULT_BLOCK_HANDLE_I18N: BlockHandleI18n = {
+  handleAriaLabel: "块操作（点击打开菜单，Shift+点击多选）",
+  menuAriaLabel: "块操作菜单",
+  moveUp: "上移一块",
+  moveDown: "下移一块",
+  duplicateBlock: "复制块",
+  copyBlockLink: "复制块链接",
+  deleteBlock: "删除块",
+  toParagraph: "转为正文",
+  toHeading1: "转为 H1",
+  toHeading2: "转为 H2",
+  toHeading3: "转为 H3",
+  toBulletList: "转为无序列表",
+  toOrderedList: "转为有序列表",
+  toTaskList: "转为任务列表",
+  toBlockquote: "转为引用",
+  addToMultiSelect: "添加到多选",
+  copyLinkPromptTitle: "复制块链接",
+};
 
 export const BlockHandle = Extension.create<BlockHandleOptions>({
   name: "blockHandle",
@@ -24,6 +47,7 @@ export const BlockHandle = Extension.create<BlockHandleOptions>({
   addOptions() {
     return {
       width: 24,
+      i18n: DEFAULT_BLOCK_HANDLE_I18N,
     };
   },
 
@@ -32,7 +56,12 @@ export const BlockHandle = Extension.create<BlockHandleOptions>({
       new Plugin({
         key: new PluginKey("blockHandle"),
         view: (editorView) =>
-          new BlockHandleView(editorView, this.options.width, this.editor),
+          new BlockHandleView(
+            editorView,
+            this.options.width,
+            this.editor,
+            this.options.i18n,
+          ),
       }),
     ];
   },
@@ -45,17 +74,25 @@ class BlockHandleView {
   private currentBlockPos: number | null = null;
   private editor: any; // Tiptap editor instance
   private hideTimer: any = null;
+  private menuHideTimer: number | null = null;
   private scrollTarget: HTMLElement | Document = document;
+  private i18n: BlockHandleI18n;
 
-  constructor(editorView: EditorView, _width: number, editor: any) {
+  constructor(
+    editorView: EditorView,
+    _width: number,
+    editor: any,
+    i18n: BlockHandleI18n,
+  ) {
     this.editorView = editorView;
     this.editor = editor;
+    this.i18n = i18n;
 
     // Create Handle Element
     this.element = document.createElement("div");
     this.element.className = "be-block-handle";
     this.element.setAttribute("role", "button");
-    this.element.setAttribute("aria-label", "块操作（点击打开菜单，Shift+点击多选）");
+    this.element.setAttribute("aria-label", this.i18n.handleAriaLabel);
     this.element.setAttribute("aria-haspopup", "menu");
     this.element.setAttribute("tabindex", "0");
     this.element.style.position = "absolute";
@@ -67,12 +104,13 @@ class BlockHandleView {
     this.element.style.cursor = "grab";
     this.element.style.borderRadius = "4px";
     this.element.style.backgroundColor = "transparent";
+    this.element.style.color = "var(--text-muted)";
     this.element.style.transition = "opacity 0.2s, background-color 0.2s";
     this.element.style.zIndex = "50";
 
     // Hover effect
     this.element.addEventListener("mouseenter", () => {
-      this.element.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+      this.element.style.backgroundColor = "var(--surface-soft)";
       this.cancelHide();
     });
     this.element.addEventListener("mouseleave", () => {
@@ -82,7 +120,7 @@ class BlockHandleView {
 
     // Drag Handle Icon (6 dots)
     this.element.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none; color: #9ca3af;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none; color: currentColor;">
         <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>
         <circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
       </svg>
@@ -90,20 +128,14 @@ class BlockHandleView {
 
     // Create Menu Element
     this.menu = document.createElement("div");
-    this.menu.className = "be-block-handle-menu";
+    this.menu.className = "be-block-handle-menu toolbar-dropdown-menu be-panel-card";
     this.menu.setAttribute("role", "menu");
-    this.menu.setAttribute("aria-label", "块操作菜单");
+    this.menu.setAttribute("aria-label", this.i18n.menuAriaLabel);
     Object.assign(this.menu.style, {
       display: "none",
       position: "fixed",
       zIndex: "9999",
-      background: "white",
-      border: "1px solid #e5e7eb",
-      borderRadius: "8px",
-      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.08), 0 10px 24px -4px rgba(0,0,0,0.12)",
-      padding: "4px",
-      minWidth: "192px",
-      flexDirection: "column",
+      minWidth: "240px",
     });
 
     // Add menu items
@@ -162,6 +194,29 @@ class BlockHandleView {
     );
   }
 
+  private isCurrentBlockType(typeName: string) {
+    if (this.currentBlockPos === null) return false;
+    const { doc } = this.editorView.state;
+    const resolved = doc.resolve(this.currentBlockPos);
+    for (let depth = resolved.depth; depth >= 0; depth -= 1) {
+      if (resolved.node(depth).type.name === typeName) return true;
+    }
+    return false;
+  }
+
+  private isCurrentHeading(level: number) {
+    if (this.currentBlockPos === null) return false;
+    const { doc } = this.editorView.state;
+    const node = doc.nodeAt(this.currentBlockPos);
+    if (node?.type.name === "heading" && node.attrs?.level === level) return true;
+    const resolved = doc.resolve(this.currentBlockPos);
+    for (let depth = resolved.depth; depth >= 0; depth -= 1) {
+      const depthNode = resolved.node(depth);
+      if (depthNode.type.name === "heading" && depthNode.attrs?.level === level) return true;
+    }
+    return false;
+  }
+
   renderMenu() {
     const ICON = {
       arrowUp: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
@@ -171,76 +226,95 @@ class BlockHandleView {
       trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
     };
 
-    const items: {label: string; icon: string; action: () => void; danger?: boolean; divider?: boolean}[] = [
+    const items: {
+      label: string;
+      icon: string;
+      action: () => void;
+      danger?: boolean;
+      divider?: boolean;
+      isActive?: () => boolean;
+    }[] = [
       {
-        label: "上移一块",
+        label: this.i18n.moveUp,
         icon: ICON.arrowUp,
         action: () => this.moveBlock(-1),
       },
       {
-        label: "下移一块",
+        label: this.i18n.moveDown,
         icon: ICON.arrowDown,
         action: () => this.moveBlock(1),
       },
       {
-        label: "复制块",
+        label: this.i18n.duplicateBlock,
         icon: ICON.copy,
         action: () => this.duplicateBlock(),
       },
       {
-        label: "复制块链接",
+        label: this.i18n.copyBlockLink,
         icon: ICON.link,
         action: () => this.copyBlockLink(),
       },
       {
-        label: "删除块",
+        label: this.i18n.deleteBlock,
         icon: ICON.trash,
         action: () => this.deleteBlock(),
         danger: true,
         divider: true,
       },
       {
-        label: "转为正文",
+        label: this.i18n.toParagraph,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>',
         action: () => this.runCommand("setParagraph"),
+        isActive: () => {
+          if (this.currentBlockPos === null) return false;
+          const node = this.editorView.state.doc.nodeAt(this.currentBlockPos);
+          return node?.type.name === "paragraph";
+        },
       },
       {
-        label: "转为 H1",
+        label: this.i18n.toHeading1,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H1</span>',
         action: () => this.runCommand("toggleHeading", { level: 1 }),
+        isActive: () => this.isCurrentHeading(1),
       },
       {
-        label: "转为 H2",
+        label: this.i18n.toHeading2,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H2</span>',
         action: () => this.runCommand("toggleHeading", { level: 2 }),
+        isActive: () => this.isCurrentHeading(2),
       },
       {
-        label: "转为 H3",
+        label: this.i18n.toHeading3,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H3</span>',
         action: () => this.runCommand("toggleHeading", { level: 3 }),
+        isActive: () => this.isCurrentHeading(3),
       },
       {
-        label: "转为无序列表",
+        label: this.i18n.toBulletList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>',
         action: () => this.runCommand("toggleBulletList"),
+        isActive: () => this.isCurrentBlockType("bulletList"),
       },
       {
-        label: "转为有序列表",
+        label: this.i18n.toOrderedList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>',
         action: () => this.runCommand("toggleOrderedList"),
+        isActive: () => this.isCurrentBlockType("orderedList"),
       },
       {
-        label: "转为任务列表",
+        label: this.i18n.toTaskList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>',
         action: () => this.runCommand("toggleTaskList"),
+        isActive: () => this.isCurrentBlockType("taskList"),
       },
       {
-        label: "转为引用",
+        label: this.i18n.toBlockquote,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>',
         action: () => this.runCommand("toggleBlockquote"),
+        isActive: () => this.isCurrentBlockType("blockquote"),
       },
       {
-        label: "添加到多选",
+        label: this.i18n.addToMultiSelect,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
         action: () => {
           if (this.currentBlockPos !== null) {
@@ -254,36 +328,24 @@ class BlockHandleView {
     this.menu.innerHTML = "";
     items.forEach((item) => {
       if (item.divider) {
-        const hr = document.createElement("hr");
-        hr.style.cssText = "margin:4px 0;border:none;border-top:1px solid #f0f0f0;";
+        const hr = document.createElement("div");
+        hr.className = "be-block-handle-menu-divider";
         this.menu.appendChild(hr);
       }
 
-      const btn = document.createElement("button");
-      const dangerColor = "#ef4444";
-      const normalColor = "#374151";
-      btn.setAttribute("role", "menuitem");
-      btn.setAttribute("aria-label", item.label);
-      btn.style.cssText = `
-        display:flex;align-items:center;gap:8px;width:100%;
-        padding:6px 8px;font-size:13px;line-height:1.4;text-align:left;
-        border:none;border-radius:5px;background:transparent;
-        color:${item.danger ? dangerColor : normalColor};
-        cursor:pointer;transition:background 0.1s;white-space:nowrap;
-        font-family:inherit;
-      `.replace(/\s+/g, " ").trim();
-
-      btn.innerHTML = `
-        <span style="display:flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;color:#9ca3af;">${item.icon}</span>
-        <span>${item.label}</span>
-      `;
-
-      btn.addEventListener("mouseenter", () => {
-        btn.style.background = item.danger ? "#fef2f2" : "#f3f4f6";
+      const active = item.isActive?.() ?? false;
+      const btn = createDropdownItem({
+        label: item.label,
+        iconHtml: item.icon,
+        role: "menuitem",
+        className: `be-block-handle-menu-item${item.danger ? " danger" : ""}`,
+        active,
+        danger: item.danger,
       });
-      btn.addEventListener("mouseleave", () => {
-        btn.style.background = "transparent";
-      });
+      const icon = btn.querySelector("span");
+      if (icon) {
+        icon.classList.add("be-block-handle-menu-icon");
+      }
 
       btn.onclick = (e) => {
         e.stopPropagation();
@@ -421,7 +483,7 @@ class BlockHandleView {
   }
 
   private fallbackCopy(text: string) {
-    window.prompt("复制块链接", text);
+    window.prompt(this.i18n.copyLinkPromptTitle, text);
   }
 
   copyBlockLink() {
@@ -461,7 +523,7 @@ class BlockHandleView {
   };
 
   handleScroll = () => {
-    if (this.menu.style.display === "flex") {
+    if (this.menu.style.display !== "none") {
       this.hideMenu();
     }
     // Optional: re-check handle position or hide it
@@ -470,7 +532,7 @@ class BlockHandleView {
 
   scheduleHide() {
     this.hideTimer = setTimeout(() => {
-      if (this.menu.style.display !== "flex") {
+      if (this.menu.style.display === "none") {
         this.element.style.opacity = "0";
         this.element.style.pointerEvents = "none";
       }
@@ -575,10 +637,22 @@ class BlockHandleView {
 
   toggleMenu() {
     if (this.menu.style.display === "none") {
+      this.renderMenu();
       const rect = this.element.getBoundingClientRect();
-      this.menu.style.display = "flex";
+      if (this.menuHideTimer) {
+        window.clearTimeout(this.menuHideTimer);
+        this.menuHideTimer = null;
+      }
+      this.menu.style.display = "block";
       this.menu.style.top = `${rect.bottom + 4}px`;
       this.menu.style.left = `${rect.left}px`;
+      this.menu.style.opacity = "0";
+      this.menu.style.transform = "translateY(-6px) scale(0.98)";
+      requestAnimationFrame(() => {
+        this.menu.style.transition = "opacity 0.15s ease, transform 0.15s ease";
+        this.menu.style.opacity = "1";
+        this.menu.style.transform = "translateY(0) scale(1)";
+      });
       this.editor.commands.setBlockMenuOpen(true);
       this.editor.commands.setInteractionMode("block-selection");
     } else {
@@ -589,7 +663,20 @@ class BlockHandleView {
   hideMenu() {
     if (this.menu.style.display === "none") return;
 
-    this.menu.style.display = "none";
+    if (this.menuHideTimer) {
+      window.clearTimeout(this.menuHideTimer);
+      this.menuHideTimer = null;
+    }
+    this.menu.style.transition = "opacity 0.12s ease, transform 0.12s ease";
+    this.menu.style.opacity = "0";
+    this.menu.style.transform = "translateY(-4px) scale(0.98)";
+    this.menuHideTimer = window.setTimeout(() => {
+      this.menu.style.display = "none";
+      this.menu.style.transition = "";
+      this.menu.style.opacity = "";
+      this.menu.style.transform = "";
+      this.menuHideTimer = null;
+    }, 120);
     this.editor.commands.setBlockMenuOpen(false);
 
     if (this.editor.isActive("table")) {
@@ -612,5 +699,6 @@ class BlockHandleView {
       (this.scrollTarget as HTMLElement).removeEventListener("scroll", this.handleScroll);
     }
     if (this.hideTimer) clearTimeout(this.hideTimer);
+    if (this.menuHideTimer) window.clearTimeout(this.menuHideTimer);
   }
 }

@@ -7,13 +7,14 @@ import {
   hide,
 } from "@floating-ui/dom";
 import { EditorCore } from "../core/EditorCore";
-import { ToolbarItem } from "./toolbar/ToolbarItem";
-import { ToolbarDropdown } from "./toolbar/ToolbarDropdown";
-import { ColorPicker } from "./toolbar/color-picker/color-picker";
 import { TooltipManager } from "./toolbar/TooltipManager";
-import { ToolbarRegistry, ToolbarItemType } from "./toolbar/ToolbarRegistry";
-import { buildDefaultToolbarItems } from "./toolbar/defaultToolbarItems";
+import { ToolbarItemType } from "./toolbar/ToolbarRegistry";
+import { resolveToolbarGroups, type ToolbarConfig } from "./config/operation-bars";
 import { icons } from "./toolbar/icons";
+import {
+  createToolbarItemElement,
+  flattenToolbarGroups,
+} from "./toolbar/item-factory";
 import { resolveEditorI18n } from "../i18n";
 import type { EditorI18n } from "../i18n";
 
@@ -35,11 +36,13 @@ export class Toolbar {
   private moreMenuTimer: any = null;
   private readonly moreMenuOwnerId: string;
   private readonly i18n: EditorI18n;
+  private readonly groups: ToolbarItemType[][];
 
   constructor(
     container: HTMLElement,
     editorCore: EditorCore,
     i18nInput?: string | Partial<EditorI18n> | null,
+    config?: ToolbarConfig,
   ) {
     this.container = container;
     this.editorCore = editorCore;
@@ -47,12 +50,7 @@ export class Toolbar {
     this.tooltipManager = new TooltipManager(); // Initialize TooltipManager
     this.moreMenuOwnerId = `be-more-${++Toolbar.instanceCount}`;
 
-    // Initialize default items if registry is empty
-    if (ToolbarRegistry.getItems().length === 0) {
-      buildDefaultToolbarItems(this.i18n).forEach((group) =>
-        ToolbarRegistry.registerGroup(group),
-      );
-    }
+    this.groups = resolveToolbarGroups(this.i18n, config);
 
     this.render();
   }
@@ -64,33 +62,11 @@ export class Toolbar {
     this.container.style.overflow = "hidden";
     this.container.style.flexWrap = "nowrap";
 
-    const groups = ToolbarRegistry.getItems();
-    const allItems: ToolbarItemType[] = [];
-
-    groups.forEach((group, index) => {
-      allItems.push(...group);
-      if (index < groups.length - 1) {
-        allItems.push({ type: "divider" });
-      }
-    });
+    const allItems: ToolbarItemType[] = flattenToolbarGroups(this.groups);
 
     // Create all item elements
     allItems.forEach((item) => {
-      let element: HTMLElement | null = null;
-
-      if (item.type === "button") {
-        const component = new ToolbarItem(item, this.editorCore);
-        element = component.getElement();
-      } else if (item.type === "dropdown") {
-        const component = new ToolbarDropdown(item, this.editorCore);
-        element = component.getElement();
-      } else if (item.type === "color") {
-        const component = new ColorPicker(item.label, this.editorCore);
-        element = component.getElement();
-      } else if (item.type === "divider") {
-        element = document.createElement("div");
-        element.className = "divider";
-      }
+      const element = createToolbarItemElement(item, this.editorCore);
 
       if (element) {
         this.items.push(element);

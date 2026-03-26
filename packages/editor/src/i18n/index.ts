@@ -41,5 +41,17 @@ export function resolveEditorI18n(input?: string | Partial<EditorI18n> | null): 
         ...(input.dialogs?.versionHistory || {}),
       },
     },
+    commentPanel: {
+      ...base.commentPanel,
+      ...(input.commentPanel || {}),
+    },
+    blockHandle: {
+      ...base.blockHandle,
+      ...(input.blockHandle || {}),
+    },
+    blockMultiSelectBar: {
+      ...base.blockMultiSelectBar,
+      ...(input.blockMultiSelectBar || {}),
+    },
   }
 }

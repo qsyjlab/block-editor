@@ -5,373 +5,608 @@
  * - 已解决筛选（全部 / 未解决 / 已解决）
  */
 
-import { TextSelection } from 'prosemirror-state'
-import { EditorCore } from '../core/EditorCore'
-import { commentStore, CommentThread } from '../extensions/Comment'
+import { TextSelection } from "prosemirror-state";
+import { EditorCore } from "../core/EditorCore";
+import { commentStore, CommentThread } from "../extensions/Comment";
+import type { CommentPanelI18n } from "../i18n/types";
+import { createBaseButton } from "./components/BaseButton";
+import { createBaseInput } from "./components/BaseInput";
+import { createBaseTag } from "./components/BaseTag";
+import { createPanelCard } from "./components/PanelCard";
+import { createQuotePreview } from "./components/QuotePreview";
 
-type CommentFilter = 'all' | 'open' | 'resolved'
+type CommentFilter = "all" | "open" | "resolved";
 
-function formatTime(ts: number): string {
-  const d = new Date(ts)
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+function splitLegacyQuotedComment(text: string): {
+  quoteText?: string;
+  bodyText: string;
+} {
+  const match =
+    text.match(/^关于「(.+?)」：\s*(.*)$/s) ||
+    text.match(/^About ["“](.+?)["”]:\s*(.*)$/is);
+  if (!match) return { bodyText: text };
+  return {
+    quoteText: match[1]?.trim() || undefined,
+    bodyText: (match[2] || "").trim(),
+  };
+}
+
+const DEFAULT_COMMENT_PANEL_I18N: CommentPanelI18n = {
+  panelAriaLabel: "评论面板",
+  title: "评论",
+  filterAll: "全部",
+  filterOpen: "未解决",
+  filterResolved: "已解决",
+  filterAriaPrefix: "筛选：",
+  draftPlaceholder: "输入评论内容（将添加到当前选中文本）",
+  draftAriaLabel: "评论内容",
+  createButton: "添加到选区",
+  createButtonAriaLabel: "添加评论到选区",
+  selectionQuoteAriaLabel: "跳转到引用内容",
+  selectionQuoteTitle: "点击跳转到引用位置",
+  selectionQuotePrefix: "| ",
+  selectionHintEmpty: "请先在正文中选中文本",
+  selectionHintReady: "已检测到选区，可直接添加",
+  emptyNoComments: "暂无评论",
+  emptyResolved: "暂无已解决评论",
+  threadJumpTitle: "点击跳转到文档中的标注位置",
+  resolveAction: "解决评论",
+  reopenAction: "重新打开",
+  deleteAction: "删除评论",
+  replyPlaceholder: "回复...",
+  replyAriaLabel: "回复评论",
+  replyButton: "回复",
+  replyButtonAriaLabel: "发送回复",
+  currentUser: "我",
+};
+
+function formatTime(ts: number, locale: string): string {
+  const d = new Date(ts);
+  return new Intl.DateTimeFormat(locale, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
 
 export class CommentPanel {
-  private listEl: HTMLElement
-  private editorCore: EditorCore
-  private unsubscribe: () => void
-  private filter: CommentFilter = 'open'
-  private filterBtns: Record<CommentFilter, HTMLButtonElement>
-  private draftInput: HTMLTextAreaElement
-  private hintEl: HTMLElement
+  private listEl: HTMLElement;
+  private editorCore: EditorCore;
+  private i18n: CommentPanelI18n;
+  private unsubscribe: () => void;
+  private filter: CommentFilter = "open";
+  private filterBtns: Record<CommentFilter, HTMLButtonElement>;
+  private draftInput: HTMLTextAreaElement;
+  private hintEl: HTMLElement;
+  private selectionQuoteEl: HTMLButtonElement;
+  private pendingSelection: { from: number; to: number } | null = null;
+  private pendingSelectionPreview = "";
+  private readonly openCommentPanelHandler: () => void;
+  private readonly focusCommentThreadHandler: (commentId: string) => void;
 
-  constructor(editorCore: EditorCore, container: HTMLElement) {
-    this.editorCore = editorCore
+  constructor(
+    editorCore: EditorCore,
+    container: HTMLElement,
+    i18n?: Partial<CommentPanelI18n>,
+  ) {
+    this.editorCore = editorCore;
+    this.i18n = {
+      ...DEFAULT_COMMENT_PANEL_I18N,
+      ...(i18n || {}),
+    };
 
-    container.classList.add('comment-panel')
-    container.setAttribute('role', 'complementary')
-    container.setAttribute('aria-label', '评论面板')
+    container.classList.add("comment-panel");
+    container.setAttribute("role", "complementary");
+    container.setAttribute("aria-label", this.i18n.panelAriaLabel);
 
-    const header = document.createElement('div')
-    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-shrink:0;'
+    const header = document.createElement("div");
+    header.style.cssText =
+      "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-shrink:0;";
 
-    const title = document.createElement('h3')
-    title.textContent = '评论'
-    title.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#262626;'
-    header.appendChild(title)
+    const title = document.createElement("h3");
+    title.textContent = this.i18n.title;
+    title.style.cssText =
+      "margin:0;font-size:14px;font-weight:600;color:var(--text-color);";
+    header.appendChild(title);
 
-    const filterWrap = document.createElement('div')
-    filterWrap.style.cssText = 'display:flex;gap:4px;'
+    const filterWrap = document.createElement("div");
+    filterWrap.style.cssText = "display:flex;gap:4px;";
 
     this.filterBtns = {
-      all: this.createFilterBtn('全部', 'all'),
-      open: this.createFilterBtn('未解决', 'open'),
-      resolved: this.createFilterBtn('已解决', 'resolved'),
-    }
+      all: this.createFilterBtn(this.i18n.filterAll, "all"),
+      open: this.createFilterBtn(this.i18n.filterOpen, "open"),
+      resolved: this.createFilterBtn(this.i18n.filterResolved, "resolved"),
+    };
 
-    filterWrap.appendChild(this.filterBtns.open)
-    filterWrap.appendChild(this.filterBtns.resolved)
-    filterWrap.appendChild(this.filterBtns.all)
-    header.appendChild(filterWrap)
-    container.appendChild(header)
+    filterWrap.appendChild(this.filterBtns.open);
+    filterWrap.appendChild(this.filterBtns.resolved);
+    filterWrap.appendChild(this.filterBtns.all);
+    header.appendChild(filterWrap);
+    container.appendChild(header);
 
-    const draftWrap = document.createElement('div')
-    draftWrap.style.cssText = 'border:1px solid #f0f0f0;border-radius:8px;padding:8px;background:#fafafa;margin-bottom:10px;flex-shrink:0;'
+    const draftWrap = document.createElement("div");
+    draftWrap.style.cssText =
+      "border:1px solid var(--border-color);border-radius:8px;padding:8px;background:var(--surface-muted);margin-bottom:10px;flex-shrink:0;";
 
-    this.draftInput = document.createElement('textarea')
-    this.draftInput.placeholder = '输入评论内容（将添加到当前选中文本）'
-    this.draftInput.setAttribute('aria-label', '评论内容')
-    this.draftInput.rows = 2
-    this.draftInput.style.cssText = 'width:100%;resize:vertical;min-height:52px;max-height:140px;border:1px solid #e8e8e8;border-radius:6px;padding:8px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;background:#fff;'
-    this.draftInput.addEventListener('focus', () => {
-      this.draftInput.style.borderColor = '#00b96b'
-    })
-    this.draftInput.addEventListener('blur', () => {
-      this.draftInput.style.borderColor = '#e8e8e8'
-    })
+    this.selectionQuoteEl = createQuotePreview({
+      text: "",
+      ariaLabel: this.i18n.selectionQuoteAriaLabel,
+      title: this.i18n.selectionQuoteTitle,
+      className: "comment-selection-quote",
+      onClick: () => this.jumpToPendingSelection(),
+    });
+    this.selectionQuoteEl.style.display = "none";
 
-    const createRow = document.createElement('div')
-    createRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;'
+    const draftInputField = createBaseInput({
+      placeholder: this.i18n.draftPlaceholder,
+      ariaLabel: this.i18n.draftAriaLabel,
+      multiline: true,
+      rows: 2,
+      className: "comment-draft-input",
+    });
+    this.draftInput = draftInputField.control as HTMLTextAreaElement;
 
-    this.hintEl = document.createElement('span')
-    this.hintEl.style.cssText = 'font-size:12px;color:#8c8c8c;'
+    const createRow = document.createElement("div");
+    createRow.style.cssText =
+      "display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;";
 
-    const createBtn = document.createElement('button')
-    createBtn.textContent = '添加到选区'
-    createBtn.setAttribute('aria-label', '添加评论到选区')
-    createBtn.style.cssText = 'border:none;background:#00b96b;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;'
-    createBtn.addEventListener('click', () => this.createCommentFromSelection())
+    this.hintEl = document.createElement("span");
+    this.hintEl.style.cssText = "font-size:12px;color:var(--text-muted);";
 
-    createRow.appendChild(this.hintEl)
-    createRow.appendChild(createBtn)
+    const createBtn = createBaseButton({
+      label: this.i18n.createButton,
+      ariaLabel: this.i18n.createButtonAriaLabel,
+      variant: "primary",
+      size: "sm",
+      className: "comment-create-btn",
+    });
+    createBtn.addEventListener("click", () =>
+      this.createCommentFromSelection(),
+    );
 
-    draftWrap.appendChild(this.draftInput)
-    draftWrap.appendChild(createRow)
-    container.appendChild(draftWrap)
+    createRow.appendChild(this.hintEl);
+    createRow.appendChild(createBtn);
 
-    this.listEl = document.createElement('div')
-    this.listEl.style.cssText = 'flex:1;overflow-y:auto;'
-    this.listEl.setAttribute('role', 'list')
-    container.appendChild(this.listEl)
+    draftWrap.appendChild(this.selectionQuoteEl);
+    draftWrap.appendChild(draftInputField.container);
+    draftWrap.appendChild(createRow);
+    container.appendChild(draftWrap);
 
-    this.unsubscribe = commentStore.on(() => this.render())
-    editorCore.editor.on('update', () => this.render())
-    editorCore.editor.on('selectionUpdate', () => this.renderSelectionHint())
+    this.listEl = document.createElement("div");
+    this.listEl.style.cssText = "flex:1;overflow-y:auto;";
+    this.listEl.setAttribute("role", "list");
+    container.appendChild(this.listEl);
 
-    this.renderSelectionHint()
-    this.render()
+    this.unsubscribe = commentStore.on(() => this.render());
+    editorCore.editor.on("update", () => this.render());
+    editorCore.editor.on("selectionUpdate", () => this.renderSelectionHint());
+    this.openCommentPanelHandler = () => this.handleOpenCommentPanel();
+    this.focusCommentThreadHandler = (commentId: string) =>
+      this.focusCommentThread(commentId);
+    this.editorCore.events.on("openCommentPanel", this.openCommentPanelHandler);
+    this.editorCore.events.on(
+      "focusCommentThread",
+      this.focusCommentThreadHandler,
+    );
+
+    this.renderSelectionHint();
+    this.render();
   }
 
-  private createFilterBtn(label: string, filter: CommentFilter): HTMLButtonElement {
-    const btn = document.createElement('button')
-    btn.textContent = label
-    btn.setAttribute('aria-label', `筛选：${label}`)
-    btn.style.cssText = 'border:1px solid #e5e7eb;background:#fff;color:#595959;border-radius:999px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:inherit;'
-    btn.addEventListener('click', () => {
-      this.filter = filter
-      this.render()
-    })
-    return btn
+  private handleOpenCommentPanel() {
+    const selection = this.editorCore.editor.state.selection;
+    if (!selection.empty) {
+      this.pendingSelection = { from: selection.from, to: selection.to };
+      const selectedText = this.editorCore.editor.state.doc
+        .textBetween(selection.from, selection.to, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const snippet =
+        selectedText.length > 80
+          ? `${selectedText.slice(0, 80)}...`
+          : selectedText;
+      this.pendingSelectionPreview = snippet;
+    }
+    this.renderPendingSelectionQuote();
+    queueMicrotask(() => {
+      this.draftInput.focus();
+      const end = this.draftInput.value.length;
+      this.draftInput.setSelectionRange(end, end);
+    });
+    this.renderSelectionHint();
+  }
+
+  private createFilterBtn(
+    label: string,
+    filter: CommentFilter,
+  ): HTMLButtonElement {
+    const btn = createBaseTag({
+      label,
+      ariaLabel: `${this.i18n.filterAriaPrefix}${label}`,
+      className: "comment-filter-btn",
+    });
+    btn.addEventListener("click", () => {
+      this.filter = filter;
+      this.render();
+    });
+    return btn;
+  }
+
+  private focusCommentThread(commentId: string) {
+    this.filter = "all";
+    this.render();
+
+    const item = this.listEl.querySelector(
+      `[data-comment-id="${commentId}"]`,
+    ) as HTMLElement | null;
+    if (!item) return;
+
+    item.scrollIntoView({ block: "center", behavior: "smooth" });
+    item.style.boxShadow = "0 0 0 2px var(--primary-color)";
+    setTimeout(() => {
+      item.style.boxShadow = "";
+    }, 1400);
+  }
+
+  private renderPendingSelectionQuote() {
+    if (!this.pendingSelection || !this.pendingSelectionPreview) {
+      this.selectionQuoteEl.style.display = "none";
+      this.selectionQuoteEl.textContent = "";
+      return;
+    }
+
+    this.selectionQuoteEl.style.display = "block";
+    this.selectionQuoteEl.textContent = `${this.i18n.selectionQuotePrefix}${this.pendingSelectionPreview}`;
+    this.selectionQuoteEl.title = this.i18n.selectionQuoteTitle;
+  }
+
+  private jumpToPendingSelection() {
+    if (!this.pendingSelection) return;
+    const { state, view } = this.editorCore.editor;
+    const { from, to } = this.pendingSelection;
+    if (from < 0 || to > state.doc.content.size || from >= to) return;
+
+    const tr = state.tr.setSelection(TextSelection.create(state.doc, from, to));
+    view.dispatch(tr.scrollIntoView());
+    view.focus();
   }
 
   private renderSelectionHint() {
-    const empty = this.editorCore.editor.state.selection.empty
-    this.hintEl.textContent = empty ? '请先在正文中选中文本' : '已检测到选区，可直接添加'
-    this.hintEl.style.color = empty ? '#8c8c8c' : '#00b96b'
+    const empty =
+      this.editorCore.editor.state.selection.empty && !this.pendingSelection;
+    this.hintEl.textContent = empty
+      ? this.i18n.selectionHintEmpty
+      : this.i18n.selectionHintReady;
+    this.hintEl.style.color = empty ? "var(--text-muted)" : "var(--primary-color)";
+    this.renderPendingSelectionQuote();
   }
 
   private createCommentFromSelection() {
-    const text = this.draftInput.value.trim()
-    if (!text) return
+    const text = this.draftInput.value.trim();
+    if (!text) return;
 
-    const editor = this.editorCore.editor
-    if (editor.state.selection.empty) {
-      this.renderSelectionHint()
-      return
+    const editor = this.editorCore.editor;
+    let range = !editor.state.selection.empty
+      ? { from: editor.state.selection.from, to: editor.state.selection.to }
+      : this.pendingSelection;
+
+    if (!range) {
+      this.renderSelectionHint();
+      return;
     }
 
-    const id = `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-    commentStore.addThread(id, text)
-    editor.chain().focus().setComment(id).run()
+    // Ensure command applies to the originally captured range.
+    if (
+      editor.state.selection.empty ||
+      editor.state.selection.from !== range.from ||
+      editor.state.selection.to !== range.to
+    ) {
+      const tr = editor.state.tr.setSelection(
+        TextSelection.create(editor.state.doc, range.from, range.to),
+      );
+      editor.view.dispatch(tr);
+    }
 
-    this.draftInput.value = ''
-    this.jumpToComment(id)
-    this.render()
+    const id = `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const quoteText = this.pendingSelectionPreview || undefined;
+    commentStore.addThread(id, text, this.i18n.currentUser, quoteText);
+    editor.chain().focus().setComment(id).run();
+
+    this.draftInput.value = "";
+    this.pendingSelection = null;
+    this.pendingSelectionPreview = "";
+    this.renderPendingSelectionQuote();
+    this.jumpToComment(id);
+    this.render();
   }
 
   private getFilteredThreads(): CommentThread[] {
-    const all = commentStore.getAll()
-    if (this.filter === 'all') return all
-    if (this.filter === 'resolved') return all.filter((t) => t.resolved)
-    return all.filter((t) => !t.resolved)
+    const all = commentStore.getAll();
+    if (this.filter === "all") return all;
+    if (this.filter === "resolved") return all.filter((t) => t.resolved);
+    return all.filter((t) => !t.resolved);
   }
 
   private render() {
-    this.listEl.innerHTML = ''
+    this.listEl.innerHTML = "";
+    (["all", "open", "resolved"] as CommentFilter[]).forEach((key) => {
+      const active = key === this.filter;
+      this.filterBtns[key].classList.toggle("is-active", active);
+      this.filterBtns[key].setAttribute(
+        "aria-pressed",
+        active ? "true" : "false",
+      );
+    });
 
-    ;(['all', 'open', 'resolved'] as CommentFilter[]).forEach((key) => {
-      const active = key === this.filter
-      this.filterBtns[key].style.background = active ? '#ecfdf5' : '#fff'
-      this.filterBtns[key].style.borderColor = active ? '#86efac' : '#e5e7eb'
-      this.filterBtns[key].style.color = active ? '#15803d' : '#595959'
-      this.filterBtns[key].setAttribute('aria-pressed', active ? 'true' : 'false')
-    })
+    this.renderSelectionHint();
 
-    this.renderSelectionHint()
-
-    const threads = this.getFilteredThreads()
+    const threads = this.getFilteredThreads();
     if (threads.length === 0) {
-      const empty = document.createElement('div')
-      empty.style.cssText = 'text-align:center;color:#bfbfbf;font-size:13px;padding:32px 0;'
-      empty.textContent = this.filter === 'resolved' ? '暂无已解决评论' : '暂无评论'
-      this.listEl.appendChild(empty)
-      return
+      const empty = document.createElement("div");
+      empty.style.cssText =
+        "text-align:center;color:var(--text-muted);font-size:13px;padding:32px 0;";
+      empty.textContent =
+        this.filter === "resolved"
+          ? this.i18n.emptyResolved
+          : this.i18n.emptyNoComments;
+      this.listEl.appendChild(empty);
+      return;
     }
 
     threads.forEach((thread) => {
-      this.listEl.appendChild(this.renderThread(thread))
-    })
+      this.listEl.appendChild(this.renderThread(thread));
+    });
   }
 
   private renderThread(thread: CommentThread): HTMLElement {
-    const item = document.createElement('div')
-    item.className = 'comment-item'
-    item.setAttribute('role', 'listitem')
-    item.setAttribute('data-comment-id', thread.id)
-    item.style.cursor = 'pointer'
-    item.title = '点击跳转到文档中的标注位置'
+    const item = createPanelCard({
+      className: "comment-item",
+      role: "listitem",
+      clickable: true,
+    });
+    item.setAttribute("data-comment-id", thread.id);
+    item.style.cursor = "pointer";
+    item.title = this.i18n.threadJumpTitle;
 
-    item.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button, textarea, input')) return
-      this.jumpToComment(thread.id)
-    })
+    item.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+      this.jumpToComment(thread.id);
+    });
 
-    const headerEl = document.createElement('div')
-    headerEl.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;'
+    const headerEl = document.createElement("div");
+    headerEl.style.cssText =
+      "display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;";
 
-    const authorDate = document.createElement('div')
-    authorDate.innerHTML = `<span style="font-weight:600;color:#262626;font-size:13px;">${escapeHtml(thread.author)}</span> <span class="comment-date">${formatTime(thread.createdAt)}</span>`
-    headerEl.appendChild(authorDate)
+    const authorDate = document.createElement("div");
+    authorDate.innerHTML = `<span style="font-weight:600;color:var(--text-color);font-size:13px;">${escapeHtml(thread.author)}</span> <span class="comment-date">${formatTime(thread.createdAt, this.editorCore.i18n.locale)}</span>`;
+    headerEl.appendChild(authorDate);
 
-    const actions = document.createElement('div')
-    actions.style.cssText = 'display:flex;gap:4px;flex-shrink:0;'
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:4px;flex-shrink:0;";
 
     if (!thread.resolved) {
-      const resolveBtn = this.createActionBtn('✓', '解决评论', '#00b96b')
-      resolveBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        commentStore.resolve(thread.id)
-        this.removeMarkFromEditor(thread.id)
-      })
-      actions.appendChild(resolveBtn)
+      const resolveBtn = this.createActionBtn(
+        "✓",
+        this.i18n.resolveAction,
+        "success",
+      );
+      resolveBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        commentStore.resolve(thread.id);
+        this.removeMarkFromEditor(thread.id);
+      });
+      actions.appendChild(resolveBtn);
     } else {
-      const reopenBtn = this.createActionBtn('↺', '重新打开', '#1677ff')
-      reopenBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        commentStore.reopen(thread.id)
-      })
-      actions.appendChild(reopenBtn)
+      const reopenBtn = this.createActionBtn(
+        "↺",
+        this.i18n.reopenAction,
+        "primary",
+      );
+      reopenBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        commentStore.reopen(thread.id);
+      });
+      actions.appendChild(reopenBtn);
     }
 
-    const deleteBtn = this.createActionBtn('✕', '删除评论', '#ff4d4f')
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      commentStore.delete(thread.id)
-      this.removeMarkFromEditor(thread.id)
-    })
-    actions.appendChild(deleteBtn)
-    headerEl.appendChild(actions)
-    item.appendChild(headerEl)
+    const deleteBtn = this.createActionBtn(
+      "✕",
+      this.i18n.deleteAction,
+      "danger",
+    );
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      commentStore.delete(thread.id);
+      this.removeMarkFromEditor(thread.id);
+    });
+    actions.appendChild(deleteBtn);
+    headerEl.appendChild(actions);
+    item.appendChild(headerEl);
 
-    const textEl = document.createElement('div')
-    textEl.className = 'comment-content'
-    textEl.textContent = thread.text
-    item.appendChild(textEl)
+    const { quoteText: legacyQuote, bodyText } = splitLegacyQuotedComment(
+      thread.text,
+    );
+    const finalQuoteText = thread.quoteText || legacyQuote;
+
+    if (finalQuoteText) {
+      const quoteEl = createQuotePreview({
+        text: finalQuoteText,
+        title: this.i18n.selectionQuoteTitle,
+        className: "comment-thread-quote",
+      });
+      quoteEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.jumpToComment(thread.id);
+      });
+      item.appendChild(quoteEl);
+    }
+
+    const textEl = document.createElement("div");
+    textEl.className = "comment-content";
+    textEl.textContent = bodyText;
+    item.appendChild(textEl);
 
     if (thread.replies.length > 0) {
-      const repliesEl = document.createElement('div')
-      repliesEl.style.cssText = 'margin-top:8px;border-left:2px solid #f0f0f0;padding-left:10px;display:flex;flex-direction:column;gap:6px;'
+      const repliesEl = document.createElement("div");
+      repliesEl.style.cssText =
+        "margin-top:8px;border-left:2px solid var(--border-color);padding-left:10px;display:flex;flex-direction:column;gap:6px;";
       thread.replies.forEach((reply) => {
-        const r = document.createElement('div')
+        const r = document.createElement("div");
         r.innerHTML = `
-          <div style="font-size:12px;color:#8c8c8c;margin-bottom:2px;">
-            <strong style="color:#595959;">${escapeHtml(reply.author)}</strong> · ${formatTime(reply.createdAt)}
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">
+            <strong style="color:var(--text-secondary);">${escapeHtml(reply.author)}</strong> · ${formatTime(reply.createdAt, this.editorCore.i18n.locale)}
           </div>
-          <div style="font-size:13px;color:#595959;">${escapeHtml(reply.text)}</div>
-        `
-        repliesEl.appendChild(r)
-      })
-      item.appendChild(repliesEl)
+          <div style="font-size:13px;color:var(--text-secondary);">${escapeHtml(reply.text)}</div>
+        `;
+        repliesEl.appendChild(r);
+      });
+      item.appendChild(repliesEl);
     }
 
     if (!thread.resolved) {
-      const replyRow = document.createElement('div')
-      replyRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;'
+      const replyRow = document.createElement("div");
+      replyRow.style.cssText = "display:flex;gap:6px;margin-top:8px;";
 
-      const input = document.createElement('input')
-      input.type = 'text'
-      input.placeholder = '回复...'
-      input.setAttribute('aria-label', '回复评论')
-      input.style.cssText = 'flex:1;border:1px solid #e8e8e8;border-radius:4px;padding:4px 8px;font-size:12px;outline:none;font-family:inherit;'
-      input.addEventListener('focus', () => {
-        input.style.borderColor = '#00b96b'
-      })
-      input.addEventListener('blur', () => {
-        input.style.borderColor = '#e8e8e8'
-      })
-      input.addEventListener('click', (e) => e.stopPropagation())
+      const inputField = createBaseInput({
+        placeholder: this.i18n.replyPlaceholder,
+        ariaLabel: this.i18n.replyAriaLabel,
+        className: "comment-reply-input",
+      });
+      const input = inputField.control as HTMLInputElement;
+      inputField.container.style.flex = "1";
+      input.addEventListener("click", (e) => e.stopPropagation());
 
-      const sendBtn = document.createElement('button')
-      sendBtn.textContent = '回复'
-      sendBtn.setAttribute('aria-label', '发送回复')
-      sendBtn.style.cssText = 'border:none;background:#00b96b;color:#fff;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;'
-      sendBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        const text = input.value.trim()
-        if (!text) return
-        commentStore.addReply(thread.id, text)
-        input.value = ''
-      })
+      const sendBtn = createBaseButton({
+        label: this.i18n.replyButton,
+        ariaLabel: this.i18n.replyButtonAriaLabel,
+        variant: "primary",
+        size: "xs",
+        className: "comment-reply-send-btn",
+      });
+      sendBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const text = input.value.trim();
+        if (!text) return;
+        commentStore.addReply(thread.id, text);
+        input.value = "";
+      });
 
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.stopPropagation()
-          sendBtn.click()
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.stopPropagation();
+          sendBtn.click();
         }
-      })
+      });
 
-      replyRow.appendChild(input)
-      replyRow.appendChild(sendBtn)
-      item.appendChild(replyRow)
+      replyRow.appendChild(inputField.container);
+      replyRow.appendChild(sendBtn);
+      item.appendChild(replyRow);
     }
 
     if (thread.resolved) {
-      item.style.opacity = '0.7'
+      item.style.opacity = "0.7";
     }
 
-    return item
+    return item;
   }
 
-  private createActionBtn(text: string, title: string, hoverColor: string): HTMLButtonElement {
-    const btn = document.createElement('button')
-    btn.textContent = text
-    btn.title = title
-    btn.setAttribute('aria-label', title)
-    btn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:12px;color:#8c8c8c;padding:2px 5px;border-radius:3px;font-family:inherit;'
-    btn.addEventListener('mouseenter', () => {
-      btn.style.color = hoverColor
-      btn.style.background = '#f5f5f5'
-    })
-    btn.addEventListener('mouseleave', () => {
-      btn.style.color = '#8c8c8c'
-      btn.style.background = 'transparent'
-    })
-    return btn
+  private createActionBtn(
+    text: string,
+    title: string,
+    tone: "success" | "primary" | "danger",
+  ): HTMLButtonElement {
+    const btn = createBaseButton({
+      label: text,
+      ariaLabel: title,
+      title,
+      variant: "ghost",
+      size: "xs",
+      iconOnly: true,
+      className: `comment-action-btn comment-action-btn--${tone}`,
+    });
+    return btn;
   }
 
   private jumpToComment(commentId: string) {
-    const editor = this.editorCore.editor
-    const { state, view } = editor
-    let foundPos: number | null = null
+    const editor = this.editorCore.editor;
+    const { state, view } = editor;
+    let foundPos: number | null = null;
 
     state.doc.descendants((node, pos) => {
-      if (foundPos !== null) return false
-      if (!node.isText) return true
+      if (foundPos !== null) return false;
+      if (!node.isText) return true;
       for (const mark of node.marks) {
-        if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
-          foundPos = pos
-          return false
+        if (
+          mark.type.name === "comment" &&
+          mark.attrs.commentId === commentId
+        ) {
+          foundPos = pos;
+          return false;
         }
       }
-      return true
-    })
+      return true;
+    });
 
-    if (foundPos === null) return
+    if (foundPos === null) return;
 
-    const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(foundPos)))
-    view.dispatch(tr.scrollIntoView())
-    view.focus()
+    const tr = state.tr.setSelection(
+      TextSelection.near(state.doc.resolve(foundPos)),
+    );
+    view.dispatch(tr.scrollIntoView());
+    view.focus();
 
-    const span = view.dom.querySelector(`[data-comment-id="${commentId}"]`) as HTMLElement | null
+    const span = view.dom.querySelector(
+      `[data-comment-id="${commentId}"]`,
+    ) as HTMLElement | null;
     if (span) {
-      span.style.outline = '2px solid #00b96b'
+      span.style.outline = "2px solid var(--primary-color)";
       setTimeout(() => {
-        span.style.outline = ''
-      }, 1500)
+        span.style.outline = "";
+      }, 1500);
     }
   }
 
   private removeMarkFromEditor(commentId: string) {
-    const { state, view } = this.editorCore.editor
-    const schema = state.schema
-    const commentMark = schema.marks.comment
-    if (!commentMark) return
+    const { state, view } = this.editorCore.editor;
+    const schema = state.schema;
+    const commentMark = schema.marks.comment;
+    if (!commentMark) return;
 
-    let tr = state.tr
-    let changed = false
+    let tr = state.tr;
+    let changed = false;
 
     state.doc.descendants((node, pos) => {
-      if (!node.isInline) return
+      if (!node.isInline) return;
       node.marks.forEach((mark) => {
         if (mark.type === commentMark && mark.attrs.commentId === commentId) {
-          tr = tr.removeMark(pos, pos + node.nodeSize, commentMark)
-          changed = true
+          tr = tr.removeMark(pos, pos + node.nodeSize, commentMark);
+          changed = true;
         }
-      })
-    })
+      });
+    });
 
-    if (changed) view.dispatch(tr)
+    if (changed) view.dispatch(tr);
   }
 
   destroy() {
-    this.unsubscribe()
+    this.unsubscribe();
+    this.editorCore.events.off(
+      "openCommentPanel",
+      this.openCommentPanelHandler,
+    );
+    this.editorCore.events.off(
+      "focusCommentThread",
+      this.focusCommentThreadHandler,
+    );
   }
 }
 
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

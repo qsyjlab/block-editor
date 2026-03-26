@@ -20,6 +20,11 @@ const locale = (
   "zh-CN"
 ).toLowerCase();
 const editorLocale = locale.startsWith("en") ? "en-US" : "zh-CN";
+const rawTheme = (params.get("theme") || "auto").toLowerCase();
+const editorTheme =
+  rawTheme === "dark" || rawTheme === "light" || rawTheme === "auto"
+    ? rawTheme
+    : "auto";
 
 function createCustomLayout(
   container: HTMLElement,
@@ -125,6 +130,7 @@ onMounted(() => {
     toolbarMode: "inline",
     commentPanelDefaultVisible: true,
     i18n: editorLocale,
+    theme: editorTheme,
     layoutBuilder: ({
       container,
       editorCore,

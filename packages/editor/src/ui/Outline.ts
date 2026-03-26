@@ -119,7 +119,7 @@ export class Outline {
     const title = document.createElement("h3");
     title.textContent = this.i18n.outlineTitle;
     title.style.cssText =
-      "margin:0 0 10px;font-size:16px;line-height:1.25;font-weight:700;color:#0f172a;letter-spacing:0;";
+      "margin:0 0 10px;font-size:16px;line-height:1.25;font-weight:700;color:var(--text-color);letter-spacing:0;";
     this.container.appendChild(title);
 
     this.headings = [];
@@ -147,7 +147,7 @@ export class Outline {
     if (this.headings.length === 0) {
       const empty = document.createElement("div");
       empty.textContent = this.i18n.noHeadings;
-      empty.style.color = "#94a3b8";
+      empty.style.color = "var(--text-muted)";
       empty.style.fontSize = "12px";
       empty.style.padding = "6px 2px";
       this.container.appendChild(empty);
@@ -170,18 +170,18 @@ export class Outline {
         li.style.textOverflow = "ellipsis";
         li.style.transition = "all 0.14s ease";
         li.style.fontWeight = h.level === 1 ? "600" : "500";
-        li.style.color = "#334155";
+        li.style.color = "var(--text-secondary)";
 
         li.addEventListener("mouseenter", () => {
           if (this.activePos !== h.pos) {
-            li.style.background = "#f1f5f9";
-            li.style.color = "#0f172a";
+            li.style.background = "var(--surface-soft)";
+            li.style.color = "var(--text-color)";
           }
         });
         li.addEventListener("mouseleave", () => {
           if (this.activePos !== h.pos) {
             li.style.background = "transparent";
-            li.style.color = "#334155";
+            li.style.color = "var(--text-secondary)";
           }
         });
 
@@ -266,13 +266,13 @@ export class Outline {
     wrapper.className = "be-outline-backlinks";
     wrapper.style.marginTop = "14px";
     wrapper.style.paddingTop = "12px";
-    wrapper.style.borderTop = "1px solid #e5e7eb";
+    wrapper.style.borderTop = "1px solid var(--border-color)";
 
     const title = document.createElement("div");
     title.textContent = this.i18n.backlinksTitle;
     title.style.fontSize = "13px";
     title.style.fontWeight = "600";
-    title.style.color = "#475569";
+    title.style.color = "var(--text-secondary)";
     title.style.marginBottom = "8px";
     wrapper.appendChild(title);
 
@@ -283,13 +283,13 @@ export class Outline {
       const empty = document.createElement("div");
       empty.textContent = this.i18n.noBlockId;
       empty.style.fontSize = "12px";
-      empty.style.color = "#9ca3af";
+      empty.style.color = "var(--text-muted)";
       wrapper.appendChild(empty);
     } else if (backlinks.length === 0) {
       const empty = document.createElement("div");
       empty.textContent = this.i18n.noBacklinks;
       empty.style.fontSize = "12px";
-      empty.style.color = "#9ca3af";
+      empty.style.color = "var(--text-muted)";
       wrapper.appendChild(empty);
     } else {
       const list = document.createElement("div");
@@ -303,14 +303,14 @@ export class Outline {
         btn.textContent = item.text || this.i18n.backlinkPlaceholder;
         btn.title = this.i18n.backlinkFrom(item.fromBlockId);
         btn.style.cssText =
-          "text-align:left;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:7px 9px;font-size:12px;color:#334155;cursor:pointer;font-family:inherit;";
+          "text-align:left;border:1px solid var(--border-color);background:var(--paper-bg);border-radius:8px;padding:7px 9px;font-size:12px;color:var(--text-secondary);cursor:pointer;font-family:inherit;";
         btn.onmouseenter = () => {
-          btn.style.background = "#f8fafc";
-          btn.style.borderColor = "#cbd5e1";
+          btn.style.background = "var(--surface-soft)";
+          btn.style.borderColor = "var(--primary-color)";
         };
         btn.onmouseleave = () => {
-          btn.style.background = "#fff";
-          btn.style.borderColor = "#e5e7eb";
+          btn.style.background = "var(--paper-bg)";
+          btn.style.borderColor = "var(--border-color)";
         };
         btn.onclick = () => {
           this.navigateToPos(item.fromPos);
@@ -455,12 +455,13 @@ export class Outline {
 
     this.itemByPos.forEach((item, headingPos) => {
       if (headingPos === pos) {
-        item.style.color = "#0f172a";
+        item.style.color = "var(--text-color)";
         item.style.fontWeight = "650";
-        item.style.background = "#eff6ff";
-        item.style.boxShadow = "inset 0 0 0 1px #bfdbfe";
+        item.style.background =
+          "color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg))";
+        item.style.boxShadow = "inset 0 0 0 1px var(--primary-color)";
       } else {
-        item.style.color = "#334155";
+        item.style.color = "var(--text-secondary)";
         item.style.fontWeight = item.dataset.outlineLevel === "1" ? "600" : "500";
         item.style.background = "transparent";
         item.style.boxShadow = "none";

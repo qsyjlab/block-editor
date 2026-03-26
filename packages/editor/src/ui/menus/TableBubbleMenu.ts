@@ -3,7 +3,7 @@ import { EditorCore } from '../../core/EditorCore'
 import { ToolbarItem } from '../toolbar/ToolbarItem'
 import { ToolbarDropdown } from '../toolbar/ToolbarDropdown'
 import { ToolbarColorPicker } from '../toolbar/ToolbarColorPicker'
-import { tableMenuButtons } from './tableMenuItems'
+import { getTableMenuButtons } from './tableMenuItems'
 import { ToolbarItemType } from '../toolbar/ToolbarRegistry'
 
 export class TableBubbleMenu {
@@ -47,10 +47,10 @@ export class TableBubbleMenu {
     menu.className = 'table-bubble-menu toolbar be-fixed be-z-[1000] be-bg-white be-border be-border-gray-200 be-rounded-md be-shadow-lg be-p-1 be-gap-1'
     menu.style.display = 'none'
     menu.setAttribute('role', 'toolbar')
-    menu.setAttribute('aria-label', '表格工具栏')
+    menu.setAttribute('aria-label', this.editorCore.i18n.toolbar.tableToolbar)
     menu.setAttribute('aria-orientation', 'horizontal')
 
-    this.renderItems(menu, tableMenuButtons)
+    this.renderItems(menu, getTableMenuButtons(this.editorCore.i18n))
     return menu
   }
 
