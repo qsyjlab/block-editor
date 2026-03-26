@@ -147,21 +147,27 @@ class SlashMenuView {
   private slashPos: number | null = null
   private i18n: SlashCommandI18n
   private commands: SlashCommandItem[]
+  private overlayHost: HTMLElement
 
   constructor(view: EditorView, editor: Editor, i18n: SlashCommandI18n) {
     this.view = view
     this.editor = editor
     this.i18n = i18n
     this.commands = createDefaultCommands(i18n)
+    const root = this.view.dom as HTMLElement
+    this.overlayHost =
+      (root.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (root.closest('[data-be-ui-root="true"]') as HTMLElement | null) ||
+      document.body
 
     this.container = document.createElement('div')
     this.container.className = 'be-slash-menu'
     this.container.setAttribute('role', 'listbox')
     this.container.setAttribute('aria-label', this.i18n.menuAriaLabel)
     this.container.style.cssText =
-      'display:none;position:fixed;z-index:9999;background:white;border:1px solid #e8e8e8;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:4px;min-width:240px;max-height:320px;overflow-y:auto;'
+      'display:none;position:fixed;z-index:9999;background:var(--paper-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:var(--shadow-elevated);padding:4px;min-width:240px;max-height:320px;overflow-y:auto;'
 
-    document.body.appendChild(this.container)
+    this.overlayHost.appendChild(this.container)
   }
 
   show(pos: number, query: string) {
@@ -216,14 +222,14 @@ class SlashMenuView {
       btn.setAttribute('aria-label', `${item.title}：${item.description}`)
       btn.style.cssText = `
         display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;
-        border:none;border-radius:5px;background:${idx === this.selectedIndex ? '#f3f4f6' : 'transparent'};
+        border:none;border-radius:5px;background:${idx === this.selectedIndex ? 'var(--surface-soft)' : 'transparent'};
         cursor:pointer;text-align:left;transition:background 0.15s;
       `
       btn.innerHTML = `
-        <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f9fafb;border:1px solid #e8e8e8;border-radius:5px;flex-shrink:0;color:#595959;">${item.icon}</span>
+        <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--surface-soft);border:1px solid var(--border-color);border-radius:5px;flex-shrink:0;color:var(--text-secondary);">${item.icon}</span>
         <span style="display:flex;flex-direction:column;gap:1px;">
-          <span style="font-size:13px;font-weight:500;color:#262626;">${item.title}</span>
-          <span style="font-size:12px;color:#9ca3af;">${item.description}</span>
+          <span style="font-size:13px;font-weight:500;color:var(--text-color);">${item.title}</span>
+          <span style="font-size:12px;color:var(--text-muted);">${item.description}</span>
         </span>
       `
       btn.onmouseenter = () => {

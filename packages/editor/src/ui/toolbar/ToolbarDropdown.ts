@@ -71,14 +71,24 @@ export class ToolbarDropdown {
   private _isOpen: boolean = false
   private cleanupFloating: (() => void) | null = null
   private focusedIndex: number = -1
+  private overlayHost: HTMLElement
 
   constructor(props: ToolbarDropdownProps, editorCore: EditorCore) {
     this.props = props
     this.editorCore = editorCore
+    this.overlayHost = this.resolveOverlayHost()
     this.element = this.render()
 
     this.editorCore.events.on('selectionUpdate', () => this.updateLabel())
     this.editorCore.events.on('transaction', () => this.updateLabel())
+  }
+
+  private resolveOverlayHost(): HTMLElement {
+    const editorRoot = this.editorCore.editor.options.element as HTMLElement
+    const host =
+      (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
+    return host || document.body
   }
 
   public getElement(): HTMLElement {
@@ -174,7 +184,7 @@ export class ToolbarDropdown {
     const openedFromMoreMenu = Boolean(ownerMoreMenu)
     this.menu.dataset.ownerInMore = openedFromMoreMenu ? 'true' : 'false'
     this.menu.dataset.ownerMoreId = ownerMoreMenu?.dataset.beMoreId ?? ''
-    document.body.appendChild(this.menu)
+    this.overlayHost.appendChild(this.menu)
     this.renderMenuItems()
 
     // Animate in
@@ -240,8 +250,8 @@ export class ToolbarDropdown {
     this.menu.style.transform = 'translateY(-4px) scale(0.97)'
 
     setTimeout(() => {
-      if (this.menu.parentElement === document.body) {
-        document.body.removeChild(this.menu)
+      if (this.menu.parentElement === this.overlayHost) {
+        this.overlayHost.removeChild(this.menu)
       }
       this.menu.style.display = 'none'
       this.menu.style.transition = ''

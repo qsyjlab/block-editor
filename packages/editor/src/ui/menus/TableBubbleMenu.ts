@@ -44,7 +44,7 @@ export class TableBubbleMenu {
 
   private render(): HTMLElement {
     const menu = document.createElement('div')
-    menu.className = 'table-bubble-menu toolbar be-fixed be-z-[1000] be-bg-white be-border be-border-gray-200 be-rounded-md be-shadow-lg be-p-1 be-gap-1'
+    menu.className = 'table-bubble-menu toolbar be-fixed be-z-[1000] be-rounded-md be-shadow-lg be-p-1 be-gap-1'
     menu.style.display = 'none'
     menu.setAttribute('role', 'toolbar')
     menu.setAttribute('aria-label', this.editorCore.i18n.toolbar.tableToolbar)

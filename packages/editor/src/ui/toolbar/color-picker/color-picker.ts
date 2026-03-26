@@ -22,11 +22,13 @@ export class ColorPicker {
   private cleanupFloating: (() => void) | null = null;
   private spectrum: ColorSpectrum | null = null;
   private readonly i18n: ColorPickerI18n;
+  private overlayHost: HTMLElement;
 
   constructor(label: string, editorCore: EditorCore) {
     this.label = label;
     this.editorCore = editorCore;
     this.i18n = this.editorCore.i18n.colorPicker;
+    this.overlayHost = this.resolveOverlayHost();
     this.element = this.render();
 
     // Close on outside click
@@ -40,6 +42,14 @@ export class ColorPicker {
         }
       }
     });
+  }
+
+  private resolveOverlayHost(): HTMLElement {
+    const editorRoot = this.editorCore.editor.options.element as HTMLElement;
+    const host =
+      (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
+      (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null);
+    return host || document.body;
   }
 
   getElement() {
@@ -201,7 +211,7 @@ export class ColorPicker {
   private open() {
     this.isOpen = true;
     this.trigger.classList.add("active");
-    document.body.appendChild(this.dropdown);
+    this.overlayHost.appendChild(this.dropdown);
     this.dropdown.classList.add("open");
 
     // Update active state
@@ -270,8 +280,8 @@ export class ColorPicker {
       this.cleanupFloating();
       this.cleanupFloating = null;
     }
-    if (this.dropdown.parentElement === document.body) {
-      document.body.removeChild(this.dropdown);
+    if (this.dropdown.parentElement === this.overlayHost) {
+      this.overlayHost.removeChild(this.dropdown);
     }
     // Reset spectrum
     if (this.spectrum) {
