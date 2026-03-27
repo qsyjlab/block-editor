@@ -12,7 +12,7 @@ useSceneEditor("inline-toolbar", editorContainer, (container, context) => {
     element: document.createElement("div"),
     content: buildSceneIntroContent("行内工具栏模式"),
     collaboration: {
-      enabled: true,
+      enabled: context.collaborationEnabled,
       roomName: context.room,
       websocketUrl: "wss://demos.yjs.dev",
       user: { name: context.userName, color: context.userColor },

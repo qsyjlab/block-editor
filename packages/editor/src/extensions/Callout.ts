@@ -1,4 +1,5 @@
 import { Node as TiptapNode, mergeAttributes } from '@tiptap/core'
+import { resolveEditorI18n } from '../i18n'
 import type { CalloutI18n } from '../i18n/types'
 
 export type CalloutType = 'info' | 'success' | 'warning' | 'danger'
@@ -16,13 +17,7 @@ declare module '@tiptap/core' {
   }
 }
 
-const DEFAULT_CALLOUT_I18N: CalloutI18n = {
-  infoLabel: '信息',
-  successLabel: '成功',
-  warningLabel: '警告',
-  dangerLabel: '危险',
-  switchTypeTitle: '点击切换类型',
-}
+const DEFAULT_CALLOUT_I18N: CalloutI18n = resolveEditorI18n('en-US').callout
 
 function buildCalloutStyles(i18n: CalloutI18n): Record<
   CalloutType,

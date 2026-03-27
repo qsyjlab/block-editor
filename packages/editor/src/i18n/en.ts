@@ -206,6 +206,7 @@ export const enUS: EditorI18n = {
     selectedCount: (count) => `${count} blocks selected`,
   },
   slashCommand: {
+    editorPlaceholder: 'Type "/" for commands...',
     menuAriaLabel: 'Slash Command Menu',
     paragraphTitle: 'Paragraph',
     paragraphDescription: 'Normal text paragraph',
@@ -263,5 +264,13 @@ export const enUS: EditorI18n = {
     warningLabel: 'Warning',
     dangerLabel: 'Danger',
     switchTypeTitle: 'Click to switch type',
+  },
+  codeBlock: {
+    blockTitle: "Code Block",
+    searchLanguagePlaceholder: "Search language...",
+    wrap: "Wrap",
+    copy: "Copy",
+    toggleWrapTitle: "Toggle Wrap",
+    copyTitle: "Copy",
   },
 }

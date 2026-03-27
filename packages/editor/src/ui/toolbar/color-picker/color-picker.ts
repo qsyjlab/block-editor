@@ -114,7 +114,7 @@ export class ColorPicker {
       item.style.height = "32px";
       item.style.borderRadius = "6px";
       item.style.cursor = "pointer";
-      item.style.border = "1px solid rgba(0,0,0,0.1)"; // subtle border for light colors
+      item.style.border = "1px solid var(--border-color)";
       item.dataset.value = color;
       item.title = color; // Add tooltip if needed, or color name map
 
@@ -129,7 +129,9 @@ export class ColorPicker {
         color.toLowerCase() === "#ffffff" ||
         color.toLowerCase() === "#eab308" ||
         color.toLowerCase() === "#fadb14";
-      check.style.color = isLight ? "#000000" : "#FFFFFF";
+      check.style.color = isLight
+        ? "var(--text-color)"
+        : "var(--brand-solid-text)";
 
       item.appendChild(check);
 
@@ -144,7 +146,7 @@ export class ColorPicker {
     // 2. Custom Color (Match React style: "自定义颜色")
     const customSection = document.createElement("div");
     customSection.className = "color-picker-section";
-    customSection.style.borderTop = "1px solid #e5e7eb"; // border-gray-200
+    customSection.style.borderTop = "1px solid var(--border-color)";
     customSection.style.marginTop = "12px";
     customSection.style.paddingTop = "12px";
 

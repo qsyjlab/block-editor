@@ -1,4 +1,5 @@
 import { EditorCore } from "../core/EditorCore";
+import { resolveEditorI18n } from "../i18n";
 
 interface OutlineHeading {
   level: number;
@@ -28,16 +29,7 @@ export interface OutlineI18n {
   backlinkFrom: (blockId: string) => string;
 }
 
-const DEFAULT_OUTLINE_I18N: OutlineI18n = {
-  outlineTitle: "Outline",
-  noHeadings: "No headings",
-  untitled: "（无标题）",
-  backlinksTitle: "Backlinks",
-  noBlockId: "当前块无 ID",
-  noBacklinks: "暂无反向链接",
-  backlinkPlaceholder: "块引用",
-  backlinkFrom: (blockId) => `来自 ${blockId}`,
-};
+const DEFAULT_OUTLINE_I18N: OutlineI18n = resolveEditorI18n("en-US").outline;
 
 export interface OutlineOptions {
   scrollArea?: HTMLElement | null;

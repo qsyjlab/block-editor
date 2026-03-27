@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { resolveEditorI18n } from "../i18n";
 import type { BlockHandleI18n } from "../i18n/types";
 import { createDropdownItem } from "../ui/components/DropdownMenu";
 
@@ -18,28 +19,20 @@ function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
 
 export interface BlockHandleOptions {
   width: number;
+  enabled: boolean;
   i18n: BlockHandleI18n;
 }
 
-const DEFAULT_BLOCK_HANDLE_I18N: BlockHandleI18n = {
-  handleAriaLabel: "块操作（点击打开菜单，Shift+点击多选）",
-  menuAriaLabel: "块操作菜单",
-  moveUp: "上移一块",
-  moveDown: "下移一块",
-  duplicateBlock: "复制块",
-  copyBlockLink: "复制块链接",
-  deleteBlock: "删除块",
-  toParagraph: "转为正文",
-  toHeading1: "转为 H1",
-  toHeading2: "转为 H2",
-  toHeading3: "转为 H3",
-  toBulletList: "转为无序列表",
-  toOrderedList: "转为有序列表",
-  toTaskList: "转为任务列表",
-  toBlockquote: "转为引用",
-  addToMultiSelect: "添加到多选",
-  copyLinkPromptTitle: "复制块链接",
-};
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    blockHandle: {
+      setBlockHandleEnabled: (enabled: boolean) => ReturnType;
+    };
+  }
+}
+
+const DEFAULT_BLOCK_HANDLE_I18N: BlockHandleI18n =
+  resolveEditorI18n("en-US").blockHandle;
 
 export const BlockHandle = Extension.create<BlockHandleOptions>({
   name: "blockHandle",
@@ -47,7 +40,25 @@ export const BlockHandle = Extension.create<BlockHandleOptions>({
   addOptions() {
     return {
       width: 24,
+      enabled: true,
       i18n: DEFAULT_BLOCK_HANDLE_I18N,
+    };
+  },
+
+  addStorage() {
+    return {
+      enabled: this.options.enabled,
+    };
+  },
+
+  addCommands() {
+    return {
+      setBlockHandleEnabled:
+        (enabled: boolean) =>
+        () => {
+          this.storage.enabled = enabled;
+          return true;
+        },
     };
   },
 
@@ -141,7 +152,7 @@ class BlockHandleView {
     // Add menu items
     this.renderMenu();
 
-    this.getOverlayContainer().appendChild(this.menu);
+    this.ensureMenuHost();
 
     // Event Listeners
     this.element.addEventListener("mousedown", (e) => {
@@ -184,6 +195,17 @@ class BlockHandleView {
       (dom.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (dom.closest('[data-be-ui-root="true"]') as HTMLElement | null);
     return container || document.body;
+  }
+
+  private ensureMenuHost() {
+    const host = this.getOverlayContainer();
+    if (this.menu.parentElement !== host) {
+      host.appendChild(this.menu);
+    }
+  }
+
+  private isEnabled() {
+    return this.editor?.storage?.blockHandle?.enabled !== false;
   }
 
   private getScrollContainer(): HTMLElement | null {
@@ -427,16 +449,21 @@ class BlockHandleView {
 
   deleteBlock() {
     if (this.currentBlockPos === null) return;
-    const node = this.editorView.state.doc.nodeAt(this.currentBlockPos);
-    if (node) {
-      this.editor
-        .chain()
-        .deleteRange({
-          from: this.currentBlockPos,
-          to: this.currentBlockPos + node.nodeSize,
-        })
-        .run();
-    }
+    const { state } = this.editorView;
+    const node = state.doc.nodeAt(this.currentBlockPos);
+    if (!node) return;
+
+    const from = this.currentBlockPos;
+    const to = this.currentBlockPos + node.nodeSize;
+    const tr = state.tr.delete(from, to);
+
+    const anchor = Math.max(1, Math.min(from, tr.doc.content.size));
+    const selection = TextSelection.near(tr.doc.resolve(anchor), -1);
+    tr.setSelection(selection);
+    this.editorView.dispatch(tr);
+
+    this.editorView.focus();
+    this.editor.commands.focus();
   }
 
   duplicateBlock() {
@@ -503,6 +530,12 @@ class BlockHandleView {
   }
 
   update() {
+    if (!this.isEnabled()) {
+      this.hideMenu();
+      this.element.style.display = "none";
+      return;
+    }
+
     const container = this.getEditorContainer();
 
     if (container && this.element.parentNode !== container) {
@@ -566,6 +599,12 @@ class BlockHandleView {
   }
 
   handleMouseMove = throttle((event: MouseEvent) => {
+    if (!this.isEnabled()) {
+      this.hideMenu();
+      this.element.style.display = "none";
+      return;
+    }
+
     // throttled at 16ms (~60fps)
     this.update();
 
@@ -636,7 +675,10 @@ class BlockHandleView {
   }
 
   toggleMenu() {
+    if (!this.isEnabled()) return;
+
     if (this.menu.style.display === "none") {
+      this.ensureMenuHost();
       this.renderMenu();
       const rect = this.element.getBoundingClientRect();
       if (this.menuHideTimer) {

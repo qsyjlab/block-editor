@@ -121,7 +121,7 @@ export class EditorCore {
     const user =
       options.collaboration?.user ||
       ({
-        name: `用户-${Math.random().toString(36).slice(2, 6)}`,
+        name: `user-${Math.random().toString(36).slice(2, 6)}`,
         color: `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`,
       } as const);
 
@@ -157,9 +157,11 @@ export class EditorCore {
             }),
           ]
         : []),
-      CustomCodeBlock,
+      CustomCodeBlock.configure({
+        i18n: this.i18n.codeBlock,
+      }),
       Placeholder.configure({
-        placeholder: 'Type "/" for commands...',
+        placeholder: this.i18n.slashCommand.editorPlaceholder,
       }),
       Comment.configure({
         i18n: this.i18n.commentExtension,

@@ -7,6 +7,7 @@ import CustomLayoutAScenePage from "./scenes/pages/CustomLayoutAScenePage.vue";
 import CustomLayoutBScenePage from "./scenes/pages/CustomLayoutBScenePage.vue";
 import ModularLayoutScenePage from "./scenes/pages/ModularLayoutScenePage.vue";
 import RegressionScenePage from "./scenes/pages/RegressionScenePage.vue";
+import BlockShowcaseScenePage from "./scenes/pages/BlockShowcaseScenePage.vue";
 
 export const SCENE_KEYS = [
   "default",
@@ -15,6 +16,7 @@ export const SCENE_KEYS = [
   "custom-layout-a",
   "custom-layout-b",
   "modular-layout",
+  "block-showcase",
   "regression",
 ] as const;
 
@@ -66,6 +68,12 @@ const sceneRoutes: SceneRouteRecord[] = [
     title: "模块化布局（Schema）",
     path: "/scenes/modular-layout",
     component: ModularLayoutScenePage,
+  },
+  {
+    key: "block-showcase",
+    title: "块类型展示分栏（全覆盖）",
+    path: "/scenes/block-showcase",
+    component: BlockShowcaseScenePage,
   },
   {
     key: "regression",

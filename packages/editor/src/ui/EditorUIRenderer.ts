@@ -551,6 +551,20 @@ export class EditorUIRenderer {
           this.applyCommentPanelVisibility();
         },
       },
+      blockHandle: {
+        id: "blockHandle",
+        defaultRegion: "editor",
+        mount: () => {
+          (this.editorCore.editor.commands as any).setBlockHandleEnabled?.(true);
+          return {
+            unmount: () => {
+              (this.editorCore.editor.commands as any).setBlockHandleEnabled?.(
+                false,
+              );
+            },
+          };
+        },
+      },
       tableBubbleMenu: {
         id: "tableBubbleMenu",
         defaultRegion: "overlay",
@@ -587,6 +601,7 @@ export class EditorUIRenderer {
       "selectionToolbar",
       "outline",
       "commentPanel",
+      "blockHandle",
       "tableBubbleMenu",
       "blockMultiSelectBar",
     ];
@@ -599,11 +614,23 @@ export class EditorUIRenderer {
         if (id === "selectionToolbar") {
           this.configureSelectionToolbarModule(false, resolvedRegion);
         }
+        if (id === "blockHandle") {
+          (this.editorCore.editor.commands as any).setBlockHandleEnabled?.(
+            false,
+          );
+        }
         return;
       }
+      const useDirectRegionHostForCommentPanel =
+        id === "commentPanel" &&
+        resolvedRegion === "comment" &&
+        Boolean(this.slots.commentContainer);
       const regionContainer =
         id === "selectionToolbar"
+          || id === "blockHandle"
           ? this.resolveRegionContainer(resolvedRegion)
+          : useDirectRegionHostForCommentPanel
+            ? this.resolveRegionContainer(resolvedRegion)
           : this.createModuleMountPoint(id, resolvedRegion) ||
             this.resolveRegionContainer(resolvedRegion);
       const instance =

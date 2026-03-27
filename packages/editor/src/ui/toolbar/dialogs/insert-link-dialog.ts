@@ -1,5 +1,6 @@
 import { Dialog } from '../../components/dialog';
 import { createInput } from '../../components/input';
+import { resolveEditorI18n } from '../../../i18n';
 import type { InsertLinkDialogI18n } from '../../../i18n';
 
 export class InsertLinkDialog {
@@ -20,19 +21,7 @@ export class InsertLinkDialog {
     this.onSave = onSave;
     this.text = initialText;
     this.url = initialUrl;
-    this.i18n = i18n || {
-      title: '插入链接',
-      subtitle: '添加超链接到你的文档',
-      closeDialogAriaLabel: '关闭对话框',
-      urlLabel: '链接地址',
-      urlPlaceholder: 'https://example.com',
-      textLabel: '显示文本',
-      textOptionalHint: '(可选)',
-      textPlaceholder: '链接文本',
-      cancel: '取消',
-      insert: '插入链接',
-      update: '更新链接',
-    };
+    this.i18n = i18n || resolveEditorI18n('en-US').dialogs.insertLink;
 
     const content = document.createElement('div');
     content.className = 'be-space-y-4';

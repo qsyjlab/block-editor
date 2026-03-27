@@ -37,7 +37,7 @@ export class ToolbarColorPicker {
     colorBar.style.left = '6px'
     colorBar.style.right = '6px'
     colorBar.style.height = '3px'
-    colorBar.style.backgroundColor = '#000'
+    colorBar.style.backgroundColor = 'var(--text-color)'
     
     input.oninput = (e) => {
       const color = (e.target as HTMLInputElement).value

@@ -30,7 +30,7 @@
 
 @supports not (color: color-mix(in srgb, white 50%, black)) {
   .be-active-block {
-    background: rgba(59, 130, 246, 0.14);
+    background: color-mix(in srgb, var(--primary-color) 14%, transparent);
   }
 }
 

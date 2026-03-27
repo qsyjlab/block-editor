@@ -1,4 +1,5 @@
 import { icons } from '../ui/toolbar/icons'
+import type { CodeBlockI18n } from "../i18n";
 
 // Common programming languages
 const LANGUAGES = [
@@ -20,11 +21,20 @@ export class CodeBlockView {
   private langDropdown: HTMLElement
   private wrapBtn: HTMLElement
   private contentWrapper: HTMLElement
+  private i18n: CodeBlockI18n
 
-  constructor(node: any, _view: any, getPos: () => number, _validations: any, editor: any) {
+  constructor(
+    node: any,
+    _view: any,
+    getPos: () => number,
+    _validations: any,
+    editor: any,
+    i18n: CodeBlockI18n,
+  ) {
     this.node = node
     this.getPos = getPos
     this.editor = editor
+    this.i18n = i18n
     this.updateAttributes = (attrs) => {
       const pos = getPos()
       if (pos === undefined) return
@@ -62,7 +72,7 @@ export class CodeBlockView {
     }
     
     const label = document.createElement('span')
-    label.textContent = 'Code Block'
+    label.textContent = this.i18n.blockTitle
 
     left.appendChild(arrow)
     left.appendChild(label)
@@ -102,7 +112,7 @@ export class CodeBlockView {
     // Search Input
     const searchInput = document.createElement('input')
     searchInput.className = 'lang-search-input'
-    searchInput.placeholder = 'Search language...'
+    searchInput.placeholder = this.i18n.searchLanguagePlaceholder
     searchInput.onclick = (e) => e.stopPropagation()
     searchInput.oninput = (e) => this.filterLanguages((e.target as HTMLInputElement).value)
 
@@ -118,15 +128,15 @@ export class CodeBlockView {
     // Wrap Toggle
     this.wrapBtn = document.createElement('button')
     this.wrapBtn.className = 'code-block-action-btn'
-    this.wrapBtn.title = 'Toggle Wrap'
-    this.wrapBtn.innerHTML = `<span>Wrap</span>${icons.wrap}`
+    this.wrapBtn.title = this.i18n.toggleWrapTitle
+    this.wrapBtn.innerHTML = `<span>${this.i18n.wrap}</span>${icons.wrap}`
     this.wrapBtn.onclick = () => this.toggleWrap()
 
     // Copy Button
     const copyBtn = document.createElement('button')
     copyBtn.className = 'code-block-action-btn'
-    copyBtn.title = 'Copy'
-    copyBtn.innerHTML = `<span>Copy</span>${icons.copy}`
+    copyBtn.title = this.i18n.copyTitle
+    copyBtn.innerHTML = `<span>${this.i18n.copy}</span>${icons.copy}`
     copyBtn.onclick = () => this.copyCode()
 
     right.appendChild(langContainer)

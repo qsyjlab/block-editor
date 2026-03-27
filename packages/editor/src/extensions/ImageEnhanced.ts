@@ -16,6 +16,7 @@
 
 import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
+import { resolveEditorI18n } from '../i18n'
 import type { ImageEnhancedI18n } from '../i18n/types'
 
 declare module '@tiptap/core' {
@@ -37,13 +38,8 @@ interface ImageEnhancedOptions {
   i18n: ImageEnhancedI18n
 }
 
-const DEFAULT_IMAGE_ENHANCED_I18N: ImageEnhancedI18n = {
-  captionPlaceholder: '添加图片说明…',
-  alignLeft: '左对齐',
-  alignCenter: '居中',
-  alignRight: '右对齐',
-  alignFull: '宽度铺满',
-}
+const DEFAULT_IMAGE_ENHANCED_I18N: ImageEnhancedI18n =
+  resolveEditorI18n('en-US').imageEnhanced
 
 export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
   name: 'image',
@@ -153,8 +149,8 @@ export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
       handle.style.cssText = `
         position:absolute;bottom:4px;right:4px;
         width:12px;height:12px;
-        border-right:2px solid rgba(255,255,255,0.9);
-        border-bottom:2px solid rgba(255,255,255,0.9);
+        border-right:2px solid color-mix(in srgb, var(--brand-solid-text) 90%, transparent);
+        border-bottom:2px solid color-mix(in srgb, var(--brand-solid-text) 90%, transparent);
         cursor:nwse-resize;
         opacity:0;transition:opacity 0.15s;
         z-index:10;
@@ -222,7 +218,7 @@ export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
       figcaption.className = 'be-image-caption'
       figcaption.contentEditable = 'true'
       figcaption.style.cssText =
-        'display:block;text-align:center;font-size:13px;color:#6b7280;margin-top:6px;min-height:1em;outline:none;'
+        'display:block;text-align:center;font-size:13px;color:var(--text-muted);margin-top:6px;min-height:1em;outline:none;'
       figcaption.textContent = caption
       figcaption.setAttribute('data-placeholder', this.options.i18n.captionPlaceholder)
 
@@ -291,7 +287,7 @@ function buildAlignBar(
   const bar = document.createElement('div')
   bar.style.cssText = `
     display:flex;gap:4px;justify-content:center;
-    background:rgba(17,24,39,0.75);border-radius:6px;
+    background:color-mix(in srgb, var(--text-color) 75%, transparent);border-radius:6px;
     padding:3px 6px;margin-bottom:6px;
   `
 
@@ -307,11 +303,13 @@ function buildAlignBar(
     btn.title = title
     btn.textContent = icon
     btn.style.cssText = `
-      background:transparent;border:none;color:white;
+      background:transparent;border:none;color:var(--brand-solid-text);
       cursor:pointer;font-size:14px;padding:2px 4px;
       border-radius:4px;transition:background 0.1s;
     `
-    btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.2)' })
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'color-mix(in srgb, var(--brand-solid-text) 20%, transparent)'
+    })
     btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent' })
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault()

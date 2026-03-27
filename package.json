@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "pnpm -r dev",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test:unit": "pnpm --filter @block-editor/editor test",
+    "test:e2e": "pnpm --filter block-editor-playground test:e2e"
   },
   "devDependencies": {
     "@types/node": "^25.1.0",
@@ -11,7 +13,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@tiptap/vue-3": "^3.20.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "vue": "^3.5.29"
   }

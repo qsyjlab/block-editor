@@ -6,6 +6,7 @@ import {
 } from "../../../core/VersionHistory";
 import { Dialog } from "../../components/dialog";
 import type { VersionHistoryDialogI18n } from "../../../i18n";
+import { resolveEditorI18n } from "../../../i18n";
 
 function formatTime(ts: number, locale: string) {
   return new Date(ts).toLocaleString(locale, {
@@ -28,42 +29,8 @@ function sourceLabel(
   return i18n.sourceRestore;
 }
 
-const DEFAULT_VERSION_HISTORY_I18N: VersionHistoryDialogI18n = {
-  title: "版本历史",
-  subtitle: "本地快照、逐行差异与 Blame",
-  closeDialogAriaLabel: "关闭对话框",
-  tips: "支持按行查看增删改、作者与时间；点击快照可查看详细变更或 Blame。",
-  saveSnapshot: "立即保存快照",
-  manualSnapshotLabel: "手动快照",
-  noSnapshots: "暂无快照",
-  sourceAuto: "自动",
-  sourceManual: "手动",
-  sourceRestore: "回滚前",
-  viewChanges: "查看变更",
-  collapse: "收起",
-  restoreToThis: "回滚到此版本",
-  restoreConfirm: "确认回滚到该版本？当前内容会被替换。",
-  restoreCompareTip: (previousLabel) => `Diff preview（对比上一版：${previousLabel}）`,
-  noChanges: "该版本暂无可展示变更",
-  fullDiff: "查看完整 Diff",
-  detailUnavailable: "该快照详情不可用",
-  completeDiffTitle: "完整变更文本",
-  oldLine: "旧行",
-  newLine: "新行",
-  oldVersion: "旧版本",
-  blankBase: "初始空白",
-  selectSnapshotDetail: "请选择一个快照查看详情",
-  diffView: "变更视图",
-  blameView: "Blame 视图",
-  blankBaseline: "空白基线",
-  diffSummary: (baseLabel, added, deleted, modified) =>
-    `对比基线：${baseLabel} · +${added} / -${deleted} / ~${modified}`,
-  noDiff: "无差异",
-  noBlameLines: "当前快照无可展示行",
-  fullDiffHeader: (baseLabel) => `完整 Diff（对比：${baseLabel}）`,
-  fullDiffSubtitle: (currentLabel, baseLabel, timeText) =>
-    `${currentLabel} · 对比 ${baseLabel} · ${timeText}`,
-};
+const DEFAULT_VERSION_HISTORY_I18N: VersionHistoryDialogI18n =
+  resolveEditorI18n("en-US").dialogs.versionHistory;
 
 export class VersionHistoryDialog {
   private dialog: Dialog;
@@ -314,13 +281,13 @@ export class VersionHistoryDialog {
               oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
               oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
             } else if (line.type === "added") {
-              newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
-              newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+              newNo.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
+              newText.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
             } else {
               oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
               oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
-              newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
-              newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+              newNo.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
+              newText.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
             }
 
             lineRow.appendChild(oldNo);
@@ -475,7 +442,7 @@ export class VersionHistoryDialog {
       row.style.borderBottom = "1px solid color-mix(in srgb, var(--border-color) 70%, transparent)";
       row.style.alignItems = "start";
 
-      if (line.type === "added") row.style.background = "color-mix(in srgb, #22c55e 12%, var(--paper-bg))";
+      if (line.type === "added") row.style.background = "color-mix(in srgb, var(--success-color) 12%, var(--paper-bg))";
       if (line.type === "deleted") row.style.background = "color-mix(in srgb, var(--danger-color) 12%, var(--paper-bg))";
       if (line.type === "modified")
         row.style.background =
@@ -724,13 +691,13 @@ export class VersionHistoryDialog {
           oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
           oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
         } else if (line.type === "added") {
-          newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
-          newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+          newNo.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
+          newText.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
         } else {
           oldNo.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
           oldText.style.background = "color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))";
-          newNo.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
-          newText.style.background = "color-mix(in srgb, #22c55e 24%, var(--paper-bg))";
+          newNo.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
+          newText.style.background = "color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))";
         }
 
         row.appendChild(oldNo);

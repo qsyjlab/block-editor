@@ -2,32 +2,41 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "Block Editor",
-  description: "Block Editor 使用文档",
+  description: "Block Editor 使用与开发文档",
   lang: "zh-CN",
   lastUpdated: true,
   themeConfig: {
     nav: [
-      { text: "指南", link: "/guide/getting-started" },
-      { text: "配置", link: "/reference/configuration" },
-      { text: "回归", link: "/guide/regression-checklist" },
+      { text: "使用文档", link: "/usage/getting-started" },
+      { text: "开发者文档", link: "/developer/architecture" },
       { text: "审计记录", link: "/ui-audit/color-hardcode-inventory" },
     ],
     sidebar: [
       {
-        text: "开始",
+        text: "使用文档",
         items: [
           { text: "介绍", link: "/" },
-          { text: "快速开始", link: "/guide/getting-started" },
-          { text: "回归清单", link: "/guide/regression-checklist" },
+          { text: "快速开始", link: "/usage/getting-started" },
+          { text: "核心配置", link: "/usage/configuration" },
+          { text: "操作栏配置", link: "/usage/operation-bars" },
+          { text: "布局与模块", link: "/usage/layout-modules" },
+          { text: "迁移指南", link: "/usage/migration" },
+          { text: "行为基准", link: "/usage/behavior-benchmark" },
+          { text: "行为差异清单", link: "/usage/behavior-gap-analysis" },
+          { text: "回归清单", link: "/usage/regression-checklist" },
         ],
       },
       {
-        text: "参考",
+        text: "开发者文档",
         items: [
-          { text: "配置说明", link: "/reference/configuration" },
-          { text: "操作栏配置", link: "/reference/operation-bars" },
-          { text: "模块化布局", link: "/reference/layout-modules" },
-          { text: "迁移与接入", link: "/reference/migration" },
+          { text: "架构总览", link: "/developer/architecture" },
+          { text: "代码地图", link: "/developer/code-map" },
+          { text: "调用链路", link: "/developer/call-chains" },
+          { text: "行为基准", link: "/developer/behavior-benchmark" },
+          { text: "行为对照矩阵", link: "/developer/behavior-matrix" },
+          { text: "行为差异盘点", link: "/developer/behavior-gap-analysis" },
+          { text: "主题与 UI 规范", link: "/developer/theme-and-ui" },
+          { text: "文档更新规范", link: "/developer/doc-update-policy" },
         ],
       },
       {

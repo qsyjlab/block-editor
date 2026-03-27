@@ -202,6 +202,7 @@ export interface BlockMultiSelectBarI18n {
 }
 
 export interface SlashCommandI18n {
+  editorPlaceholder: string
   menuAriaLabel: string
   paragraphTitle: string
   paragraphDescription: string
@@ -266,6 +267,15 @@ export interface CalloutI18n {
   switchTypeTitle: string
 }
 
+export interface CodeBlockI18n {
+  blockTitle: string
+  searchLanguagePlaceholder: string
+  wrap: string
+  copy: string
+  toggleWrapTitle: string
+  copyTitle: string
+}
+
 export interface EditorI18n {
   locale: string
   toolbar: ToolbarI18n
@@ -280,4 +290,5 @@ export interface EditorI18n {
   versionHistoryCore: VersionHistoryCoreI18n
   imageEnhanced: ImageEnhancedI18n
   callout: CalloutI18n
+  codeBlock: CodeBlockI18n
 }

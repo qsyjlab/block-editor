@@ -12,7 +12,7 @@ useSceneEditor("default", editorContainer, (container, context) => {
     element: document.createElement("div"),
     content: buildSceneIntroContent("默认布局（顶部工具栏）"),
     collaboration: {
-      enabled: true,
+      enabled: context.collaborationEnabled,
       roomName: context.room,
       websocketUrl: "wss://demos.yjs.dev",
       user: { name: context.userName, color: context.userColor },

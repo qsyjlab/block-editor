@@ -8,6 +8,11 @@ export interface SceneRuntimeContext {
   userColor: string;
   editorLocale: "zh-CN" | "en-US";
   theme: "light" | "dark" | "auto";
+  collaborationEnabled: boolean;
+}
+
+export interface SceneEditorOptions {
+  defaultCollaborationEnabled?: boolean;
 }
 
 function queryValue(input: unknown, fallback: string): string {
@@ -21,6 +26,7 @@ function queryValue(input: unknown, fallback: string): string {
 function resolveRuntimeContext(
   sceneKey: string,
   query: Record<string, unknown>,
+  options: SceneEditorOptions = {},
 ): SceneRuntimeContext {
   const room = queryValue(query.room, "block-editor-demo-room");
   const userName = queryValue(
@@ -37,6 +43,9 @@ function resolveRuntimeContext(
   const rawTheme = queryValue(query.theme, "light").toLowerCase();
   const theme: "light" | "dark" | "auto" =
     rawTheme === "dark" || rawTheme === "auto" ? rawTheme : "light";
+  const defaultCollab = options.defaultCollaborationEnabled ?? true;
+  const collaborationEnabled =
+    queryValue(query.collab, defaultCollab ? "1" : "0") !== "0";
 
   return {
     room: `${room}-${sceneKey}`,
@@ -44,6 +53,7 @@ function resolveRuntimeContext(
     userColor: `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`,
     editorLocale,
     theme,
+    collaborationEnabled,
   };
 }
 
@@ -51,6 +61,7 @@ export function useSceneEditor(
   sceneKey: string,
   editorContainer: Ref<HTMLElement | null>,
   create: (container: HTMLElement, context: SceneRuntimeContext) => EditorCore,
+  options: SceneEditorOptions = {},
 ) {
   const route = useRoute();
   let editor: EditorCore | null = null;
@@ -70,6 +81,7 @@ export function useSceneEditor(
     const context = resolveRuntimeContext(
       sceneKey,
       route.query as unknown as Record<string, unknown>,
+      options,
     );
     editor = create(container, context);
   };
@@ -78,7 +90,13 @@ export function useSceneEditor(
   onBeforeUnmount(destroyEditor);
 
   watch(
-    () => [route.query.theme, route.query.lang, route.query.room, route.query.user],
+    () => [
+      route.query.theme,
+      route.query.lang,
+      route.query.room,
+      route.query.user,
+      route.query.collab,
+    ],
     () => {
       destroyEditor();
       createEditor();

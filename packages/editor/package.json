@@ -18,7 +18,8 @@
   "scripts": {
     "build": "pnpm run build:css && tsc",
     "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/style.css",
-    "dev": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/style.css --watch"
+    "dev": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/style.css --watch",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.5",
@@ -66,6 +67,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.8"
   }
 }

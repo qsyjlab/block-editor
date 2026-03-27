@@ -17,6 +17,8 @@ export class ColorSpectrum {
   }
 
   private render() {
+    const initialColor = this.resolveInitialColor()
+
     // 1. Spectrum Area (S/V)
     const spectrum = document.createElement('div')
     spectrum.className = 'spectrum-area'
@@ -39,11 +41,11 @@ export class ColorSpectrum {
     
     const hexInput = document.createElement('input')
     hexInput.className = 'hex-input'
-    hexInput.value = '#FF0000'
+    hexInput.value = initialColor
     
     const preview = document.createElement('div')
     preview.className = 'color-preview'
-    preview.style.backgroundColor = '#FF0000'
+    preview.style.backgroundColor = initialColor
 
     inputRow.appendChild(hexInput)
     inputRow.appendChild(preview)
@@ -64,6 +66,14 @@ export class ColorSpectrum {
             // TODO: Update H/S/V from hex if needed for bi-directional sync
         }
     }
+  }
+
+  private resolveInitialColor() {
+      const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue('--primary-color')
+        .trim()
+      if (/^#[0-9A-Fa-f]{6}$/.test(raw)) return raw
+      return '#4f7cff'
   }
 
   private bindSpectrumEvents(area: HTMLElement, cursor: HTMLElement, input: HTMLInputElement, preview: HTMLElement) {

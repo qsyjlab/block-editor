@@ -16,7 +16,7 @@ useSceneEditor("custom-layout-b", editorContainer, (container, context) => {
     element: document.createElement("div"),
     content: buildSceneIntroContent("自定义布局 B（左导轨）"),
     collaboration: {
-      enabled: true,
+      enabled: context.collaborationEnabled,
       roomName: context.room,
       websocketUrl: "wss://demos.yjs.dev",
       user: { name: context.userName, color: context.userColor },

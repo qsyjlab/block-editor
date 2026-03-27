@@ -23,6 +23,40 @@ const KEEP_STYLE_PROPS = new Set([
   'font-size',
 ])
 
+type SmartPasteEditorLike = {
+  state: {
+    selection: {
+      $from: {
+        parent: {
+          type: {
+            spec?: {
+              code?: boolean
+            }
+          }
+        }
+      }
+    }
+  }
+  isActive: (name: string) => boolean
+  chain: () => {
+    focus: () => {
+      insertContent: (content: unknown) => {
+        run: () => void
+      }
+    }
+  }
+  commands: {
+    insertContent: (content: string) => void
+  }
+}
+
+type SmartPasteEventLike = {
+  clipboardData?: {
+    getData: (type: string) => string
+  } | null
+  preventDefault: () => void
+}
+
 function cleanHtml(html: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
@@ -59,6 +93,64 @@ function cleanHtml(html: string): string {
   return doc.body.innerHTML
 }
 
+export function isInCodePasteContext(editor: SmartPasteEditorLike): boolean {
+  const { $from } = editor.state.selection
+  return (
+    editor.isActive('codeBlock') ||
+    editor.isActive('code') ||
+    Boolean($from.parent.type.spec?.code)
+  )
+}
+
+export function handleSmartPaste(
+  editor: SmartPasteEditorLike,
+  event: SmartPasteEventLike,
+  slice?: unknown,
+): boolean {
+  const clipboardData = event.clipboardData
+  if (!clipboardData) return false
+
+  // In code blocks, keep native ProseMirror paste behavior.
+  // Smart transformations (auto-link / HTML cleanup) can break the
+  // expected "paste as plain code text" flow and may insert content
+  // outside the current code block.
+  if (isInCodePasteContext(editor)) {
+    return false
+  }
+
+  const plainText = clipboardData.getData('text/plain').trim()
+  const htmlText = clipboardData.getData('text/html')
+
+  // ── Case 1: Plain URL paste ────────────────────────────────────
+  if (!htmlText && URL_REGEX.test(plainText)) {
+    event.preventDefault()
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: 'text',
+        text: plainText,
+        marks: [{ type: 'link', attrs: { href: plainText, target: '_blank' } }],
+      })
+      .run()
+    return true
+  }
+
+  // ── Case 2: Rich text with HTML – clean it first ───────────────
+  if (htmlText) {
+    const cleaned = cleanHtml(htmlText)
+    if (cleaned !== htmlText) {
+      event.preventDefault()
+      editor.commands.insertContent(cleaned)
+      return true
+    }
+  }
+
+  // Fall through to default ProseMirror paste handling
+  void slice
+  return false
+}
+
 export const SmartPaste = Extension.create({
   name: 'smartPaste',
 
@@ -71,40 +163,11 @@ export const SmartPaste = Extension.create({
 
         props: {
           handlePaste(_view, event, slice) {
-            const clipboardData = event.clipboardData
-            if (!clipboardData) return false
-
-            const plainText = clipboardData.getData('text/plain').trim()
-            const htmlText = clipboardData.getData('text/html')
-
-            // ── Case 1: Plain URL paste ────────────────────────────────────
-            if (!htmlText && URL_REGEX.test(plainText)) {
-              event.preventDefault()
-              editor
-                .chain()
-                .focus()
-                .insertContent({
-                  type: 'text',
-                  text: plainText,
-                  marks: [{ type: 'link', attrs: { href: plainText, target: '_blank' } }],
-                })
-                .run()
-              return true
-            }
-
-            // ── Case 2: Rich text with HTML – clean it first ───────────────
-            if (htmlText) {
-              const cleaned = cleanHtml(htmlText)
-              if (cleaned !== htmlText) {
-                event.preventDefault()
-                editor.commands.insertContent(cleaned)
-                return true
-              }
-            }
-
-            // Fall through to default ProseMirror paste handling
-            void slice
-            return false
+            return handleSmartPaste(
+              editor as unknown as SmartPasteEditorLike,
+              event as unknown as SmartPasteEventLike,
+              slice,
+            )
           },
         },
       }),

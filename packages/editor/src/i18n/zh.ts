@@ -206,6 +206,7 @@ export const zhCN: EditorI18n = {
     selectedCount: (count) => `已选 ${count} 块`,
   },
   slashCommand: {
+    editorPlaceholder: '输入 "/" 调出命令',
     menuAriaLabel: 'Slash 命令菜单',
     paragraphTitle: '正文',
     paragraphDescription: '普通文本段落',
@@ -263,5 +264,13 @@ export const zhCN: EditorI18n = {
     warningLabel: '警告',
     dangerLabel: '危险',
     switchTypeTitle: '点击切换类型',
+  },
+  codeBlock: {
+    blockTitle: "代码块",
+    searchLanguagePlaceholder: "搜索语言...",
+    wrap: "自动换行",
+    copy: "复制",
+    toggleWrapTitle: "切换自动换行",
+    copyTitle: "复制代码",
   },
 }

@@ -24,7 +24,7 @@ useSceneEditor("regression", editorContainer, (container, context) => {
       <p>请将鼠标移到左侧块手柄，验证菜单项样式和暗黑模式下拉是否一致。</p>
     `,
     collaboration: {
-      enabled: true,
+      enabled: context.collaborationEnabled,
       roomName: context.room,
       websocketUrl: "wss://demos.yjs.dev",
       user: { name: context.userName, color: context.userColor },

@@ -77,5 +77,9 @@ export function resolveEditorI18n(input?: string | Partial<EditorI18n> | null): 
       ...base.callout,
       ...(input.callout || {}),
     },
+    codeBlock: {
+      ...base.codeBlock,
+      ...(input.codeBlock || {}),
+    },
   }
 }

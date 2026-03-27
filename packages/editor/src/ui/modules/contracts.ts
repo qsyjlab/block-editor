@@ -18,6 +18,7 @@ export type EditorUIModuleId =
   | "selectionToolbar"
   | "outline"
   | "commentPanel"
+  | "blockHandle"
   | "tableBubbleMenu"
   | "blockMultiSelectBar";
 

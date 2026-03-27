@@ -2,6 +2,7 @@ import { Dialog } from '../../components/dialog';
 import { Tabs } from '../../components/tabs';
 import { createInput } from '../../components/input';
 import { createUploadZone } from '../../components/upload-zone';
+import { resolveEditorI18n } from '../../../i18n';
 import type { InsertImageDialogI18n } from '../../../i18n';
 
 export class InsertImageDialog {
@@ -18,22 +19,7 @@ export class InsertImageDialog {
     host?: HTMLElement | null,
   ) {
     this.onSave = onSave;
-    this.i18n = i18n || {
-      title: '插入图片',
-      subtitle: '从URL或本地上传图片',
-      closeDialogAriaLabel: '关闭对话框',
-      tabUrl: '图片链接',
-      tabUpload: '上传图片',
-      urlLabel: '图片地址',
-      urlPlaceholder: 'https://example.com/image.jpg',
-      preview: '预览',
-      invalidImage: '无效的图片链接',
-      cancel: '取消',
-      insert: '插入图片',
-      uploadHint: '拖拽图片到此处或',
-      uploadClick: '点击上传',
-      uploadSupport: '支持 JPG, PNG, GIF, WebP 格式',
-    };
+    this.i18n = i18n || resolveEditorI18n('en-US').dialogs.insertImage;
 
     const urlTabContent = document.createElement('div');
     const urlInput = createInput({

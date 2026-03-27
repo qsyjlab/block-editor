@@ -7,6 +7,7 @@
 
 import { TextSelection } from "prosemirror-state";
 import { EditorCore } from "../core/EditorCore";
+import { resolveEditorI18n } from "../i18n";
 import { commentStore, CommentThread } from "../extensions/Comment";
 import type { CommentPanelI18n } from "../i18n/types";
 import { createBaseButton } from "./components/BaseButton";
@@ -31,34 +32,8 @@ function splitLegacyQuotedComment(text: string): {
   };
 }
 
-const DEFAULT_COMMENT_PANEL_I18N: CommentPanelI18n = {
-  panelAriaLabel: "评论面板",
-  title: "评论",
-  filterAll: "全部",
-  filterOpen: "未解决",
-  filterResolved: "已解决",
-  filterAriaPrefix: "筛选：",
-  draftPlaceholder: "输入评论内容（将添加到当前选中文本）",
-  draftAriaLabel: "评论内容",
-  createButton: "添加到选区",
-  createButtonAriaLabel: "添加评论到选区",
-  selectionQuoteAriaLabel: "跳转到引用内容",
-  selectionQuoteTitle: "点击跳转到引用位置",
-  selectionQuotePrefix: "| ",
-  selectionHintEmpty: "请先在正文中选中文本",
-  selectionHintReady: "已检测到选区，可直接添加",
-  emptyNoComments: "暂无评论",
-  emptyResolved: "暂无已解决评论",
-  threadJumpTitle: "点击跳转到文档中的标注位置",
-  resolveAction: "解决评论",
-  reopenAction: "重新打开",
-  deleteAction: "删除评论",
-  replyPlaceholder: "回复...",
-  replyAriaLabel: "回复评论",
-  replyButton: "回复",
-  replyButtonAriaLabel: "发送回复",
-  currentUser: "我",
-};
+const DEFAULT_COMMENT_PANEL_I18N: CommentPanelI18n =
+  resolveEditorI18n("en-US").commentPanel;
 
 function formatTime(ts: number, locale: string): string {
   const d = new Date(ts);

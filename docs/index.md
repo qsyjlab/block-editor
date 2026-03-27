@@ -4,20 +4,20 @@ layout: home
 hero:
   name: "Block Editor"
   text: "模块化可扩展编辑器"
-  tagline: "VitePress 文档站（默认官方风格）"
+  tagline: "统一的使用文档 + 开发者文档"
   actions:
     - theme: brand
-      text: 快速开始
-      link: /guide/getting-started
+      text: 使用文档
+      link: /usage/getting-started
     - theme: alt
-      text: 配置参考
-      link: /reference/configuration
+      text: 开发者文档
+      link: /developer/architecture
 
 features:
-  - title: 模块化 UI
-    details: toolbar、selection toolbar、评论区、大纲等能力可按布局组合。
-  - title: 操作栏可配置
-    details: 支持 full/basic/minimal 预设与按 item 自定义覆盖。
-  - title: 主题化支持
-    details: 已支持 light / dark / auto 主题模式及 playground 快速验证。
+  - title: 使用文档
+    details: 面向接入方，聚焦初始化、配置、布局、场景验证与迁移。
+  - title: 开发者文档
+    details: 面向维护者，聚焦代码结构、调用链路、主题规范与改动流程。
+  - title: 强制文档同步
+    details: 每次功能交付都要求更新调用链路说明与两类文档。
 ---

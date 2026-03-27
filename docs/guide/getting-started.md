@@ -1,28 +1,6 @@
-# 快速开始
+# 已迁移
 
-## 安装依赖
+该页面已迁移到新分区：
 
-```bash
-pnpm install
-```
-
-## 启动 Playground
-
-```bash
-pnpm --filter block-editor-playground dev
-```
-
-## 启动文档站
-
-```bash
-cd docs-repo
-pnpm install
-pnpm docs:dev
-```
-
-文档构建：
-
-```bash
-cd docs-repo
-pnpm docs:build
-```
+- 使用文档：[/usage/getting-started](/usage/getting-started)
+- 开发者入口：[/developer/architecture](/developer/architecture)

@@ -17,12 +17,13 @@ useSceneEditor("modular-layout", editorContainer, (container, context) => {
       <table>
         <tr><th>模块</th><th>region</th><th>enabled</th></tr>
         <tr><td>selectionToolbar</td><td>editor</td><td>true</td></tr>
+        <tr><td>blockHandle</td><td>editor</td><td>true</td></tr>
         <tr><td>tableBubbleMenu</td><td>editor</td><td>true</td></tr>
         <tr><td>blockMultiSelectBar</td><td>toolbar</td><td>true</td></tr>
       </table>
     `,
     collaboration: {
-      enabled: true,
+      enabled: context.collaborationEnabled,
       roomName: context.room,
       websocketUrl: "wss://demos.yjs.dev",
       user: { name: context.userName, color: context.userColor },
@@ -54,6 +55,7 @@ useSceneEditor("modular-layout", editorContainer, (container, context) => {
         selectionToolbar: { region: "editor", enabled: true },
         outline: { region: "outline", enabled: true },
         commentPanel: { region: "comment", enabled: true },
+        blockHandle: { region: "editor", enabled: true },
         tableBubbleMenu: { region: "editor", enabled: true },
         blockMultiSelectBar: { region: "toolbar", enabled: true },
       },
