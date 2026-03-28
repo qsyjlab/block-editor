@@ -20,6 +20,8 @@ pnpm --filter block-editor-playground dev
 - `/scenes/inline-toolbar`
 - `/scenes/minimal`
 - `/scenes/block-showcase`
+- `/scenes/drag-showcase`
+- `/scenes/table-showcase`
 - `/scenes/regression`
 
 常用 query：
@@ -38,7 +40,7 @@ pnpm --filter block-editor-playground test:e2e
 
 说明：
 
-- 该命令会自动启动 Playground 并执行 `H2.1 ~ H2.5` 回归用例。
+- 该命令会自动启动 Playground 并执行完整行为回归（当前覆盖到 `H3.14`）。
 - 用例默认走 `scenes/regression?lang=zh-CN&theme=dark&collab=0`。
 
 ## 2.2 运行编辑器单元测试（Vitest）

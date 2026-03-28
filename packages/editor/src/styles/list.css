@@ -1,0 +1,31 @@
+/* =========================================================
+   Ordered / Unordered List
+   ========================================================= */
+
+.ProseMirror ul:not([data-type="taskList"]),
+.ProseMirror ol {
+  margin: 0.35em 0 0.35em 1.5em;
+  padding: 0;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) {
+  list-style: disc;
+}
+
+.ProseMirror ol {
+  list-style: decimal;
+}
+
+.ProseMirror li {
+  margin: 0.12em 0;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) > li::marker,
+.ProseMirror ol > li::marker {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ProseMirror li > p {
+  margin: 0;
+}

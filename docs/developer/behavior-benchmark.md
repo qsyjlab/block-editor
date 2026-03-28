@@ -71,3 +71,11 @@
 首轮 Gap Analysis 已落地，见：
 
 - `/developer/behavior-gap-analysis`
+
+## 8. 行为基准场景（Playground）
+
+1. 场景路由：`/scenes/behavior-benchmark`
+2. 专项路由：`/scenes/drag-showcase`、`/scenes/table-showcase`
+3. 查询参数：`theme/lang/collab/room/user/case`
+4. `case` 对应 P0 行为 ID（如 `inp-001`、`cmt-001`、`tob-002`），页面会自动定位到对应复现锚点。
+5. 默认无协作干扰（`collab=0`），需要协作联调时显式改为 `collab=1`。

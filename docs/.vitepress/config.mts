@@ -9,6 +9,7 @@ export default defineConfig({
     nav: [
       { text: "使用文档", link: "/usage/getting-started" },
       { text: "开发者文档", link: "/developer/architecture" },
+      { text: "代办管理", link: "/todo/current" },
       { text: "审计记录", link: "/ui-audit/color-hardcode-inventory" },
     ],
     sidebar: [
@@ -22,6 +23,7 @@ export default defineConfig({
           { text: "布局与模块", link: "/usage/layout-modules" },
           { text: "迁移指南", link: "/usage/migration" },
           { text: "行为基准", link: "/usage/behavior-benchmark" },
+          { text: "行为评分卡", link: "/usage/behavior-scorecard" },
           { text: "行为差异清单", link: "/usage/behavior-gap-analysis" },
           { text: "回归清单", link: "/usage/regression-checklist" },
         ],
@@ -33,10 +35,26 @@ export default defineConfig({
           { text: "代码地图", link: "/developer/code-map" },
           { text: "调用链路", link: "/developer/call-chains" },
           { text: "行为基准", link: "/developer/behavior-benchmark" },
+          { text: "行为评分卡", link: "/developer/behavior-scorecard" },
           { text: "行为对照矩阵", link: "/developer/behavior-matrix" },
           { text: "行为差异盘点", link: "/developer/behavior-gap-analysis" },
           { text: "主题与 UI 规范", link: "/developer/theme-and-ui" },
+          {
+            text: "执行工作流标准",
+            link: "/developer/execution-workflow-standard",
+          },
           { text: "文档更新规范", link: "/developer/doc-update-policy" },
+        ],
+      },
+      {
+        text: "代办管理",
+        items: [
+          { text: "当前代办清单", link: "/todo/current" },
+          { text: "已执行代办清单", link: "/todo/executed" },
+          {
+            text: "执行工作流标准",
+            link: "/developer/execution-workflow-standard",
+          },
         ],
       },
       {

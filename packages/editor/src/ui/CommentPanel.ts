@@ -15,6 +15,12 @@ import { createBaseInput } from "./components/BaseInput";
 import { createBaseTag } from "./components/BaseTag";
 import { createPanelCard } from "./components/PanelCard";
 import { createQuotePreview } from "./components/QuotePreview";
+import {
+  type SelectionSnapshot,
+  buildCreateCommentDraft,
+  buildSelectionSnapshot,
+  resolvePendingSelection,
+} from "./comment-panel-logic";
 
 type CommentFilter = "all" | "open" | "resolved";
 
@@ -58,6 +64,7 @@ export class CommentPanel {
   private selectionQuoteEl: HTMLButtonElement;
   private pendingSelection: { from: number; to: number } | null = null;
   private pendingSelectionPreview = "";
+  private lastKnownSelection: SelectionSnapshot | null = null;
   private readonly openCommentPanelHandler: () => void;
   private readonly focusCommentThreadHandler: (commentId: string) => void;
 
@@ -156,7 +163,7 @@ export class CommentPanel {
 
     this.unsubscribe = commentStore.on(() => this.render());
     editorCore.editor.on("update", () => this.render());
-    editorCore.editor.on("selectionUpdate", () => this.renderSelectionHint());
+    editorCore.editor.on("selectionUpdate", () => this.handleSelectionUpdate());
     this.openCommentPanelHandler = () => this.handleOpenCommentPanel();
     this.focusCommentThreadHandler = (commentId: string) =>
       this.focusCommentThread(commentId);
@@ -166,23 +173,53 @@ export class CommentPanel {
       this.focusCommentThreadHandler,
     );
 
-    this.renderSelectionHint();
+    this.handleSelectionUpdate();
     this.render();
+  }
+
+  private handleSelectionUpdate() {
+    const selection = this.editorCore.editor.state.selection;
+    if (!selection.empty) {
+      const selectedText = this.editorCore.editor.state.doc.textBetween(
+        selection.from,
+        selection.to,
+        " ",
+      );
+      const snapshot = buildSelectionSnapshot(
+        { from: selection.from, to: selection.to },
+        selectedText,
+      );
+      if (snapshot) this.lastKnownSelection = snapshot;
+    }
+    this.renderSelectionHint();
   }
 
   private handleOpenCommentPanel() {
     const selection = this.editorCore.editor.state.selection;
-    if (!selection.empty) {
-      this.pendingSelection = { from: selection.from, to: selection.to };
-      const selectedText = this.editorCore.editor.state.doc
-        .textBetween(selection.from, selection.to, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      const snippet =
-        selectedText.length > 80
-          ? `${selectedText.slice(0, 80)}...`
-          : selectedText;
-      this.pendingSelectionPreview = snippet;
+    const current = !selection.empty
+      ? buildSelectionSnapshot(
+          { from: selection.from, to: selection.to },
+          this.editorCore.editor.state.doc.textBetween(
+            selection.from,
+            selection.to,
+            " ",
+          ),
+        )
+      : null;
+    if (current) {
+      this.lastKnownSelection = current;
+    }
+
+    const pending = resolvePendingSelection(current, this.lastKnownSelection);
+    if (pending) {
+      this.pendingSelection = {
+        from: pending.from,
+        to: pending.to,
+      };
+      this.pendingSelectionPreview = pending.preview;
+    } else {
+      this.pendingSelection = null;
+      this.pendingSelectionPreview = "";
     }
     this.renderPendingSelectionQuote();
     queueMicrotask(() => {
@@ -259,15 +296,17 @@ export class CommentPanel {
   }
 
   private createCommentFromSelection() {
-    const text = this.draftInput.value.trim();
-    if (!text) return;
-
     const editor = this.editorCore.editor;
-    let range = !editor.state.selection.empty
-      ? { from: editor.state.selection.from, to: editor.state.selection.to }
-      : this.pendingSelection;
+    const draft = buildCreateCommentDraft({
+      draftText: this.draftInput.value,
+      currentRange: !editor.state.selection.empty
+        ? { from: editor.state.selection.from, to: editor.state.selection.to }
+        : null,
+      pendingRange: this.pendingSelection,
+      pendingPreview: this.pendingSelectionPreview,
+    });
 
-    if (!range) {
+    if (!draft) {
       this.renderSelectionHint();
       return;
     }
@@ -275,18 +314,17 @@ export class CommentPanel {
     // Ensure command applies to the originally captured range.
     if (
       editor.state.selection.empty ||
-      editor.state.selection.from !== range.from ||
-      editor.state.selection.to !== range.to
+      editor.state.selection.from !== draft.range.from ||
+      editor.state.selection.to !== draft.range.to
     ) {
       const tr = editor.state.tr.setSelection(
-        TextSelection.create(editor.state.doc, range.from, range.to),
+        TextSelection.create(editor.state.doc, draft.range.from, draft.range.to),
       );
       editor.view.dispatch(tr);
     }
 
     const id = `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const quoteText = this.pendingSelectionPreview || undefined;
-    commentStore.addThread(id, text, this.i18n.currentUser, quoteText);
+    commentStore.addThread(id, draft.text, this.i18n.currentUser, draft.quoteText);
     editor.chain().focus().setComment(id).run();
 
     this.draftInput.value = "";

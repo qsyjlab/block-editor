@@ -8,6 +8,9 @@ import CustomLayoutBScenePage from "./scenes/pages/CustomLayoutBScenePage.vue";
 import ModularLayoutScenePage from "./scenes/pages/ModularLayoutScenePage.vue";
 import RegressionScenePage from "./scenes/pages/RegressionScenePage.vue";
 import BlockShowcaseScenePage from "./scenes/pages/BlockShowcaseScenePage.vue";
+import BehaviorBenchmarkScenePage from "./scenes/pages/BehaviorBenchmarkScenePage.vue";
+import DragShowcaseScenePage from "./scenes/pages/DragShowcaseScenePage.vue";
+import TableShowcaseScenePage from "./scenes/pages/TableShowcaseScenePage.vue";
 
 export const SCENE_KEYS = [
   "default",
@@ -17,6 +20,9 @@ export const SCENE_KEYS = [
   "custom-layout-b",
   "modular-layout",
   "block-showcase",
+  "drag-showcase",
+  "table-showcase",
+  "behavior-benchmark",
   "regression",
 ] as const;
 
@@ -74,6 +80,24 @@ const sceneRoutes: SceneRouteRecord[] = [
     title: "块类型展示分栏（全覆盖）",
     path: "/scenes/block-showcase",
     component: BlockShowcaseScenePage,
+  },
+  {
+    key: "drag-showcase",
+    title: "拖拽专项场景",
+    path: "/scenes/drag-showcase",
+    component: DragShowcaseScenePage,
+  },
+  {
+    key: "table-showcase",
+    title: "表格专项场景",
+    path: "/scenes/table-showcase",
+    component: TableShowcaseScenePage,
+  },
+  {
+    key: "behavior-benchmark",
+    title: "行为基准场景（P0）",
+    path: "/scenes/behavior-benchmark",
+    component: BehaviorBenchmarkScenePage,
   },
   {
     key: "regression",

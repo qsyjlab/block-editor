@@ -141,12 +141,24 @@ export class ToolbarDropdown {
 
     // Keyboard on trigger: open on ArrowDown / Enter / Space
     this.trigger.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      const openKeys = ['ArrowDown', 'ArrowUp', 'Enter', ' ']
+      if (!this._isOpen && openKeys.includes(e.key)) {
         e.preventDefault()
-        if (!this._isOpen) {
-          this.open()
+        this.open()
+        if (e.key === 'ArrowUp') {
+          const items = this.getFocusableItems()
+          this.focusItem(Math.max(0, items.length - 1))
+        } else {
           this.focusItem(0)
         }
+        this.menu.focus()
+        return
+      }
+
+      const navKeys = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ', 'Escape', 'Tab']
+      if (this._isOpen && navKeys.includes(e.key)) {
+        this.menu.focus()
+        this.handleMenuKeydown(e)
       }
     })
 

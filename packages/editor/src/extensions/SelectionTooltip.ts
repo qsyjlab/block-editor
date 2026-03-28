@@ -3,7 +3,7 @@ import {
   BubbleMenuPlugin,
   BubbleMenuPluginProps,
 } from "@tiptap/extension-bubble-menu";
-import { PluginKey } from "prosemirror-state";
+import { NodeSelection, PluginKey } from "prosemirror-state";
 import {
   ToolbarItemType,
 } from "../ui/toolbar/ToolbarRegistry";
@@ -317,6 +317,7 @@ export const SelectionTooltip = Extension.create({
         element,
         shouldShow: ({ editor, from, to }) => {
           if (!isSelectionToolbarEnabled(editor)) return false;
+          const selection = editor.state.selection;
           const state = editor.storage.interactionState as
             | {
                 mode?:
@@ -330,6 +331,8 @@ export const SelectionTooltip = Extension.create({
 
           if (from === to || !editor.isEditable || editor.state.selection.empty)
             return false;
+          if (selection instanceof NodeSelection) return false;
+          if (editor.isActive("image")) return false;
           if (editor.isActive("table")) return false;
           if (state?.blockMenuOpen) return false;
           if (

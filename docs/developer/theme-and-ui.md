@@ -3,10 +3,11 @@
 ## 主题规则
 
 1. 不新增硬编码色值，统一走 `styles/index.css` 语义 token。
-2. 新增弹层组件时，默认挂载到主题根（`overlayContainer` 或 UI root）。
-3. 暗黑模式必须校验：默认态、hover、active、disabled、focus。
-4. 按钮/标签激活态统一使用品牌 token：`--brand-solid-*` 与 `--brand-soft-*`，避免暗黑模式出现“亮蓝孤岛”。
-5. 语义状态色统一：`--success-*`、`--warning-*`、`--danger-*`，禁止在业务样式中直接写 `#22c55e/#f59e0b`。
+2. 区块/组件样式按领域拆分文件维护（例如 `styles/image.css`、`styles/list.css`），`index.css` 仅做 token 与聚合入口。
+3. 新增弹层组件时，默认挂载到主题根（`overlayContainer` 或 UI root）。
+4. 暗黑模式必须校验：默认态、hover、active、disabled、focus。
+5. 按钮/标签激活态统一使用品牌 token：`--brand-solid-*` 与 `--brand-soft-*`，避免暗黑模式出现“亮蓝孤岛”。
+6. 语义状态色统一：`--success-*`、`--warning-*`、`--danger-*`，禁止在业务样式中直接写 `#22c55e/#f59e0b`。
 
 ## 基础组件优先级
 

@@ -1,0 +1,325 @@
+/* =========================================================
+   Image Enhanced
+   ========================================================= */
+
+.be-image-figure {
+  position: relative;
+  display: block;
+  margin: 8px auto;
+  width: fit-content;
+  max-width: 100%;
+  outline: none;
+}
+
+.be-image-figure.ProseMirror-selectednode {
+  outline: none;
+}
+
+.be-image-figure[data-align="left"] {
+  margin: 8px auto 8px 0;
+}
+
+.be-image-figure[data-align="center"] {
+  margin: 8px auto;
+}
+
+.be-image-figure[data-align="right"] {
+  margin: 8px 0 8px auto;
+}
+
+.be-image-figure[data-align="full"] {
+  width: 100%;
+}
+
+.be-image-figure[data-align="full"] img {
+  width: 100%;
+  height: auto;
+}
+
+.be-image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.be-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  transition: box-shadow 0.15s;
+}
+
+.be-image-wrapper img:hover {
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.be-image-figure.ProseMirror-selectednode > .be-image-wrapper,
+.be-image-wrapper.be-image-controls-active {
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--primary-color) 42%, transparent);
+  border-radius: 8px;
+}
+
+.be-resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid
+    color-mix(in srgb, var(--brand-solid-text) 90%, transparent);
+  border-bottom: 2px solid
+    color-mix(in srgb, var(--brand-solid-text) 90%, transparent);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.be-image-caption {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  min-height: 1em;
+  outline: none;
+  caret-color: var(--primary-color);
+}
+
+.be-image-caption:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--paper-bg));
+  pointer-events: none;
+}
+
+.be-image-align-bar,
+.be-image-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+  width: fit-content;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--paper-bg);
+  box-shadow: var(--shadow-elevated);
+}
+
+.be-image-align-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+}
+
+.be-image-toolbar .icon-btn {
+  margin: 0;
+  width: 30px;
+  height: 30px;
+}
+
+.be-image-toolbar .icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.be-image-toolbar .divider {
+  height: 18px;
+  margin: 0 2px;
+}
+
+.be-image-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300000;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.16s ease;
+}
+
+.be-image-viewer-overlay.open {
+  opacity: 1;
+}
+
+.be-image-viewer-stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  display: block;
+  z-index: 1;
+}
+
+.be-image-viewer-center {
+  position: relative;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.be-image-viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  transition: transform 0.08s linear;
+  border-radius: 4px;
+  /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38); */
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  will-change: transform;
+}
+
+.be-image-viewer-image.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.be-image-viewer-status {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(11, 15, 20, 0.72);
+}
+
+.be-image-viewer-hint {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(72vw, 920px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(11, 15, 20, 0.64);
+}
+
+.be-image-viewer-overlay.is-loaded .be-image-viewer-status {
+  display: none;
+}
+
+.be-image-viewer-close {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(12, 16, 24, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.be-image-viewer-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.be-image-viewer-close:hover {
+  background: rgba(26, 33, 48, 0.84);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.be-image-viewer-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: rgba(8, 11, 17, 0.86);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.be-image-viewer-tool-btn,
+.be-image-viewer-scale {
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.be-image-viewer-scale {
+  width: auto;
+  min-width: 56px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.be-image-viewer-tool-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.be-image-viewer-tool-btn:hover,
+.be-image-viewer-scale:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.be-image-viewer-tool-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.be-image-viewer-counter {
+  min-width: 52px;
+  text-align: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.be-image-viewer-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-be-theme="dark"] .be-image-toolbar {
+  background: color-mix(in srgb, var(--paper-bg) 90%, black);
+  border-color: color-mix(in srgb, var(--border-color) 78%, transparent);
+}

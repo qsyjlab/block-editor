@@ -1,5 +1,6 @@
 import { icons } from '../ui/toolbar/icons'
 import type { CodeBlockI18n } from "../i18n";
+import { ensureCodeLanguageRegistered } from "./code-highlighting";
 
 // Common programming languages
 const LANGUAGES = [
@@ -22,6 +23,7 @@ export class CodeBlockView {
   private wrapBtn: HTMLElement
   private contentWrapper: HTMLElement
   private i18n: CodeBlockI18n
+  private languageSwitchSeq = 0
 
   constructor(
     node: any,
@@ -100,6 +102,7 @@ export class CodeBlockView {
     this.langSelect.appendChild(iconSpan)
 
     this.updateLangLabel()
+    void this.ensureLanguageLoaded(this.node.attrs.language)
     
     this.langSelect.onclick = (e) => {
         e.stopPropagation()
@@ -178,8 +181,12 @@ export class CodeBlockView {
     if (node.type !== this.node.type) {
       return false
     }
+    const prevLanguage = this.node.attrs.language
     this.node = node
     this.updateLangLabel()
+    if ((node.attrs.language || "plaintext") !== (prevLanguage || "plaintext")) {
+        void this.ensureLanguageLoaded(node.attrs.language)
+    }
     // Re-render language list to update active state
     const list = this.langDropdown.querySelector('.lang-list') as HTMLElement
     if (list) {
@@ -234,10 +241,13 @@ export class CodeBlockView {
             item.classList.add('active')
             item.innerHTML += icons.check
         }
+        item.onmousedown = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+        }
         item.onclick = (e) => {
             e.stopPropagation()
-            this.updateAttributes({ language: lang })
-            this.langDropdown.classList.remove('show')
+            void this.switchLanguage(lang)
         }
         container.appendChild(item)
     })
@@ -276,6 +286,69 @@ export class CodeBlockView {
           // Show feedback?
           // For now, assume success
       })
+  }
+
+  private async ensureLanguageLoaded(language?: string | null) {
+      const result = await ensureCodeLanguageRegistered(language)
+
+      const currentLanguage = (this.node.attrs.language || "plaintext") as string
+      if (currentLanguage !== result.language) {
+          this.updateAttributes({ language: result.language })
+          return
+      }
+
+      if (result.loadedNow) {
+          this.refreshHighlight()
+      }
+  }
+
+  private async switchLanguage(nextLanguage: string) {
+      const seq = ++this.languageSwitchSeq
+      const currentLanguage = (this.node.attrs.language || "plaintext") as string
+      this.langDropdown.classList.remove('show')
+
+      if (nextLanguage !== currentLanguage) {
+          this.updateAttributes({ language: nextLanguage })
+      }
+
+      this.langSelect.classList.add('is-loading')
+      this.langSelect.setAttribute('aria-busy', 'true')
+      try {
+          const result = await ensureCodeLanguageRegistered(nextLanguage)
+          if (seq !== this.languageSwitchSeq) return
+
+          if (result.language !== nextLanguage) {
+              this.updateAttributes({ language: result.language })
+          }
+
+          this.refreshHighlight()
+      } catch (error) {
+          console.warn('[CodeBlockView] switch language failed', error)
+      } finally {
+          if (seq === this.languageSwitchSeq) {
+              this.langSelect.classList.remove('is-loading')
+              this.langSelect.removeAttribute('aria-busy')
+          }
+      }
+  }
+
+  private refreshHighlight() {
+      let pos: number | undefined
+      try {
+          pos = this.getPos?.()
+      } catch {
+          return
+      }
+      if (typeof pos !== "number") return
+
+      const state = this.editor?.view?.state
+      if (!state) return
+      const node = state.doc.nodeAt(pos)
+      if (!node) return
+
+      const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs }, node.marks)
+      tr.setMeta("addToHistory", false)
+      this.editor.view.dispatch(tr)
   }
 
   destroy() {

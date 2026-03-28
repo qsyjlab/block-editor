@@ -22,6 +22,7 @@ import FontFamily from "@tiptap/extension-font-family";
 import { FontSize } from "../extensions/FontSize";
 import { LineHeight } from "../extensions/LineHeight";
 import { BlockHandle } from "../extensions/block-handle";
+import { TableHandle } from "../extensions/TableHandle";
 import { CurrentLineHighlight } from "../extensions/CurrentLineHighlight";
 import { SelectionTooltip } from "../extensions/SelectionTooltip";
 import { Exporter } from "../export/Exporter";
@@ -176,6 +177,7 @@ export class EditorCore {
       Table.configure({
         resizable: true,
       }),
+      TableHandle,
       TableRow,
       TableHeader,
       TableCell,

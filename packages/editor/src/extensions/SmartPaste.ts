@@ -9,6 +9,8 @@ import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 
 const URL_REGEX = /^(https?:\/\/)[^\s/$.?#].[^\s]*$/i
+const IMAGE_URL_REGEX =
+  /^(https?:\/\/)[^\s?#]+?\.(png|jpe?g|gif|webp|avif|svg|bmp|ico)([?#][^\s]*)?$/i
 
 // Tags to strip entirely (including their content)
 const STRIP_TAGS = ['script', 'style', 'meta', 'link', 'iframe', 'object', 'embed']
@@ -26,8 +28,10 @@ const KEEP_STYLE_PROPS = new Set([
 type SmartPasteEditorLike = {
   state: {
     selection: {
+      empty?: boolean
       $from: {
         parent: {
+          textContent?: string
           type: {
             spec?: {
               code?: boolean
@@ -46,7 +50,9 @@ type SmartPasteEditorLike = {
     }
   }
   commands: {
-    insertContent: (content: string) => void
+    insertContent: (content: unknown) => void
+    setLink?: (attrs: { href: string; target?: string }) => boolean
+    setImage?: (attrs: { src: string; alt?: string; title?: string }) => boolean
   }
 }
 
@@ -102,6 +108,14 @@ export function isInCodePasteContext(editor: SmartPasteEditorLike): boolean {
   )
 }
 
+function isImageUrl(url: string): boolean {
+  return IMAGE_URL_REGEX.test(url)
+}
+
+function selectionHasText(editor: SmartPasteEditorLike): boolean {
+  return editor.state.selection.empty === false
+}
+
 export function handleSmartPaste(
   editor: SmartPasteEditorLike,
   event: SmartPasteEventLike,
@@ -124,6 +138,26 @@ export function handleSmartPaste(
   // ── Case 1: Plain URL paste ────────────────────────────────────
   if (!htmlText && URL_REGEX.test(plainText)) {
     event.preventDefault()
+
+    // Keep "paste URL as link" when the user has selected text.
+    if (selectionHasText(editor) && typeof editor.commands.setLink === 'function') {
+      const linked = editor.commands.setLink({ href: plainText, target: '_blank' })
+      if (linked) return true
+    }
+
+    // Auto-convert direct image links to image blocks for quicker media insertion.
+    if (isImageUrl(plainText)) {
+      if (typeof editor.commands.setImage === 'function') {
+        const inserted = editor.commands.setImage({ src: plainText })
+        if (inserted) return true
+      }
+      editor.commands.insertContent({
+        type: 'image',
+        attrs: { src: plainText },
+      })
+      return true
+    }
+
     editor
       .chain()
       .focus()

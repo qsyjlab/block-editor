@@ -39,11 +39,16 @@
 
 ## 4. 当前执行方式
 
-1. 在 playground 进入行为场景进行手工验证。
-2. 同时运行自动化回归：
-3. `pnpm test:unit`（Vitest 单测）
-4. `pnpm test:e2e`（Vitest + Playwright e2e）
-5. 将结果回写到 `behavior-benchmark-todo.md` 执行日志。
+1. 在 playground 打开：`/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0`。
+2. 关键行为可通过 `case` 参数一键定位，例如：
+3. `/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0&case=cmt-001`
+4. `/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0&case=pst-001`
+5. `/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0&case=tob-002`
+6. 运行自动化回归：`pnpm test:unit` 与 `pnpm test:e2e`。
+7. 将结果回写到 `docs/todo/history/behavior-benchmark-todo.md` 执行日志。
+8. 交互专项可直接进入：
+9. `/scenes/drag-showcase?theme=dark&lang=zh-CN&collab=0`
+10. `/scenes/table-showcase?theme=dark&lang=zh-CN&collab=0`
 
 ## 5. 首批重点对标范围
 

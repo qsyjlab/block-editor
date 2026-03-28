@@ -25,6 +25,7 @@ export function createDropdownMenu(options: DropdownMenuOptions = {}): HTMLEleme
     .filter(Boolean)
     .join(" ");
   menu.setAttribute("role", options.role || "listbox");
+  menu.setAttribute("tabindex", "-1");
   menu.style.display = "none";
 
   if (options.layout === "row") {

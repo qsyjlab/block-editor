@@ -88,6 +88,10 @@ class BlockHandleView {
   private menuHideTimer: number | null = null;
   private scrollTarget: HTMLElement | Document = document;
   private i18n: BlockHandleI18n;
+  private draggingBlockPos: number | null = null;
+  private dropTargetPos: number | null = null;
+  private dropPlacement: "before" | "after" = "before";
+  private ignoreMenuClickUntil = 0;
 
   constructor(
     editorView: EditorView,
@@ -106,6 +110,7 @@ class BlockHandleView {
     this.element.setAttribute("aria-label", this.i18n.handleAriaLabel);
     this.element.setAttribute("aria-haspopup", "menu");
     this.element.setAttribute("tabindex", "0");
+    this.element.setAttribute("draggable", "true");
     this.element.style.position = "absolute";
     this.element.style.display = "none";
     this.element.style.alignItems = "center";
@@ -156,19 +161,27 @@ class BlockHandleView {
 
     // Event Listeners
     this.element.addEventListener("mousedown", (e) => {
-      e.preventDefault(); // Prevent focus loss
       e.stopPropagation();
 
       if (e.shiftKey && this.currentBlockPos !== null) {
+        e.preventDefault();
         // Shift+click: toggle block into multi-selection
         this.editor.commands.toggleBlockSelection(this.currentBlockPos);
-        return;
       }
-
+    });
+    this.element.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.shiftKey) return;
+      if (Date.now() < this.ignoreMenuClickUntil) return;
       this.toggleMenu();
     });
+    this.element.addEventListener("dragstart", this.handleDragStart);
+    this.element.addEventListener("dragend", this.handleDragEnd);
 
     window.addEventListener("mousemove", this.handleMouseMove);
+    document.addEventListener("dragover", this.handleDragOver);
+    document.addEventListener("drop", this.handleDrop);
     document.addEventListener("click", this.handleGlobalClick);
 
     this.scrollTarget = this.getScrollContainer() || document;
@@ -582,6 +595,15 @@ class BlockHandleView {
   }
 
   private getVisualBlockFromResolvedPos(resolvedPos: any) {
+    if (resolvedPos.depth < 1) {
+      const node = this.editorView.state.doc.nodeAt(resolvedPos.pos);
+      if (!node) return null;
+      return {
+        pos: resolvedPos.pos,
+        node,
+      };
+    }
+
     for (let depth = resolvedPos.depth; depth >= 2; depth -= 1) {
       const node = resolvedPos.node(depth);
       if (node?.type?.name === "listItem" || node?.type?.name === "taskItem") {
@@ -596,6 +618,116 @@ class BlockHandleView {
       pos: resolvedPos.before(1),
       node: resolvedPos.node(1),
     };
+  }
+
+  private getVisualBlockFromDomTarget(target: HTMLElement | null) {
+    if (!target) return null;
+    const root = this.editorView.dom as HTMLElement;
+    let block: HTMLElement | null = target;
+    while (block && block.parentElement && block.parentElement !== root) {
+      block = block.parentElement;
+    }
+    if (!block || block.parentElement !== root) return null;
+    try {
+      const pos = this.editorView.posAtDOM(block, 0);
+      const node = this.editorView.state.doc.nodeAt(pos);
+      if (!node) return null;
+      return { pos, node };
+    } catch {
+      return null;
+    }
+  }
+
+  private getNodeDom(pos: number): HTMLElement | null {
+    const dom = this.editorView.nodeDOM(pos);
+    return dom instanceof HTMLElement ? dom : null;
+  }
+
+  private shouldHideForImageInteraction(
+    target: HTMLElement | null,
+    clientX: number,
+  ) {
+    const figure = target?.closest(".be-image-figure") as HTMLElement | null;
+    if (!figure) return false;
+
+    const rect = figure.getBoundingClientRect();
+    const nearLeftEdge = clientX <= rect.left + 24;
+    if (nearLeftEdge) return false;
+
+    if (target?.closest(".be-image-align-bar")) return true;
+    if (target?.closest(".be-resize-handle")) return true;
+    if (target?.closest(".be-image-caption")) return true;
+    if (target?.closest('[data-be-image-preview="true"]')) return true;
+    if (figure.classList.contains("be-image-controls-active")) return true;
+    return false;
+  }
+
+  private setSourceDraggingClass(active: boolean) {
+    if (this.draggingBlockPos === null) return;
+    const sourceDom = this.getNodeDom(this.draggingBlockPos);
+    if (!sourceDom) return;
+    sourceDom.classList.toggle("be-block-drag-source", active);
+  }
+
+  private clearDropTarget() {
+    if (this.dropTargetPos !== null) {
+      const oldDom = this.getNodeDom(this.dropTargetPos);
+      if (oldDom) {
+        oldDom.classList.remove("be-block-drop-target", "is-before", "is-after");
+        oldDom.removeAttribute("data-drop-placement");
+      }
+    }
+    this.dropTargetPos = null;
+  }
+
+  private setDropTarget(pos: number, placement: "before" | "after") {
+    if (this.dropTargetPos === pos && this.dropPlacement === placement) return;
+
+    this.clearDropTarget();
+    this.dropTargetPos = pos;
+    this.dropPlacement = placement;
+
+    const dom = this.getNodeDom(pos);
+    if (!dom) return;
+    dom.classList.add("be-block-drop-target");
+    dom.classList.add(placement === "before" ? "is-before" : "is-after");
+    dom.setAttribute("data-drop-placement", placement);
+  }
+
+  private reorderBlockByDrop(
+    sourcePos: number,
+    targetPos: number,
+    placement: "before" | "after",
+  ) {
+    const { state } = this.editorView;
+    const sourceNode = state.doc.nodeAt(sourcePos);
+    const targetNode = state.doc.nodeAt(targetPos);
+    if (!sourceNode || !targetNode) return;
+    if (sourcePos === targetPos) return;
+
+    const sourceSize = sourceNode.nodeSize;
+    const targetSize = targetNode.nodeSize;
+    let insertPos = targetPos + (placement === "after" ? targetSize : 0);
+    if (sourcePos < targetPos) {
+      insertPos -= sourceSize;
+    }
+
+    try {
+      const tr = state.tr.delete(sourcePos, sourcePos + sourceSize);
+      const boundedInsertPos = Math.max(0, Math.min(insertPos, tr.doc.content.size));
+      tr.insert(boundedInsertPos, sourceNode);
+      const cursorPos = Math.max(
+        1,
+        Math.min(boundedInsertPos + 1, tr.doc.content.size),
+      );
+      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos), 1));
+      this.editorView.dispatch(tr);
+      this.currentBlockPos = boundedInsertPos;
+      this.editorView.focus();
+    } catch (error) {
+      // Ignore invalid cross-parent insertion attempts.
+      console.warn("[BlockHandle] drag reorder failed", error);
+    }
   }
 
   handleMouseMove = throttle((event: MouseEvent) => {
@@ -634,14 +766,24 @@ class BlockHandleView {
       return;
     }
 
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(".be-table-handle") || target?.closest("table")) {
+      this.scheduleHide();
+      return;
+    }
+    if (this.shouldHideForImageInteraction(target, clientX)) {
+      this.scheduleHide();
+      return;
+    }
+
     const pos = this.editorView.posAtCoords({ left: clientX, top: clientY });
     if (!pos) return;
 
     const resolvedPos = this.editorView.state.doc.resolve(pos.pos);
-    if (resolvedPos.depth < 1) return;
-
-    const visual = this.getVisualBlockFromResolvedPos(resolvedPos);
-    if (!visual.node) return;
+    const visual =
+      this.getVisualBlockFromResolvedPos(resolvedPos) ||
+      this.getVisualBlockFromDomTarget(target);
+    if (!visual?.node) return;
 
     this.currentBlockPos = visual.pos;
     this.showHandle(visual.pos, visual.node);
@@ -730,10 +872,81 @@ class BlockHandleView {
     this.editor.commands.setInteractionMode(mode);
   }
 
+  private finishDrag() {
+    this.element.classList.remove("is-dragging");
+    this.setSourceDraggingClass(false);
+    this.clearDropTarget();
+    this.draggingBlockPos = null;
+  }
+
+  handleDragStart = (event: DragEvent) => {
+    if (!this.isEnabled()) return;
+    if (this.currentBlockPos === null) return;
+    this.ignoreMenuClickUntil = Date.now() + 260;
+    this.hideMenu();
+    this.draggingBlockPos = this.currentBlockPos;
+    this.element.classList.add("is-dragging");
+    this.setSourceDraggingClass(true);
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", "be-block-drag");
+    }
+  };
+
+  handleDragOver = (event: DragEvent) => {
+    if (this.draggingBlockPos === null) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+
+    const pos = this.editorView.posAtCoords({
+      left: event.clientX,
+      top: event.clientY,
+    });
+    if (!pos) return;
+    const resolvedPos = this.editorView.state.doc.resolve(pos.pos);
+    const visual =
+      this.getVisualBlockFromResolvedPos(resolvedPos) ||
+      this.getVisualBlockFromDomTarget(event.target as HTMLElement | null);
+    if (!visual?.node) return;
+    if (visual.pos === this.draggingBlockPos) {
+      this.clearDropTarget();
+      return;
+    }
+
+    const nodeDom = this.getNodeDom(visual.pos);
+    const rect = nodeDom?.getBoundingClientRect();
+    const placement =
+      rect && event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    this.setDropTarget(visual.pos, placement);
+  };
+
+  handleDrop = (event: DragEvent) => {
+    if (this.draggingBlockPos === null) return;
+    event.preventDefault();
+    const sourcePos = this.draggingBlockPos;
+    const targetPos = this.dropTargetPos;
+    const placement = this.dropPlacement;
+    this.finishDrag();
+
+    if (targetPos === null || sourcePos === targetPos) return;
+    this.reorderBlockByDrop(sourcePos, targetPos, placement);
+  };
+
+  handleDragEnd = () => {
+    this.finishDrag();
+  };
+
   destroy() {
     this.element.remove();
     this.menu.remove();
+    this.element.removeEventListener("dragstart", this.handleDragStart);
+    this.element.removeEventListener("dragend", this.handleDragEnd);
     window.removeEventListener("mousemove", this.handleMouseMove);
+    document.removeEventListener("dragover", this.handleDragOver);
+    document.removeEventListener("drop", this.handleDrop);
     document.removeEventListener("click", this.handleGlobalClick);
     if (this.scrollTarget === document) {
       document.removeEventListener("scroll", this.handleScroll, true);

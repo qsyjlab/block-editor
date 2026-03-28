@@ -1,7 +1,8 @@
-import CodeBlock from '@tiptap/extension-code-block'
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { CodeBlockView } from './CodeBlockView'
 import { resolveEditorI18n } from '../i18n'
 import type { CodeBlockI18n } from '../i18n'
+import { getCodeLowlight } from "./code-highlighting";
 
 interface CustomCodeBlockOptions {
   i18n: CodeBlockI18n
@@ -10,11 +11,12 @@ interface CustomCodeBlockOptions {
 const DEFAULT_CODE_BLOCK_I18N: CodeBlockI18n =
   resolveEditorI18n("en-US").codeBlock
 
-export const CustomCodeBlock = CodeBlock.extend<CustomCodeBlockOptions>({
+export const CustomCodeBlock = CodeBlockLowlight.extend<CustomCodeBlockOptions>({
   addOptions() {
     return {
       ...this.parent?.(),
       i18n: DEFAULT_CODE_BLOCK_I18N,
+      lowlight: getCodeLowlight(),
     }
   },
 

@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { NodeSelection, Plugin, PluginKey } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 
 export const CurrentLineHighlight = Extension.create({
@@ -13,6 +13,9 @@ export const CurrentLineHighlight = Extension.create({
           decorations: ({ doc, selection }) => {
             const { isEditable, isFocused } = this.editor
             if (!isEditable || !isFocused) {
+              return DecorationSet.empty
+            }
+            if (selection instanceof NodeSelection) {
               return DecorationSet.empty
             }
 

@@ -22,6 +22,7 @@ export * from "./extensions/SmartPaste";
 export * from "./extensions/ImageEnhanced";
 export * from "./extensions/BlockMultiSelect";
 export * from "./extensions/BlockAnchor";
+export * from "./extensions/TableHandle";
 export * from "./i18n";
 export * from "./ui/config/operation-bars";
 export * from "./ui/modules/contracts";

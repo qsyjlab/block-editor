@@ -257,6 +257,17 @@ export interface ImageEnhancedI18n {
   alignCenter: string
   alignRight: string
   alignFull: string
+  previewImage: string
+  previewLoading: string
+  previewLoadFailed: string
+  previewPrev: string
+  previewNext: string
+  previewZoomIn: string
+  previewZoomOut: string
+  previewRotate: string
+  previewDownload: string
+  previewScale: string
+  closePreview: string
 }
 
 export interface CalloutI18n {

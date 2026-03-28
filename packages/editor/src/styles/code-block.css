@@ -52,6 +52,11 @@
   color: var(--text-color);
 }
 
+.code-block-lang-select.is-loading {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
 .code-block-action-btn {
   display: flex;
   align-items: center;
@@ -109,6 +114,57 @@
   padding: 0;
   color: inherit;
   font-family: inherit;
+}
+
+.code-block-content code .hljs-comment,
+.code-block-content code .hljs-quote {
+  color: color-mix(in srgb, var(--text-muted) 86%, var(--paper-bg));
+}
+
+.code-block-content code .hljs-keyword,
+.code-block-content code .hljs-selector-tag,
+.code-block-content code .hljs-literal,
+.code-block-content code .hljs-strong,
+.code-block-content code .hljs-name {
+  color: color-mix(in srgb, var(--primary-color) 88%, var(--text-color));
+}
+
+.code-block-content code .hljs-string,
+.code-block-content code .hljs-title,
+.code-block-content code .hljs-section,
+.code-block-content code .hljs-attribute,
+.code-block-content code .hljs-symbol,
+.code-block-content code .hljs-bullet,
+.code-block-content code .hljs-addition {
+  color: color-mix(in srgb, #16a34a 70%, var(--text-color));
+}
+
+.code-block-content code .hljs-number,
+.code-block-content code .hljs-type,
+.code-block-content code .hljs-tag {
+  color: color-mix(in srgb, #d97706 68%, var(--text-color));
+}
+
+.code-block-content code .hljs-variable,
+.code-block-content code .hljs-template-variable,
+.code-block-content code .hljs-deletion {
+  color: color-mix(in srgb, #dc2626 72%, var(--text-color));
+}
+
+[data-be-theme="dark"] .code-block-content code .hljs-string,
+[data-be-theme="dark"] .code-block-content code .hljs-title,
+[data-be-theme="dark"] .code-block-content code .hljs-section,
+[data-be-theme="dark"] .code-block-content code .hljs-attribute,
+[data-be-theme="dark"] .code-block-content code .hljs-symbol,
+[data-be-theme="dark"] .code-block-content code .hljs-bullet,
+[data-be-theme="dark"] .code-block-content code .hljs-addition {
+  color: #86efac;
+}
+
+[data-be-theme="dark"] .code-block-content code .hljs-number,
+[data-be-theme="dark"] .code-block-content code .hljs-type,
+[data-be-theme="dark"] .code-block-content code .hljs-tag {
+  color: #fbbf24;
 }
 
 /* Language Dropdown */

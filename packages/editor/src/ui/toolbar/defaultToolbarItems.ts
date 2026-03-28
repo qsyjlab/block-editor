@@ -192,6 +192,7 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
           ) as HTMLElement | null
           const { from, to } = core.editor.state.selection
           const text = core.editor.state.doc.textBetween(from, to, ' ')
+          const previousUrl = core.editor.getAttributes('link').href || ''
 
           new InsertLinkDialog(
             (url, linkText) => {
@@ -207,7 +208,7 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
                 .run()
             },
             text,
-            '',
+            previousUrl,
             i18n.dialogs.insertLink,
             host,
           ).show()

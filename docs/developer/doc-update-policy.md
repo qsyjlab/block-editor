@@ -16,7 +16,7 @@
    - 文件：`/docs/developer/*`  
    - 要写清楚：代码位置、改造边界、回归风险。
 4. 更新代办日志  
-   - 文件：`/ui-modularization-todo.md`  
+   - 文件：`/docs/todo/current.md`  
    - 要写清楚：改动范围、验证结果、遗留问题。
 
 ## 合并前检查清单

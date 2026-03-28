@@ -48,6 +48,12 @@ export class ToolbarItem {
     }
 
     btn.onclick = () => this.execute()
+    // Keep editor text selection when clicking toolbar buttons, so
+    // selection-dependent commands (e.g. addComment/setLink) can read
+    // the current range instead of a collapsed selection on the button.
+    btn.addEventListener('mousedown', (event) => {
+      event.preventDefault()
+    })
     return btn
   }
 
