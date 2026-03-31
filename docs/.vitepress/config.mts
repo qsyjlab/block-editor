@@ -20,6 +20,7 @@ export default defineConfig({
           { text: '快速开始', link: '/usage/getting-started' },
           { text: '核心配置', link: '/usage/configuration' },
           { text: '操作栏配置', link: '/usage/operation-bars' },
+          { text: '快捷键总览', link: '/usage/shortcuts' },
           { text: '布局与模块', link: '/usage/layout-modules' },
           { text: '迁移指南', link: '/usage/migration' },
           { text: '行为基准', link: '/usage/behavior-benchmark' },

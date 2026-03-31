@@ -258,6 +258,34 @@
 
 - `packages/editor/src/ui/CommentPanel.ts`
 
+## 19. 快捷键统一分发链路（2026-03-31）
+
+`document.keydown(capture)`  
+-> `ShortcutManager.handleKeydown`（限定编辑区焦点）  
+-> `ShortcutRegistry.dispatch`（平台映射、input 安全、when 条件、priority 仲裁）  
+-> `EditorCore.registerDefaultShortcuts()` / 各 UI 模块注册的 `run`  
+-> `core.exec(...)` 或 `events.emit(...)` 执行具体行为。
+
+关键文件：
+
+- `packages/editor/src/core/ShortcutManager.ts`
+- `packages/editor/src/core/ShortcutRegistry.ts`
+- `packages/editor/src/core/EditorCore.ts`
+- `packages/editor/src/ui/menus/find-replace-panel.ts`
+- `packages/editor/src/ui/menus/block-multi-select-bar.ts`
+
+## 20. 版本历史 diff 基线解析链路（2026-03-31 修复）
+
+版本列表行展开  
+-> `VersionHistoryDialog.resolveBaseSnapshotForDiff()` 选择真实对比基线（跳过无变化快照）  
+-> `renderDetail/openFullDiffDialog` 统一使用该基线  
+-> `VersionHistoryManager.getSnapshotDiff(currentId, baseId)` 输出一致的统计与详情。
+
+关键文件：
+
+- `packages/editor/src/ui/toolbar/dialogs/version-history-dialog.ts`
+- `packages/editor/src/core/VersionHistory.ts`
+
 ## 19. 快捷键统一分发链路（P0-SK2~SK5）
 
 `EditorUIRenderer` 初始化  

@@ -3,6 +3,7 @@ import { BubbleMenuPlugin, BubbleMenuPluginProps } from '@tiptap/extension-bubbl
 import { NodeSelection, PluginKey } from 'prosemirror-state'
 import { ToolbarItemType } from '../ui/toolbar/ToolbarRegistry'
 import { createToolbarItemElement, flattenToolbarGroups } from '../ui/toolbar/item-factory'
+import { applyShortcutHintsToGroups, applyShortcutHintsToItems } from '../ui/toolbar/shortcut-hints'
 import { InsertLinkDialog } from '../ui/toolbar/dialogs/insert-link-dialog'
 import {
   resolveToolbarGroups,
@@ -238,8 +239,9 @@ function createSelectionToolbarElement(editor: Editor) {
     uiConfig?.selectionToolbar,
     i18n,
   )
+  const hintedItems = applyShortcutHintsToItems(items, core, ['selection', 'editor', 'comment'])
 
-  items.forEach((item) => {
+  hintedItems.forEach((item) => {
     const element = createToolbarItemElement(item, core)
     if (element) container.appendChild(element)
   })
@@ -258,7 +260,7 @@ function createInlineToolbarElement(editor: Editor) {
   container.setAttribute('aria-label', i18n.toolbar.heading)
   container.setAttribute('aria-orientation', 'horizontal')
 
-  const groups = resolveToolbarGroups(i18n, uiConfig?.toolbar)
+  const groups = applyShortcutHintsToGroups(resolveToolbarGroups(i18n, uiConfig?.toolbar), core)
   const allItems: ToolbarItemType[] = flattenToolbarGroups(groups)
 
   allItems.forEach((item) => {

@@ -5,6 +5,7 @@ import { ToolbarDropdown } from '../toolbar/ToolbarDropdown'
 import { ToolbarColorPicker } from '../toolbar/ToolbarColorPicker'
 import { getTableMenuButtons } from './tableMenuItems'
 import { ToolbarItemType } from '../toolbar/ToolbarRegistry'
+import { applyShortcutHintsToItems } from '../toolbar/shortcut-hints'
 
 export class TableBubbleMenu {
   private element: HTMLElement
@@ -54,7 +55,13 @@ export class TableBubbleMenu {
     menu.setAttribute('aria-label', this.editorCore.i18n.toolbar.tableToolbar)
     menu.setAttribute('aria-orientation', 'horizontal')
 
-    this.renderItems(menu, getTableMenuButtons(this.editorCore.i18n))
+    this.renderItems(
+      menu,
+      applyShortcutHintsToItems(getTableMenuButtons(this.editorCore.i18n), this.editorCore, [
+        'table',
+        'editor',
+      ]),
+    )
     return menu
   }
 

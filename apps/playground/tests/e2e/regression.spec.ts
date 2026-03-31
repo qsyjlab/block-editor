@@ -14,6 +14,7 @@ const APP_CWD = path.resolve(path.dirname(THIS_FILE), '../..')
 const REGRESSION_ROUTE = '/scenes/regression?lang=zh-CN&theme=dark&collab=0'
 const DRAG_SHOWCASE_ROUTE = '/scenes/drag-showcase?lang=zh-CN&theme=dark&collab=0'
 const TABLE_SHOWCASE_ROUTE = '/scenes/table-showcase?lang=zh-CN&theme=dark&collab=0'
+const SHORTCUT_ROUTE = '/scenes/shortcuts?lang=zh-CN&theme=dark&collab=0'
 
 let devServer: ChildProcessWithoutNullStreams | null = null
 let browser: Browser | null = null
@@ -83,6 +84,10 @@ async function openDragShowcasePage(page: Page, roomPrefix: string) {
 
 async function openTableShowcasePage(page: Page, roomPrefix: string) {
   await openScenePage(page, roomPrefix, TABLE_SHOWCASE_ROUTE, '表格专项场景', '表格 handle')
+}
+
+async function openShortcutScenePage(page: Page, roomPrefix: string) {
+  await openScenePage(page, roomPrefix, SHORTCUT_ROUTE, '快捷键总览', '快捷键演示页')
 }
 
 async function openScenePage(
@@ -2274,6 +2279,25 @@ describe('regression e2e (H2)', () => {
       )
       .not.toMatch(/\bis-loading\b/)
     await expect(await codeBlock.locator('.lang-dropdown-menu.show').count()).toBe(0)
+
+    await page.close()
+  })
+
+  test('H3.18 快捷键总览页：清单展示并可触发基础命令', async () => {
+    if (!browser) throw new Error('browser not initialized')
+    const page = await browser.newPage()
+    await openShortcutScenePage(page, 'h3-shortcut-scene')
+
+    const rows = page.locator('.shortcut-list .shortcut-row')
+    await waitForVisible(rows.first())
+    await expect(await rows.count()).toBeGreaterThan(6)
+    await expect(await page.locator('.shortcut-row .shortcut-id', { hasText: 'core.bold' }).count()).toBeGreaterThan(0)
+
+    const editor = page.locator('.ProseMirror')
+    await waitForVisible(editor)
+    await selectTextInParagraph(page, '选中这段文本后尝试')
+    await page.keyboard.press('ControlOrMeta+b')
+    await expect(await page.locator('.ProseMirror strong').count()).toBeGreaterThan(0)
 
     await page.close()
   })

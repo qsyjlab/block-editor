@@ -136,6 +136,7 @@ export class BlockMultiSelectBar {
         id: 'multiselect.clear',
         source: 'BlockMultiSelectBar',
         scope: 'selection',
+        command: 'clearBlockSelection',
         combo: { mac: 'Escape', windows: 'Escape' },
         priority: 100,
         allowInInput: true,

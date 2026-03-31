@@ -11,7 +11,8 @@
 2. 建议场景：`/scenes/regression?theme=dark&lang=zh-CN&collab=0`
 3. 行为基准场景：`/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0`
 4. 行为直达示例：`/scenes/behavior-benchmark?theme=dark&lang=zh-CN&collab=0&case=cmt-001`
-5. 交叉验证：`theme=light|dark|auto`
+5. 快捷键总览场景：`/scenes/shortcuts?theme=dark&lang=zh-CN&collab=0`
+6. 交叉验证：`theme=light|dark|auto`
 
 自动化回归（推荐先跑）：
 

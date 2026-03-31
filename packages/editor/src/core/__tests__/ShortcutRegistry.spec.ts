@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ShortcutRegistry } from '../ShortcutRegistry'
+import { formatShortcutCombo, ShortcutRegistry } from '../ShortcutRegistry'
 
 function createKeydownEvent(
   key: string,
@@ -103,5 +103,10 @@ describe('ShortcutRegistry', () => {
     const consumedAllowed = registry.dispatch(event, null)
     expect(consumedAllowed).toBe(true)
     expect(calls).toBe(1)
+  })
+
+  it('formats shortcut combo for display', () => {
+    expect(formatShortcutCombo('Mod+Shift+b', 'mac')).toBe('⌘⇧B')
+    expect(formatShortcutCombo('Mod+Shift+b', 'windows')).toBe('Ctrl+Shift+B')
   })
 })

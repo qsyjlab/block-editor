@@ -5,6 +5,7 @@ import { ToolbarItemType } from './toolbar/ToolbarRegistry'
 import { resolveToolbarGroups, type ToolbarConfig } from './config/operation-bars'
 import { icons } from './toolbar/icons'
 import { createToolbarItemElement, flattenToolbarGroups } from './toolbar/item-factory'
+import { applyShortcutHintsToGroups } from './toolbar/shortcut-hints'
 import { resolveEditorI18n } from '../i18n'
 import type { EditorI18n } from '../i18n'
 
@@ -53,7 +54,7 @@ export class Toolbar {
     this.moreMenuOwnerId = `be-more-${++Toolbar.instanceCount}`
     this.overlayHost = this.resolveOverlayHost()
 
-    this.groups = resolveToolbarGroups(this.i18n, config)
+    this.groups = applyShortcutHintsToGroups(resolveToolbarGroups(this.i18n, config), this.editorCore)
 
     this.render()
   }

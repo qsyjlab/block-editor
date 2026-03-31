@@ -439,6 +439,7 @@ export function buildDefaultToolbarItems(
         type: 'button',
         label: t.findReplace,
         icon: 'search',
+        command: 'openFindReplace',
         shortcut: '⌘F',
         onExecute: (core: EditorCore) => {
           core.events.emit('openFindReplace', false)

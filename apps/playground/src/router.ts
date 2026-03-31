@@ -11,6 +11,7 @@ import BlockShowcaseScenePage from './scenes/pages/BlockShowcaseScenePage.vue'
 import BehaviorBenchmarkScenePage from './scenes/pages/BehaviorBenchmarkScenePage.vue'
 import DragShowcaseScenePage from './scenes/pages/DragShowcaseScenePage.vue'
 import TableShowcaseScenePage from './scenes/pages/TableShowcaseScenePage.vue'
+import ShortcutScenePage from './scenes/pages/ShortcutScenePage.vue'
 
 export const SCENE_KEYS = [
   'default',
@@ -22,6 +23,7 @@ export const SCENE_KEYS = [
   'block-showcase',
   'drag-showcase',
   'table-showcase',
+  'shortcuts',
   'behavior-benchmark',
   'regression',
 ] as const
@@ -92,6 +94,12 @@ const sceneRoutes: SceneRouteRecord[] = [
     title: '表格专项场景',
     path: '/scenes/table-showcase',
     component: TableShowcaseScenePage,
+  },
+  {
+    key: 'shortcuts',
+    title: '快捷键总览',
+    path: '/scenes/shortcuts',
+    component: ShortcutScenePage,
   },
   {
     key: 'behavior-benchmark',

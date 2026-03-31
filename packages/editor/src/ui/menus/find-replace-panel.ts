@@ -13,8 +13,6 @@ function collectMatches(doc: any, query: string): FindMatchRange[] {
     const haystack = text.toLocaleLowerCase()
     let start = 0
     while (start <= haystack.length - q.length) {
-      const a = 1
-
       const idx = haystack.indexOf(q, start)
       if (idx < 0) break
       matches.push({
@@ -179,6 +177,7 @@ export class FindReplacePanel {
         id: 'find.open',
         source: 'FindReplacePanel',
         scope: 'editor',
+        command: 'openFindReplace',
         combo: { mac: 'Mod+f', windows: 'Mod+f' },
         allowInInput: true,
         priority: 90,
@@ -190,6 +189,7 @@ export class FindReplacePanel {
         id: 'find.openReplace',
         source: 'FindReplacePanel',
         scope: 'editor',
+        command: 'openFindReplace',
         combo: { mac: 'Mod+h', windows: 'Mod+h' },
         allowInInput: true,
         priority: 90,
@@ -201,6 +201,7 @@ export class FindReplacePanel {
         id: 'find.close',
         source: 'FindReplacePanel',
         scope: 'editor',
+        command: 'closeFindReplace',
         combo: { mac: 'Escape', windows: 'Escape' },
         allowInInput: true,
         priority: 110,

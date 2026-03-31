@@ -19,6 +19,7 @@ export interface ShortcutDefinition {
   id: string
   source: string
   scope: ShortcutScope
+  command?: string
   combo: ShortcutCombo
   priority?: number
   allowInInput?: boolean
@@ -93,6 +94,57 @@ function normalizeCombo(raw: string, platform: ShortcutPlatform) {
     (a, b) => MODIFIER_ORDER.indexOf(a as any) - MODIFIER_ORDER.indexOf(b as any),
   )
   return [...sorted, key].join('+')
+}
+
+function displayKey(key: string, platform: ShortcutPlatform) {
+  const dict: Record<string, string> = {
+    esc: platform === 'mac' ? '⎋' : 'Esc',
+    enter: platform === 'mac' ? '↩' : 'Enter',
+    space: platform === 'mac' ? '␣' : 'Space',
+    up: '↑',
+    down: '↓',
+    left: '←',
+    right: '→',
+    delete: platform === 'mac' ? '⌦' : 'Delete',
+    backspace: platform === 'mac' ? '⌫' : 'Backspace',
+    tab: platform === 'mac' ? '⇥' : 'Tab',
+    home: 'Home',
+    end: 'End',
+    pageup: 'PgUp',
+    pagedown: 'PgDn',
+  }
+  if (dict[key]) return dict[key]
+  if (key.length === 1) return key.toUpperCase()
+  return key[0].toUpperCase() + key.slice(1)
+}
+
+function displayModifier(mod: string, platform: ShortcutPlatform) {
+  const mac: Record<string, string> = {
+    mod: '⌘',
+    ctrl: '⌃',
+    alt: '⌥',
+    shift: '⇧',
+    meta: '⌘',
+  }
+  const windows: Record<string, string> = {
+    mod: 'Ctrl',
+    ctrl: 'Ctrl',
+    alt: 'Alt',
+    shift: 'Shift',
+    meta: 'Win',
+  }
+  return platform === 'mac' ? mac[mod] || mod : windows[mod] || mod
+}
+
+export function formatShortcutCombo(raw: string, platform: ShortcutPlatform) {
+  const signature = normalizeCombo(raw, platform)
+  if (!signature) return ''
+  const parts = signature.split('+').filter(Boolean)
+  const mods = parts.slice(0, -1)
+  const key = parts[parts.length - 1]
+  const items = [...mods.map((mod) => displayModifier(mod, platform)), displayKey(key, platform)]
+  if (platform === 'mac') return items.join('')
+  return items.join('+')
 }
 
 function eventToSignature(event: KeyboardEvent, platform: ShortcutPlatform) {
@@ -212,5 +264,9 @@ export class ShortcutRegistry {
 
   getPlatform() {
     return this.platform
+  }
+
+  formatCombo(combo: ShortcutCombo) {
+    return formatShortcutCombo(combo[this.platform], this.platform)
   }
 }

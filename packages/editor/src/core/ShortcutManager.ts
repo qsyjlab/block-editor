@@ -41,6 +41,19 @@ export class ShortcutManager {
     return this.registry.list()
   }
 
+  formatCombo(def: ShortcutDefinition) {
+    return this.registry.formatCombo(def.combo)
+  }
+
+  getShortcutForCommand(command: string, scopes?: ShortcutScope[]) {
+    const candidates = this.registry
+      .list()
+      .filter((def) => def.command === command && (!scopes || scopes.includes(def.scope)))
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+    if (candidates.length === 0) return ''
+    return this.registry.formatCombo(candidates[0].combo)
+  }
+
   private reportConflicts() {
     const conflicts = this.registry.findConflicts()
     if (conflicts.length === 0) return

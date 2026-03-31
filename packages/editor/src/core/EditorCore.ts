@@ -111,6 +111,7 @@ export class EditorCore {
   public uiConfig?: EditorUIConfig
   public shortcuts: ShortcutManager
   private ydoc: Y.Doc | null = null
+  private shortcutDisposers: Array<() => void> = []
 
   constructor(options: EditorCoreOptions) {
     this.events = new EventBus()
@@ -246,6 +247,7 @@ export class EditorCore {
       i18n: this.i18n.versionHistoryCore,
     })
     this.syncInteractionMode(this.editor)
+    this.registerDefaultShortcuts()
   }
 
   private syncInteractionMode(editor: Editor) {
@@ -277,6 +279,8 @@ export class EditorCore {
   }
 
   public destroy() {
+    this.shortcutDisposers.forEach((dispose) => dispose())
+    this.shortcutDisposers = []
     this.shortcuts.stop()
     this.editor.destroy()
     this.importer.destroy()
@@ -285,6 +289,289 @@ export class EditorCore {
     this.provider = null
     this.ydoc?.destroy()
     this.ydoc = null
+  }
+
+  private registerDefaultShortcuts() {
+    const register = (def: Parameters<ShortcutManager['registerShortcut']>[0]) => {
+      this.shortcutDisposers.push(this.shortcuts.registerShortcut(def))
+    }
+
+    const runCommand = (command: string, args?: any) => {
+      this.exec(command, args)
+    }
+
+    register({
+      id: 'core.undo',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'undo',
+      combo: { mac: 'Mod+z', windows: 'Mod+z' },
+      priority: 70,
+      run: () => runCommand('undo'),
+    })
+    register({
+      id: 'core.redo',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'redo',
+      combo: { mac: 'Shift+Mod+z', windows: 'Shift+Mod+z' },
+      priority: 70,
+      run: () => runCommand('redo'),
+    })
+    register({
+      id: 'core.redoAltWin',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'redo',
+      combo: { mac: 'Mod+y', windows: 'Mod+y' },
+      priority: 70,
+      run: () => runCommand('redo'),
+    })
+
+    register({
+      id: 'core.bold',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleBold',
+      combo: { mac: 'Mod+b', windows: 'Mod+b' },
+      priority: 60,
+      run: () => runCommand('toggleBold'),
+    })
+    register({
+      id: 'core.italic',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleItalic',
+      combo: { mac: 'Mod+i', windows: 'Mod+i' },
+      priority: 60,
+      run: () => runCommand('toggleItalic'),
+    })
+    register({
+      id: 'core.underline',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleUnderline',
+      combo: { mac: 'Mod+u', windows: 'Mod+u' },
+      priority: 60,
+      run: () => runCommand('toggleUnderline'),
+    })
+    register({
+      id: 'core.strike',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleStrike',
+      combo: { mac: 'Shift+Mod+x', windows: 'Shift+Mod+x' },
+      priority: 60,
+      run: () => runCommand('toggleStrike'),
+    })
+    register({
+      id: 'core.code',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleCode',
+      combo: { mac: 'Mod+e', windows: 'Mod+e' },
+      priority: 60,
+      run: () => runCommand('toggleCode'),
+    })
+    register({
+      id: 'core.highlight',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleHighlight',
+      combo: { mac: 'Shift+Mod+h', windows: 'Shift+Mod+h' },
+      priority: 60,
+      run: () => runCommand('toggleHighlight'),
+    })
+    register({
+      id: 'core.codeBlock',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleCodeBlock',
+      combo: { mac: 'Alt+Mod+c', windows: 'Alt+Mod+c' },
+      priority: 60,
+      run: () => runCommand('toggleCodeBlock'),
+    })
+    register({
+      id: 'core.clearFormatting',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'clearFormatting',
+      combo: { mac: 'Alt+Mod+0', windows: 'Alt+Mod+0' },
+      priority: 60,
+      run: () => {
+        this.editor.chain().focus().unsetAllMarks().clearNodes().run()
+      },
+    })
+    register({
+      id: 'core.indent',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'indent',
+      combo: { mac: 'Mod+]', windows: 'Mod+]' },
+      priority: 60,
+      run: () => runCommand('indent'),
+    })
+    register({
+      id: 'core.outdent',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'outdent',
+      combo: { mac: 'Mod+[', windows: 'Mod+[' },
+      priority: 60,
+      run: () => runCommand('outdent'),
+    })
+    register({
+      id: 'core.bulletList',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleBulletList',
+      combo: { mac: 'Shift+Mod+8', windows: 'Shift+Mod+8' },
+      priority: 60,
+      run: () => runCommand('toggleBulletList'),
+    })
+    register({
+      id: 'core.orderedList',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleOrderedList',
+      combo: { mac: 'Shift+Mod+7', windows: 'Shift+Mod+7' },
+      priority: 60,
+      run: () => runCommand('toggleOrderedList'),
+    })
+    register({
+      id: 'core.taskList',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleTaskList',
+      combo: { mac: 'Shift+Mod+9', windows: 'Shift+Mod+9' },
+      priority: 60,
+      run: () => runCommand('toggleTaskList'),
+    })
+    register({
+      id: 'core.blockquote',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'toggleBlockquote',
+      combo: { mac: 'Shift+Mod+b', windows: 'Shift+Mod+b' },
+      priority: 60,
+      run: () => runCommand('toggleBlockquote'),
+    })
+    register({
+      id: 'core.openCommentPanel',
+      source: 'EditorCore',
+      scope: 'comment',
+      command: 'addComment',
+      combo: { mac: 'Alt+Mod+m', windows: 'Alt+Mod+m' },
+      priority: 80,
+      run: () => this.events.emit('openCommentPanel'),
+    })
+
+    register({
+      id: 'multiselect.delete',
+      source: 'EditorCore',
+      scope: 'selection',
+      command: 'deleteSelectedBlocks',
+      combo: { mac: 'Backspace', windows: 'Backspace' },
+      priority: 120,
+      allowInInput: true,
+      when: () => {
+        const storage = this.editor.storage.blockMultiSelect as
+          | { selectedPositions?: Set<number> }
+          | undefined
+        return (storage?.selectedPositions?.size || 0) > 0
+      },
+      run: () => runCommand('deleteSelectedBlocks'),
+    })
+    register({
+      id: 'multiselect.deleteForward',
+      source: 'EditorCore',
+      scope: 'selection',
+      command: 'deleteSelectedBlocks',
+      combo: { mac: 'Delete', windows: 'Delete' },
+      priority: 120,
+      allowInInput: true,
+      when: () => {
+        const storage = this.editor.storage.blockMultiSelect as
+          | { selectedPositions?: Set<number> }
+          | undefined
+        return (storage?.selectedPositions?.size || 0) > 0
+      },
+      run: () => runCommand('deleteSelectedBlocks'),
+    })
+    register({
+      id: 'multiselect.moveUp',
+      source: 'EditorCore',
+      scope: 'selection',
+      command: 'moveSelectedBlocks',
+      combo: { mac: 'Alt+Up', windows: 'Alt+Up' },
+      priority: 120,
+      allowInInput: true,
+      when: () => {
+        const storage = this.editor.storage.blockMultiSelect as
+          | { selectedPositions?: Set<number> }
+          | undefined
+        return (storage?.selectedPositions?.size || 0) > 0
+      },
+      run: () => runCommand('moveSelectedBlocks', 'up'),
+    })
+    register({
+      id: 'multiselect.moveDown',
+      source: 'EditorCore',
+      scope: 'selection',
+      command: 'moveSelectedBlocks',
+      combo: { mac: 'Alt+Down', windows: 'Alt+Down' },
+      priority: 120,
+      allowInInput: true,
+      when: () => {
+        const storage = this.editor.storage.blockMultiSelect as
+          | { selectedPositions?: Set<number> }
+          | undefined
+        return (storage?.selectedPositions?.size || 0) > 0
+      },
+      run: () => runCommand('moveSelectedBlocks', 'down'),
+    })
+
+    const tableWhen = () => this.editor.isActive('table')
+    register({
+      id: 'table.addRowBefore',
+      source: 'EditorCore',
+      scope: 'table',
+      command: 'addRowBefore',
+      combo: { mac: 'Alt+Mod+Up', windows: 'Alt+Mod+Up' },
+      priority: 95,
+      when: tableWhen,
+      run: () => runCommand('addRowBefore'),
+    })
+    register({
+      id: 'table.addRowAfter',
+      source: 'EditorCore',
+      scope: 'table',
+      command: 'addRowAfter',
+      combo: { mac: 'Alt+Mod+Down', windows: 'Alt+Mod+Down' },
+      priority: 95,
+      when: tableWhen,
+      run: () => runCommand('addRowAfter'),
+    })
+    register({
+      id: 'table.addColumnBefore',
+      source: 'EditorCore',
+      scope: 'table',
+      command: 'addColumnBefore',
+      combo: { mac: 'Alt+Mod+Left', windows: 'Alt+Mod+Left' },
+      priority: 95,
+      when: tableWhen,
+      run: () => runCommand('addColumnBefore'),
+    })
+    register({
+      id: 'table.addColumnAfter',
+      source: 'EditorCore',
+      scope: 'table',
+      command: 'addColumnAfter',
+      combo: { mac: 'Alt+Mod+Right', windows: 'Alt+Mod+Right' },
+      priority: 95,
+      when: tableWhen,
+      run: () => runCommand('addColumnAfter'),
+    })
   }
 
   public getJSON() {

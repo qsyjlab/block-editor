@@ -1,6 +1,6 @@
 # 当前代办清单（唯一执行入口）
 
-最后更新：2026-03-30  
+最后更新：2026-03-31  
 状态：进行中  
 维护规则：后续所有代办更新统一写在本页面。
 
@@ -52,16 +52,16 @@
 - [x] P0-SK3 建立平台映射层（Mac `⌘` / Win `Ctrl`）并统一展示文案。
 - [x] P0-SK4 建立冲突检测机制（注册冲突告警 + 文档化冲突白名单）。
 - [x] P0-SK5 抽离统一快捷键执行分发（避免散落在各模块 `keydown` 里）。
-- [ ] P0-SK6 接入核心能力（撤销/重做/粗体/斜体/下划线/查找/替换）。
-- [ ] P0-SK7 接入块与选区能力（多选工具栏、块转换、删除、移动）。
-- [ ] P0-SK8 接入表格与评论能力（表格操作、评论开关与提交链路）。
-- [ ] P0-SK9 统一 tooltip 与菜单快捷键提示来源（全部由 i18n + registry 输出）。
-- [ ] P0-SK10 新增 playground 快捷键演示页（路由独立，支持分类过滤、触发日志、平台切换）。
-- [ ] P0-SK11 为演示页补示例脚本（覆盖编辑/选区/表格/评论/查找替换）。
-- [ ] P0-SK12 补齐单测（注册/冲突/解析/焦点优先级）。
-- [ ] P0-SK13 补齐 e2e（输入框不抢焦点、弹层优先、按钮与快捷键一致性）。
-- [ ] P0-SK14 更新使用文档（快捷键总览、场景示例、常见冲突处理）。
-- [ ] P0-SK15 更新开发文档（架构、调用链路、扩展方式、维护约束）。
+- [x] P0-SK6 接入核心能力（撤销/重做/粗体/斜体/下划线/查找/替换）。
+- [x] P0-SK7 接入块与选区能力（多选工具栏、删除、移动；块转换快捷键待下一轮补齐）。
+- [x] P0-SK8 接入表格与评论能力（表格增行增列、评论面板快捷入口）。
+- [x] P0-SK9 统一 tooltip 与菜单快捷键提示来源（Toolbar/Selection/Table 统一由 registry 回填）。
+- [x] P0-SK10 新增 playground 快捷键演示页（路由独立，支持分类过滤、触发日志、平台切换）。
+- [x] P0-SK11 为演示页补示例脚本（覆盖编辑/选区/表格/评论/查找替换）。
+- [x] P0-SK12 补齐单测（注册/冲突/解析/焦点优先级）。
+- [ ] P0-SK13 补齐 e2e（输入框不抢焦点、弹层优先、按钮与快捷键一致性；已新增 H3.18，用例执行受本地端口监听限制待验收）。
+- [x] P0-SK14 更新使用文档（快捷键总览、场景示例、常见冲突处理）。
+- [x] P0-SK15 更新开发文档（架构、调用链路、扩展方式、维护约束）。
 
 ## P1 全链路对标未收口项（未开始）
 
@@ -69,9 +69,9 @@
 
 - [ ] P1-1 构建清零守护：持续保证 `pnpm -r build` 全绿（不引入新 TS 错误）。
 - [ ] P1-2 类型生态稳定：第三方类型声明与版本持续对齐（Markdown/协作相关依赖重点关注）。
-- [ ] P1-3 协作后端接入与鉴权方案落地（基础架构、会话鉴权、最小可运行链路）。
+- [ ] P1-3 版本历史增强（diff 对比准确性、命名版本、冲突处理）。
 - [ ] P1-4 评论与版本历史服务端化最小闭环（写入、查询、回放、失败兜底）。
-- [ ] P1-5 版本历史增强（diff 对比、命名版本、冲突处理）。
+- [ ] P1-5 协作后端接入与鉴权方案落地（基础架构、会话鉴权、最小可运行链路，低优先级）。
 - [ ] P1-6 块链接体系增强（块引用预览、反向引用）。
 - [ ] P1-7 Markdown 深度兼容与大文档性能优化（复杂嵌套映射 + 压测基线 + 优化项收口）。
 
@@ -85,7 +85,8 @@
 6. 再推进 `P0-SK6 ~ P0-SK11`（模块接入 + 演示页落地）。
 7. 然后完成 `P0-SK12 ~ P0-SK15`（测试与文档闭环）。
 8. 再推进 `P1-1 ~ P1-2`（工程稳定性守护）。
-9. 最后推进 `P1-3 ~ P1-7`（服务端化与体验增强收口）。
+9. 先推进 `P1-3 ~ P1-4`（版本历史准确性 + 服务端闭环预研）。
+10. 最后推进 `P1-5 ~ P1-7`（协作后端与体验增强收口）。
 
 ## 执行规范入口
 
@@ -262,3 +263,23 @@
 - 验证结果：通过（当前 0 error，15 warnings）。
 - 文档更新：`docs/todo/current.md`
 - 风险与待办：当前 `pnpm` store 环境限制导致未补装 `vue-eslint-parser`，因此根 lint 先覆盖 `js/ts` 文件；待环境允许后补齐 `.vue` 文件 lint。
+
+### 2026-03-31 15:20
+
+- 任务ID：P0-SK6~P0-SK11 + 版本历史 diff 基线修复
+- 状态变更：doing -> done
+- 代码改动：`EditorCore` 新增默认快捷键统一注册（核心格式、列表、评论入口、多选删除/移动、表格增行增列）；新增 `/scenes/shortcuts` 场景页展示注册中心快捷键清单并支持按 scope 过滤；`VersionHistoryDialog` 统一详情/预览的 diff 基线解析，避免快照对比基线不一致。
+- 验证命令：`pnpm --filter @block-editor/editor build`、`pnpm --filter block-editor-playground build`、`pnpm --dir docs docs:build`
+- 验证结果：通过（editor build、playground build、docs build 全绿；unit 26/26 通过）。
+- 文档更新：`docs/usage/shortcuts.md`、`docs/developer/shortcut-inventory.md`、`docs/developer/call-chains.md`、`docs/usage/regression-checklist.md`、`docs/todo/current.md`
+- 风险与待办：`P0-SK9/SK12/SK13` 仍未完成（tooltip/menu 提示单一来源、快捷键单测与 e2e）。
+
+### 2026-03-31 20:35
+
+- 任务ID：P0-SK9/SK12 收口 + P0-SK13 用例补充
+- 状态变更：doing -> done（SK9/SK12） / doing -> review（SK13）
+- 代码改动：新增快捷键提示回填层 `shortcut-hints`，顶部工具栏/选区工具栏/表格工具栏的按钮 shortcut 展示统一从 `ShortcutRegistry` 按 `command` 解析；补齐 `ShortcutManager` 命令映射能力与对应单测；新增 e2e 用例 `H3.18`（快捷键总览页清单展示 + `Cmd/Ctrl+B` 行为校验）。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter @block-editor/editor build`、`pnpm --filter block-editor-playground build`、`pnpm --dir docs docs:build`、`pnpm --filter block-editor-playground exec vitest run --config vitest.e2e.config.ts -t "H3.18"`
+- 验证结果：unit/build/docs 通过；e2e 在当前环境触发 `No available port found in range 4174-6174`（端口监听受限），待在可监听本地端口环境复跑。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：`P0-SK13` 保持进行中，待端口可用环境跑通并回填结果。

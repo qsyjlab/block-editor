@@ -1,9 +1,5 @@
 import { EditorCore } from '../../../core/EditorCore'
-import {
-  SnapshotBlameLine,
-  SnapshotDiffLine,
-  SnapshotDiffResult,
-} from '../../../core/VersionHistory'
+import { SnapshotDiffLine } from '../../../core/VersionHistory'
 import { Dialog } from '../../components/dialog'
 import type { VersionHistoryDialogI18n } from '../../../i18n'
 import { resolveEditorI18n } from '../../../i18n'
@@ -33,10 +29,8 @@ export class VersionHistoryDialog {
   private dialog: Dialog
   private editorCore: EditorCore
   private listRoot: HTMLElement
-  private detailRoot: HTMLElement
   private activeSnapshotId: string | null = null
   private expandedSnapshotId: string | null = null
-  private detailTab: 'diff' | 'blame' = 'diff'
   private readonly i18n: VersionHistoryDialogI18n
   private readonly locale: string
 
@@ -46,11 +40,6 @@ export class VersionHistoryDialog {
     this.locale = locale
     this.listRoot = document.createElement('div')
     this.listRoot.className = 'be-space-y-2'
-
-    this.detailRoot = document.createElement('div')
-    this.detailRoot.className = 'be-mt-3 be-rounded-xl be-overflow-hidden'
-    this.detailRoot.style.border = '1px solid var(--border-color)'
-    this.detailRoot.style.display = 'none'
 
     const content = document.createElement('div')
     content.className = 'be-space-y-4'
@@ -72,7 +61,6 @@ export class VersionHistoryDialog {
     content.appendChild(createBtn)
 
     content.appendChild(this.listRoot)
-    content.appendChild(this.detailRoot)
 
     this.dialog = new Dialog({
       title: this.i18n.title,
@@ -101,7 +89,6 @@ export class VersionHistoryDialog {
       empty.style.color = 'var(--text-muted)'
       empty.textContent = this.i18n.noSnapshots
       this.listRoot.appendChild(empty)
-      this.detailRoot.innerHTML = ''
       this.activeSnapshotId = null
       return
     }
@@ -136,7 +123,6 @@ export class VersionHistoryDialog {
       header.addEventListener('click', () => {
         this.activeSnapshotId = snapshot.id
         this.expandedSnapshotId = expanded ? null : snapshot.id
-        this.detailTab = 'diff'
         this.renderList()
       })
 
@@ -172,7 +158,6 @@ export class VersionHistoryDialog {
         e.stopPropagation()
         this.activeSnapshotId = snapshot.id
         this.expandedSnapshotId = expanded ? null : snapshot.id
-        this.detailTab = 'diff'
         this.renderList()
       })
 
@@ -311,197 +296,6 @@ export class VersionHistoryDialog {
     })
   }
 
-  private renderDetail() {
-    this.detailRoot.innerHTML = ''
-
-    if (!this.activeSnapshotId) {
-      const empty = document.createElement('div')
-      empty.className = 'be-p-3 be-text-sm'
-      empty.style.color = 'var(--text-muted)'
-      empty.textContent = this.i18n.selectSnapshotDetail
-      this.detailRoot.appendChild(empty)
-      return
-    }
-
-    const diff = this.editorCore.versionHistory.getSnapshotDiff(this.activeSnapshotId)
-    if (!diff) {
-      const empty = document.createElement('div')
-      empty.className = 'be-p-3 be-text-sm'
-      empty.style.color = 'var(--text-muted)'
-      empty.textContent = this.i18n.detailUnavailable
-      this.detailRoot.appendChild(empty)
-      return
-    }
-
-    const blame = this.editorCore.versionHistory.getSnapshotBlame(this.activeSnapshotId)
-
-    const header = document.createElement('div')
-    header.className = 'be-flex be-items-center be-justify-between be-gap-2 be-px-3 be-py-2'
-    header.style.background = 'var(--surface-soft)'
-    header.style.borderBottom = '1px solid var(--border-color)'
-
-    const summary = document.createElement('div')
-    summary.className = 'be-text-xs'
-    summary.style.color = 'var(--text-secondary)'
-    summary.textContent = this.buildDiffSummary(diff)
-
-    const tabWrap = document.createElement('div')
-    tabWrap.className = 'be-flex be-gap-1'
-
-    const diffBtn = this.createTabBtn(this.i18n.diffView, this.detailTab === 'diff', () => {
-      this.detailTab = 'diff'
-      this.renderDetail()
-    })
-    const blameBtn = this.createTabBtn(this.i18n.blameView, this.detailTab === 'blame', () => {
-      this.detailTab = 'blame'
-      this.renderDetail()
-    })
-
-    tabWrap.appendChild(diffBtn)
-    tabWrap.appendChild(blameBtn)
-    header.appendChild(summary)
-    header.appendChild(tabWrap)
-
-    const body = document.createElement('div')
-    body.style.maxHeight = '340px'
-    body.style.overflow = 'auto'
-    body.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
-    body.style.fontSize = '12px'
-
-    if (this.detailTab === 'diff') {
-      this.renderDiffBody(body, diff)
-    } else {
-      this.renderBlameBody(body, blame)
-    }
-
-    this.detailRoot.appendChild(header)
-    this.detailRoot.appendChild(body)
-  }
-
-  private createTabBtn(label: string, active: boolean, onClick: () => void) {
-    const btn = document.createElement('button')
-    btn.textContent = label
-    btn.className = 'be-px-2.5 be-py-1 be-text-xs be-rounded-md be-border be-cursor-pointer'
-    btn.style.borderColor = active
-      ? 'color-mix(in srgb, var(--primary-color) 45%, var(--border-color))'
-      : 'var(--border-color)'
-    btn.style.background = active
-      ? 'color-mix(in srgb, var(--primary-color) 18%, var(--paper-bg))'
-      : 'var(--paper-bg)'
-    btn.style.color = active ? 'var(--primary-color)' : 'var(--text-secondary)'
-    btn.onclick = onClick
-    return btn
-  }
-
-  private buildDiffSummary(diff: SnapshotDiffResult) {
-    const added = diff.lines.filter((l) => l.type === 'added').length
-    const deleted = diff.lines.filter((l) => l.type === 'deleted').length
-    const modified = diff.lines.filter((l) => l.type === 'modified').length
-    const base = diff.baseSnapshot ? `${diff.baseSnapshot.label}` : this.i18n.blankBaseline
-    return this.i18n.diffSummary(base, added, deleted, modified)
-  }
-
-  private renderDiffBody(root: HTMLElement, diff: SnapshotDiffResult) {
-    if (diff.lines.length === 0) {
-      const empty = document.createElement('div')
-      empty.className = 'be-p-3'
-      empty.style.color = 'var(--text-muted)'
-      empty.textContent = this.i18n.noDiff
-      root.appendChild(empty)
-      return
-    }
-
-    diff.lines.forEach((line) => {
-      const row = document.createElement('div')
-      row.style.display = 'grid'
-      row.style.gridTemplateColumns = '52px 52px 1fr 170px'
-      row.style.gap = '8px'
-      row.style.padding = '4px 8px'
-      row.style.borderBottom = '1px solid color-mix(in srgb, var(--border-color) 70%, transparent)'
-      row.style.alignItems = 'start'
-
-      if (line.type === 'added')
-        row.style.background = 'color-mix(in srgb, var(--success-color) 12%, var(--paper-bg))'
-      if (line.type === 'deleted')
-        row.style.background = 'color-mix(in srgb, var(--danger-color) 12%, var(--paper-bg))'
-      if (line.type === 'modified')
-        row.style.background = 'color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg))'
-
-      const oldNo = document.createElement('span')
-      oldNo.style.color = 'var(--text-muted)'
-      oldNo.textContent = line.oldLineNumber === null ? '' : String(line.oldLineNumber)
-
-      const newNo = document.createElement('span')
-      newNo.style.color = 'var(--text-muted)'
-      newNo.textContent = line.newLineNumber === null ? '' : String(line.newLineNumber)
-
-      const text = document.createElement('div')
-      text.style.whiteSpace = 'pre-wrap'
-      text.style.wordBreak = 'break-word'
-      text.style.color = 'var(--text-color)'
-      text.textContent =
-        line.type === 'deleted'
-          ? `- ${line.oldText}`
-          : line.type === 'added'
-            ? `+ ${line.newText}`
-            : line.type === 'modified'
-              ? `~ ${line.oldText}\n→ ${line.newText}`
-              : `  ${line.newText}`
-
-      const meta = document.createElement('span')
-      meta.style.color = 'var(--text-muted)'
-      meta.style.fontSize = '11px'
-      meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`
-
-      row.appendChild(oldNo)
-      row.appendChild(newNo)
-      row.appendChild(text)
-      row.appendChild(meta)
-      root.appendChild(row)
-    })
-  }
-
-  private renderBlameBody(root: HTMLElement, blame: SnapshotBlameLine[]) {
-    if (blame.length === 0) {
-      const empty = document.createElement('div')
-      empty.className = 'be-p-3'
-      empty.style.color = 'var(--text-muted)'
-      empty.textContent = this.i18n.noBlameLines
-      root.appendChild(empty)
-      return
-    }
-
-    blame.forEach((line) => {
-      const row = document.createElement('div')
-      row.style.display = 'grid'
-      row.style.gridTemplateColumns = '48px 170px 1fr'
-      row.style.gap = '8px'
-      row.style.padding = '4px 8px'
-      row.style.borderBottom = '1px solid color-mix(in srgb, var(--border-color) 70%, transparent)'
-      row.style.alignItems = 'start'
-
-      const no = document.createElement('span')
-      no.style.color = 'var(--text-muted)'
-      no.textContent = String(line.lineNumber)
-
-      const meta = document.createElement('span')
-      meta.style.color = 'var(--text-muted)'
-      meta.style.fontSize = '11px'
-      meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`
-
-      const text = document.createElement('div')
-      text.style.whiteSpace = 'pre-wrap'
-      text.style.wordBreak = 'break-word'
-      text.style.color = 'var(--text-color)'
-      text.textContent = line.text || ' '
-
-      row.appendChild(no)
-      row.appendChild(meta)
-      row.appendChild(text)
-      root.appendChild(row)
-    })
-  }
-
   private resolveBaseSnapshotForDiff(
     snapshots: ReturnType<EditorCore['versionHistory']['listSnapshots']>,
     index: number,
@@ -611,7 +405,7 @@ export class VersionHistoryDialog {
       splitHead.appendChild(newHead)
       content.appendChild(splitHead)
 
-      changed.forEach((line) => {
+      diff.lines.forEach((line) => {
         const row = document.createElement('div')
         row.style.display = 'grid'
         row.style.gridTemplateColumns = '44px 1fr 44px 1fr'
@@ -651,6 +445,11 @@ export class VersionHistoryDialog {
         } else if (line.type === 'added') {
           newNo.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
           newText.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
+        } else if (line.type === 'context') {
+          oldNo.style.background = 'var(--paper-bg)'
+          oldText.style.background = 'var(--paper-bg)'
+          newNo.style.background = 'var(--paper-bg)'
+          newText.style.background = 'var(--paper-bg)'
         } else {
           oldNo.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
           oldText.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
