@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
-import SceneFrame from "../SceneFrame.vue";
-import { useSceneEditor } from "../useSceneEditor";
+import { ref } from 'vue'
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
+import SceneFrame from '../SceneFrame.vue'
+import { useSceneEditor } from '../useSceneEditor'
 
-const editorContainer = ref<HTMLElement | null>(null);
+const editorContainer = ref<HTMLElement | null>(null)
 
 const BLOCK_SHOWCASE_CONTENT = `
   <h2>块类型展示分栏（全覆盖）</h2>
@@ -83,39 +83,39 @@ function runReview(): ReviewResult {
   <h3 id="showcase-anchor">8. 分割线与结尾锚点</h3>
   <hr />
   <p>到这里为止，已覆盖大部分常用块能力。你可以直接在此场景继续编辑做回归验证。</p>
-`;
+`
 
 useSceneEditor(
-  "block-showcase",
+  'block-showcase',
   editorContainer,
   (container, context) => {
-  const core = new EditorCore({
-    element: document.createElement("div"),
-    content: BLOCK_SHOWCASE_CONTENT,
-    collaboration: {
-      enabled: context.collaborationEnabled,
-      roomName: context.room,
-      websocketUrl: "wss://demos.yjs.dev",
-      user: { name: context.userName, color: context.userColor },
-    },
-    i18n: context.editorLocale,
-    uiConfig: {
-      toolbar: { preset: "full" },
-      selectionToolbar: { preset: "full" },
-    },
-  } as any);
+    const core = new EditorCore({
+      element: document.createElement('div'),
+      content: BLOCK_SHOWCASE_CONTENT,
+      collaboration: {
+        enabled: context.collaborationEnabled,
+        roomName: context.room,
+        websocketUrl: 'wss://demos.yjs.dev',
+        user: { name: context.userName, color: context.userColor },
+      },
+      i18n: context.editorLocale,
+      uiConfig: {
+        toolbar: { preset: 'full' },
+        selectionToolbar: { preset: 'full' },
+      },
+    } as any)
 
-  new EditorUIRenderer(core, container, {
-    i18n: context.editorLocale,
-    theme: context.theme,
-    toolbarMode: "top",
-    commentPanelDefaultVisible: true,
-  } as any);
+    new EditorUIRenderer(core, container, {
+      i18n: context.editorLocale,
+      theme: context.theme,
+      toolbarMode: 'top',
+      commentPanelDefaultVisible: true,
+    } as any)
 
-  return core;
+    return core
   },
   { defaultCollaborationEnabled: false },
-);
+)
 </script>
 
 <template>

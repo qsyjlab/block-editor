@@ -1,138 +1,133 @@
-import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
-import { resolveEditorI18n } from "../i18n";
-import type { BlockHandleI18n } from "../i18n/types";
-import { createDropdownItem } from "../ui/components/DropdownMenu";
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
+import { resolveEditorI18n } from '../i18n'
+import type { BlockHandleI18n } from '../i18n/types'
+import { createDropdownItem } from '../ui/components/DropdownMenu'
 
 /** Simple throttle: fire at most once per `ms` milliseconds */
 function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
-  let last = 0;
+  let last = 0
   return function (this: any, ...args: any[]) {
-    const now = Date.now();
+    const now = Date.now()
     if (now - last >= ms) {
-      last = now;
-      fn.apply(this, args);
+      last = now
+      fn.apply(this, args)
     }
-  } as T;
+  } as T
 }
 
 export interface BlockHandleOptions {
-  width: number;
-  enabled: boolean;
-  i18n: BlockHandleI18n;
+  width: number
+  enabled: boolean
+  i18n: BlockHandleI18n
 }
 
-declare module "@tiptap/core" {
+declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     blockHandle: {
-      setBlockHandleEnabled: (enabled: boolean) => ReturnType;
-    };
+      setBlockHandleEnabled: (enabled: boolean) => ReturnType
+    }
   }
 }
 
-const DEFAULT_BLOCK_HANDLE_I18N: BlockHandleI18n =
-  resolveEditorI18n("en-US").blockHandle;
+const DEFAULT_BLOCK_HANDLE_I18N: BlockHandleI18n = resolveEditorI18n('en-US').blockHandle
 
 export const BlockHandle = Extension.create<BlockHandleOptions>({
-  name: "blockHandle",
+  name: 'blockHandle',
 
   addOptions() {
     return {
       width: 24,
       enabled: true,
       i18n: DEFAULT_BLOCK_HANDLE_I18N,
-    };
+    }
   },
 
   addStorage() {
     return {
       enabled: this.options.enabled,
-    };
+    }
   },
 
   addCommands() {
     return {
-      setBlockHandleEnabled:
-        (enabled: boolean) =>
-        () => {
-          this.storage.enabled = enabled;
-          return true;
-        },
-    };
+      setBlockHandleEnabled: (enabled: boolean) => () => {
+        this.storage.enabled = enabled
+        return true
+      },
+    }
   },
 
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey("blockHandle"),
+        key: new PluginKey('blockHandle'),
         view: (editorView) =>
-          new BlockHandleView(
-            editorView,
-            this.options.width,
-            this.editor,
-            this.options.i18n,
-          ),
+          new BlockHandleView(editorView, this.options.width, this.editor, this.options.i18n),
       }),
-    ];
+    ]
   },
-});
+})
 
 class BlockHandleView {
-  private editorView: EditorView;
-  private element: HTMLElement;
-  private menu: HTMLElement;
-  private currentBlockPos: number | null = null;
-  private editor: any; // Tiptap editor instance
-  private hideTimer: any = null;
-  private menuHideTimer: number | null = null;
-  private scrollTarget: HTMLElement | Document = document;
-  private i18n: BlockHandleI18n;
-  private draggingBlockPos: number | null = null;
-  private dropTargetPos: number | null = null;
-  private dropPlacement: "before" | "after" = "before";
-  private ignoreMenuClickUntil = 0;
+  private editorView: EditorView
+  private element: HTMLElement
+  private menu: HTMLElement
+  private currentBlockPos: number | null = null
+  private editor: any // Tiptap editor instance
+  private hideTimer: any = null
+  private menuHideTimer: number | null = null
+  private scrollTarget: HTMLElement | Document = document
+  private i18n: BlockHandleI18n
+  private draggingBlockPos: number | null = null
+  private draggingBlockGroup: number[] | null = null
+  private dropTargetPos: number | null = null
+  private dropPlacement: 'before' | 'after' = 'before'
+  private ignoreMenuClickUntil = 0
+  private pointerDownAt = 0
+  private pointerDownX = 0
+  private pointerDownY = 0
+  private pointerMaxDistance = 0
+  private pointerTracking = false
+  private readonly longPressMs = 180
+  private readonly dragDistancePx = 6
 
-  constructor(
-    editorView: EditorView,
-    _width: number,
-    editor: any,
-    i18n: BlockHandleI18n,
-  ) {
-    this.editorView = editorView;
-    this.editor = editor;
-    this.i18n = i18n;
+  constructor(editorView: EditorView, _width: number, editor: any, i18n: BlockHandleI18n) {
+    this.editorView = editorView
+    this.editor = editor
+    this.i18n = i18n
 
     // Create Handle Element
-    this.element = document.createElement("div");
-    this.element.className = "be-block-handle";
-    this.element.setAttribute("role", "button");
-    this.element.setAttribute("aria-label", this.i18n.handleAriaLabel);
-    this.element.setAttribute("aria-haspopup", "menu");
-    this.element.setAttribute("tabindex", "0");
-    this.element.setAttribute("draggable", "true");
-    this.element.style.position = "absolute";
-    this.element.style.display = "none";
-    this.element.style.alignItems = "center";
-    this.element.style.justifyContent = "center";
-    this.element.style.width = "24px";
-    this.element.style.height = "24px";
-    this.element.style.cursor = "grab";
-    this.element.style.borderRadius = "4px";
-    this.element.style.backgroundColor = "transparent";
-    this.element.style.color = "var(--text-muted)";
-    this.element.style.transition = "opacity 0.2s, background-color 0.2s";
-    this.element.style.zIndex = "50";
+    this.element = document.createElement('div')
+    this.element.className = 'be-block-handle'
+    this.element.setAttribute('role', 'button')
+    this.element.setAttribute('aria-label', this.i18n.handleAriaLabel)
+    this.element.setAttribute('aria-haspopup', 'menu')
+    this.element.setAttribute('tabindex', '0')
+    this.element.setAttribute('draggable', 'true')
+    this.element.style.position = 'absolute'
+    this.element.style.display = 'none'
+    this.element.style.alignItems = 'center'
+    this.element.style.justifyContent = 'center'
+    this.element.style.width = '24px'
+    this.element.style.height = '24px'
+    this.element.style.cursor = 'grab'
+    this.element.style.borderRadius = '4px'
+    this.element.style.backgroundColor = 'transparent'
+    this.element.style.color = 'var(--text-muted)'
+    this.element.style.transition = 'opacity 0.2s, background-color 0.2s'
+    this.element.style.zIndex = '50'
 
     // Hover effect
-    this.element.addEventListener("mouseenter", () => {
-      this.element.style.backgroundColor = "var(--surface-soft)";
-      this.cancelHide();
-    });
-    this.element.addEventListener("mouseleave", () => {
-      this.element.style.backgroundColor = "transparent";
-      this.scheduleHide();
-    });
+    this.element.addEventListener('mouseenter', () => {
+      this.element.style.backgroundColor = 'var(--surface-soft)'
+      this.cancelHide()
+    })
+    this.element.addEventListener('mouseleave', () => {
+      this.element.style.backgroundColor = 'transparent'
+      this.scheduleHide()
+    })
 
     // Drag Handle Icon (6 dots)
     this.element.innerHTML = `
@@ -140,134 +135,161 @@ class BlockHandleView {
         <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>
         <circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
       </svg>
-    `;
+    `
 
     // Create Menu Element
-    this.menu = document.createElement("div");
-    this.menu.className = "be-block-handle-menu toolbar-dropdown-menu be-panel-card";
-    this.menu.setAttribute("role", "menu");
-    this.menu.setAttribute("aria-label", this.i18n.menuAriaLabel);
+    this.menu = document.createElement('div')
+    this.menu.className = 'be-block-handle-menu toolbar-dropdown-menu be-panel-card'
+    this.menu.setAttribute('role', 'menu')
+    this.menu.setAttribute('aria-label', this.i18n.menuAriaLabel)
     Object.assign(this.menu.style, {
-      display: "none",
-      position: "fixed",
-      zIndex: "9999",
-      minWidth: "240px",
-    });
+      display: 'none',
+      position: 'fixed',
+      zIndex: '9999',
+      minWidth: '240px',
+    })
 
     // Add menu items
-    this.renderMenu();
+    this.renderMenu()
 
-    this.ensureMenuHost();
+    this.ensureMenuHost()
 
     // Event Listeners
-    this.element.addEventListener("mousedown", (e) => {
-      e.stopPropagation();
+    this.element.addEventListener('mousedown', (e) => {
+      e.stopPropagation()
 
       if (e.shiftKey && this.currentBlockPos !== null) {
-        e.preventDefault();
+        e.preventDefault()
         // Shift+click: toggle block into multi-selection
-        this.editor.commands.toggleBlockSelection(this.currentBlockPos);
+        this.editor.commands.toggleBlockSelection(this.currentBlockPos)
+        return
       }
-    });
-    this.element.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.shiftKey) return;
-      if (Date.now() < this.ignoreMenuClickUntil) return;
-      this.toggleMenu();
-    });
-    this.element.addEventListener("dragstart", this.handleDragStart);
-    this.element.addEventListener("dragend", this.handleDragEnd);
 
-    window.addEventListener("mousemove", this.handleMouseMove);
-    document.addEventListener("dragover", this.handleDragOver);
-    document.addEventListener("drop", this.handleDrop);
-    document.addEventListener("click", this.handleGlobalClick);
+      this.pointerDownAt = Date.now()
+      this.pointerDownX = e.clientX
+      this.pointerDownY = e.clientY
+      this.pointerMaxDistance = 0
+      this.pointerTracking = true
+    })
+    this.element.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.shiftKey) return
+      if (Date.now() < this.ignoreMenuClickUntil) return
+      this.toggleMenu()
+    })
+    this.element.addEventListener('dragstart', this.handleDragStart)
+    this.element.addEventListener('dragend', this.handleDragEnd)
 
-    this.scrollTarget = this.getScrollContainer() || document;
+    window.addEventListener('mousemove', this.handleMouseMove)
+    document.addEventListener('dragover', this.handleDragOver, true)
+    document.addEventListener('drop', this.handleDrop, true)
+    document.addEventListener('click', this.handleGlobalClick)
+    document.addEventListener('mousemove', this.handlePointerTrackMove, true)
+    document.addEventListener('mouseup', this.handlePointerTrackEnd, true)
+    window.addEventListener('blur', this.handlePointerTrackEnd)
+
+    this.scrollTarget = this.getScrollContainer() || document
     if (this.scrollTarget === document) {
-      document.addEventListener("scroll", this.handleScroll, true);
+      document.addEventListener('scroll', this.handleScroll, true)
     } else {
-      (this.scrollTarget as HTMLElement).addEventListener("scroll", this.handleScroll, {
+      ;(this.scrollTarget as HTMLElement).addEventListener('scroll', this.handleScroll, {
         passive: true,
-      });
+      })
     }
   }
 
   private getEditorContainer(): HTMLElement | null {
-    const dom = this.editorView.dom as HTMLElement;
+    const dom = this.editorView.dom as HTMLElement
     return (
       (dom.closest('[data-be-editor-container="true"]') as HTMLElement | null) ||
-      (dom.closest(".editor-container") as HTMLElement | null)
-    );
+      (dom.closest('.editor-container') as HTMLElement | null)
+    )
   }
 
   private getOverlayContainer(): HTMLElement {
-    const dom = this.editorView.dom as HTMLElement;
+    const dom = this.editorView.dom as HTMLElement
     const container =
       (dom.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
-      (dom.closest('[data-be-ui-root="true"]') as HTMLElement | null);
-    return container || document.body;
+      (dom.closest('[data-be-ui-root="true"]') as HTMLElement | null)
+    return container || document.body
   }
 
   private ensureMenuHost() {
-    const host = this.getOverlayContainer();
+    const host = this.getOverlayContainer()
     if (this.menu.parentElement !== host) {
-      host.appendChild(this.menu);
+      host.appendChild(this.menu)
     }
   }
 
   private isEnabled() {
-    return this.editor?.storage?.blockHandle?.enabled !== false;
+    return this.editor?.storage?.blockHandle?.enabled !== false
   }
 
   private getScrollContainer(): HTMLElement | null {
-    const dom = this.editorView.dom as HTMLElement;
+    const dom = this.editorView.dom as HTMLElement
     return (
       (dom.closest('[data-be-scroll-container="true"]') as HTMLElement | null) ||
-      (dom.closest(".editor-scroll-area") as HTMLElement | null)
-    );
+      (dom.closest('.editor-scroll-area') as HTMLElement | null)
+    )
   }
 
   private isCurrentBlockType(typeName: string) {
-    if (this.currentBlockPos === null) return false;
-    const { doc } = this.editorView.state;
-    const resolved = doc.resolve(this.currentBlockPos);
+    if (this.currentBlockPos === null) return false
+    const { doc } = this.editorView.state
+    const resolved = doc.resolve(this.currentBlockPos)
     for (let depth = resolved.depth; depth >= 0; depth -= 1) {
-      if (resolved.node(depth).type.name === typeName) return true;
+      if (resolved.node(depth).type.name === typeName) return true
     }
-    return false;
+    return false
+  }
+
+  private isDragActivationReady() {
+    const elapsed = Date.now() - this.pointerDownAt
+    // Primary gate is long-press duration to avoid accidental drag.
+    // Distance acts as a helper signal, not a hard blocker.
+    if (elapsed >= this.longPressMs) return true
+    return this.pointerMaxDistance >= this.dragDistancePx
+  }
+
+  private isBlockDragEvent(event: DragEvent) {
+    const types = event.dataTransfer?.types
+    if (!types) return false
+    return Array.from(types).includes('application/x-be-block-drag')
   }
 
   private isCurrentHeading(level: number) {
-    if (this.currentBlockPos === null) return false;
-    const { doc } = this.editorView.state;
-    const node = doc.nodeAt(this.currentBlockPos);
-    if (node?.type.name === "heading" && node.attrs?.level === level) return true;
-    const resolved = doc.resolve(this.currentBlockPos);
+    if (this.currentBlockPos === null) return false
+    const { doc } = this.editorView.state
+    const node = doc.nodeAt(this.currentBlockPos)
+    if (node?.type.name === 'heading' && node.attrs?.level === level) return true
+    const resolved = doc.resolve(this.currentBlockPos)
     for (let depth = resolved.depth; depth >= 0; depth -= 1) {
-      const depthNode = resolved.node(depth);
-      if (depthNode.type.name === "heading" && depthNode.attrs?.level === level) return true;
+      const depthNode = resolved.node(depth)
+      if (depthNode.type.name === 'heading' && depthNode.attrs?.level === level) return true
     }
-    return false;
+    return false
   }
 
   renderMenu() {
     const ICON = {
-      arrowUp: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
-      arrowDown: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>',
+      arrowUp:
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+      arrowDown:
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>',
       copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
       link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-      trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
-    };
+      trash:
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+    }
 
     const items: {
-      label: string;
-      icon: string;
-      action: () => void;
-      danger?: boolean;
-      divider?: boolean;
-      isActive?: () => boolean;
+      label: string
+      icon: string
+      action: () => void
+      danger?: boolean
+      divider?: boolean
+      isActive?: () => boolean
     }[] = [
       {
         label: this.i18n.moveUp,
@@ -299,104 +321,104 @@ class BlockHandleView {
       {
         label: this.i18n.toParagraph,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>',
-        action: () => this.runCommand("setParagraph"),
+        action: () => this.runCommand('setParagraph'),
         isActive: () => {
-          if (this.currentBlockPos === null) return false;
-          const node = this.editorView.state.doc.nodeAt(this.currentBlockPos);
-          return node?.type.name === "paragraph";
+          if (this.currentBlockPos === null) return false
+          const node = this.editorView.state.doc.nodeAt(this.currentBlockPos)
+          return node?.type.name === 'paragraph'
         },
       },
       {
         label: this.i18n.toHeading1,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H1</span>',
-        action: () => this.runCommand("toggleHeading", { level: 1 }),
+        action: () => this.runCommand('toggleHeading', { level: 1 }),
         isActive: () => this.isCurrentHeading(1),
       },
       {
         label: this.i18n.toHeading2,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H2</span>',
-        action: () => this.runCommand("toggleHeading", { level: 2 }),
+        action: () => this.runCommand('toggleHeading', { level: 2 }),
         isActive: () => this.isCurrentHeading(2),
       },
       {
         label: this.i18n.toHeading3,
         icon: '<span style="font-size:11px;font-weight:700;color:currentColor">H3</span>',
-        action: () => this.runCommand("toggleHeading", { level: 3 }),
+        action: () => this.runCommand('toggleHeading', { level: 3 }),
         isActive: () => this.isCurrentHeading(3),
       },
       {
         label: this.i18n.toBulletList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>',
-        action: () => this.runCommand("toggleBulletList"),
-        isActive: () => this.isCurrentBlockType("bulletList"),
+        action: () => this.runCommand('toggleBulletList'),
+        isActive: () => this.isCurrentBlockType('bulletList'),
       },
       {
         label: this.i18n.toOrderedList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>',
-        action: () => this.runCommand("toggleOrderedList"),
-        isActive: () => this.isCurrentBlockType("orderedList"),
+        action: () => this.runCommand('toggleOrderedList'),
+        isActive: () => this.isCurrentBlockType('orderedList'),
       },
       {
         label: this.i18n.toTaskList,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>',
-        action: () => this.runCommand("toggleTaskList"),
-        isActive: () => this.isCurrentBlockType("taskList"),
+        action: () => this.runCommand('toggleTaskList'),
+        isActive: () => this.isCurrentBlockType('taskList'),
       },
       {
         label: this.i18n.toBlockquote,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>',
-        action: () => this.runCommand("toggleBlockquote"),
-        isActive: () => this.isCurrentBlockType("blockquote"),
+        action: () => this.runCommand('toggleBlockquote'),
+        isActive: () => this.isCurrentBlockType('blockquote'),
       },
       {
         label: this.i18n.addToMultiSelect,
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
         action: () => {
           if (this.currentBlockPos !== null) {
-            this.editor.commands.toggleBlockSelection(this.currentBlockPos);
+            this.editor.commands.toggleBlockSelection(this.currentBlockPos)
           }
         },
         divider: true,
       },
-    ];
+    ]
 
-    this.menu.innerHTML = "";
+    this.menu.innerHTML = ''
     items.forEach((item) => {
       if (item.divider) {
-        const hr = document.createElement("div");
-        hr.className = "be-block-handle-menu-divider";
-        this.menu.appendChild(hr);
+        const hr = document.createElement('div')
+        hr.className = 'be-block-handle-menu-divider'
+        this.menu.appendChild(hr)
       }
 
-      const active = item.isActive?.() ?? false;
+      const active = item.isActive?.() ?? false
       const btn = createDropdownItem({
         label: item.label,
         iconHtml: item.icon,
-        role: "menuitem",
-        className: `be-block-handle-menu-item${item.danger ? " danger" : ""}`,
+        role: 'menuitem',
+        className: `be-block-handle-menu-item${item.danger ? ' danger' : ''}`,
         active,
         danger: item.danger,
-      });
-      const icon = btn.querySelector("span");
+      })
+      const icon = btn.querySelector('span')
       if (icon) {
-        icon.classList.add("be-block-handle-menu-icon");
+        icon.classList.add('be-block-handle-menu-icon')
       }
 
       btn.onclick = (e) => {
-        e.stopPropagation();
-        this.hideMenu();
-        item.action();
-      };
-      this.menu.appendChild(btn);
-    });
+        e.stopPropagation()
+        this.hideMenu()
+        item.action()
+      }
+      this.menu.appendChild(btn)
+    })
   }
 
   runCommand(name: string, attrs?: any) {
-    if (this.currentBlockPos === null) return;
+    if (this.currentBlockPos === null) return
 
-    const chain = this.editor.chain().focus();
+    const chain = this.editor.chain().focus()
     // Ensure we select the block first
-    const node = this.editorView.state.doc.nodeAt(this.currentBlockPos);
+    const node = this.editorView.state.doc.nodeAt(this.currentBlockPos)
     if (node) {
       // Just setting selection might be enough
       // We use setNodeSelection if possible, or text selection
@@ -404,556 +426,620 @@ class BlockHandleView {
       // Let's select the block content.
       const selection = TextSelection.near(
         this.editorView.state.doc.resolve(this.currentBlockPos + 1),
-      );
-      this.editorView.dispatch(
-        this.editorView.state.tr.setSelection(selection),
-      );
+      )
+      this.editorView.dispatch(this.editorView.state.tr.setSelection(selection))
 
-      chain[name](attrs).run();
+      chain[name](attrs).run()
     }
   }
 
   moveBlock(direction: 1 | -1) {
-    if (this.currentBlockPos === null) return;
+    if (this.currentBlockPos === null) return
 
-    const { doc } = this.editorView.state;
-    const node = doc.nodeAt(this.currentBlockPos);
-    if (!node) return;
+    const { doc } = this.editorView.state
+    const node = doc.nodeAt(this.currentBlockPos)
+    if (!node) return
 
-    const resolved = doc.resolve(this.currentBlockPos);
-    let targetDepth = 1;
+    const resolved = doc.resolve(this.currentBlockPos)
+    let targetDepth = 1
 
     for (let depth = resolved.depth; depth >= 1; depth -= 1) {
       if (resolved.before(depth) === this.currentBlockPos) {
-        targetDepth = depth;
-        break;
+        targetDepth = depth
+        break
       }
     }
 
-    const parentDepth = targetDepth - 1;
-    const parent = parentDepth >= 0 ? resolved.node(parentDepth) : doc;
-    const index = resolved.index(parentDepth);
+    const parentDepth = targetDepth - 1
+    const parent = parentDepth >= 0 ? resolved.node(parentDepth) : doc
+    const index = resolved.index(parentDepth)
 
     if (direction === -1) {
-      if (index <= 0) return;
+      if (index <= 0) return
 
-      const prevNode = parent.child(index - 1);
-      const prevPos = this.currentBlockPos - prevNode.nodeSize;
-      const end = this.currentBlockPos + node.nodeSize;
+      const prevNode = parent.child(index - 1)
+      const prevPos = this.currentBlockPos - prevNode.nodeSize
+      const end = this.currentBlockPos + node.nodeSize
 
-      const tr = this.editorView.state.tr;
-      tr.replaceWith(prevPos, end, [node, prevNode]);
-      this.editorView.dispatch(tr);
-      this.currentBlockPos = prevPos;
-      return;
+      const tr = this.editorView.state.tr
+      tr.replaceWith(prevPos, end, [node, prevNode])
+      this.editorView.dispatch(tr)
+      this.currentBlockPos = prevPos
+      return
     }
 
-    if (index >= parent.childCount - 1) return;
+    if (index >= parent.childCount - 1) return
 
-    const nextNode = parent.child(index + 1);
-    const nextPos = this.currentBlockPos + node.nodeSize;
-    const end = nextPos + nextNode.nodeSize;
+    const nextNode = parent.child(index + 1)
+    const nextPos = this.currentBlockPos + node.nodeSize
+    const end = nextPos + nextNode.nodeSize
 
-    const tr = this.editorView.state.tr;
-    tr.replaceWith(this.currentBlockPos, end, [nextNode, node]);
-    this.editorView.dispatch(tr);
-    this.currentBlockPos = this.currentBlockPos + nextNode.nodeSize;
+    const tr = this.editorView.state.tr
+    tr.replaceWith(this.currentBlockPos, end, [nextNode, node])
+    this.editorView.dispatch(tr)
+    this.currentBlockPos = this.currentBlockPos + nextNode.nodeSize
   }
 
   deleteBlock() {
-    if (this.currentBlockPos === null) return;
-    const { state } = this.editorView;
-    const node = state.doc.nodeAt(this.currentBlockPos);
-    if (!node) return;
+    if (this.currentBlockPos === null) return
+    const { state } = this.editorView
+    const node = state.doc.nodeAt(this.currentBlockPos)
+    if (!node) return
 
-    const from = this.currentBlockPos;
-    const to = this.currentBlockPos + node.nodeSize;
-    const tr = state.tr.delete(from, to);
+    const from = this.currentBlockPos
+    const to = this.currentBlockPos + node.nodeSize
+    const tr = state.tr.delete(from, to)
 
-    const anchor = Math.max(1, Math.min(from, tr.doc.content.size));
-    const selection = TextSelection.near(tr.doc.resolve(anchor), -1);
-    tr.setSelection(selection);
-    this.editorView.dispatch(tr);
+    const anchor = Math.max(1, Math.min(from, tr.doc.content.size))
+    const selection = TextSelection.near(tr.doc.resolve(anchor), -1)
+    tr.setSelection(selection)
+    this.editorView.dispatch(tr)
 
-    this.editorView.focus();
-    this.editor.commands.focus();
+    this.editorView.focus()
+    this.editor.commands.focus()
   }
 
   duplicateBlock() {
-    if (this.currentBlockPos === null) return;
-    const node = this.editorView.state.doc.nodeAt(this.currentBlockPos);
+    if (this.currentBlockPos === null) return
+    const node = this.editorView.state.doc.nodeAt(this.currentBlockPos)
     if (node) {
       // Get JSON of the node
-      const json = node.toJSON() as any;
+      const json = node.toJSON() as any
       if (json?.attrs?.blockId) {
-        json.attrs = { ...json.attrs };
-        delete json.attrs.blockId;
+        json.attrs = { ...json.attrs }
+        delete json.attrs.blockId
       }
       // Insert after
       this.editor
         .chain()
         .insertContentAt(this.currentBlockPos + node.nodeSize, json)
-        .run();
+        .run()
     }
   }
 
   private createBlockId() {
-    return `be-block-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return `be-block-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
   }
 
   private ensureCurrentBlockId() {
-    if (this.currentBlockPos === null) return null;
+    if (this.currentBlockPos === null) return null
 
-    const { state } = this.editorView;
-    const node = state.doc.nodeAt(this.currentBlockPos);
-    if (!node) return null;
+    const { state } = this.editorView
+    const node = state.doc.nodeAt(this.currentBlockPos)
+    if (!node) return null
 
-    const existingId = typeof node.attrs?.blockId === "string" ? node.attrs.blockId : "";
-    if (existingId) return existingId;
+    const existingId = typeof node.attrs?.blockId === 'string' ? node.attrs.blockId : ''
+    if (existingId) return existingId
 
-    const blockId = this.createBlockId();
+    const blockId = this.createBlockId()
     const tr = state.tr.setNodeMarkup(
       this.currentBlockPos,
       undefined,
       { ...node.attrs, blockId },
       node.marks,
-    );
-    this.editorView.dispatch(tr);
-    return blockId;
+    )
+    this.editorView.dispatch(tr)
+    return blockId
   }
 
   private fallbackCopy(text: string) {
-    window.prompt(this.i18n.copyLinkPromptTitle, text);
+    window.prompt(this.i18n.copyLinkPromptTitle, text)
   }
 
   copyBlockLink() {
-    const blockId = this.ensureCurrentBlockId();
-    if (!blockId) return;
+    const blockId = this.ensureCurrentBlockId()
+    if (!blockId) return
 
-    const url = new URL(window.location.href);
-    url.hash = blockId;
-    const text = url.toString();
+    const url = new URL(window.location.href)
+    url.hash = blockId
+    const text = url.toString()
 
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text).catch(() => this.fallbackCopy(text));
-      return;
+      navigator.clipboard.writeText(text).catch(() => this.fallbackCopy(text))
+      return
     }
 
-    this.fallbackCopy(text);
+    this.fallbackCopy(text)
   }
 
   update() {
     if (!this.isEnabled()) {
-      this.hideMenu();
-      this.element.style.display = "none";
-      return;
+      this.hideMenu()
+      this.element.style.display = 'none'
+      return
     }
 
-    const container = this.getEditorContainer();
+    const container = this.getEditorContainer()
 
     if (container && this.element.parentNode !== container) {
-      if (getComputedStyle(container).position === "static") {
-        container.style.position = "relative";
+      if (getComputedStyle(container).position === 'static') {
+        container.style.position = 'relative'
       }
-      container.appendChild(this.element);
+      container.appendChild(this.element)
     }
   }
 
   handleGlobalClick = (e: MouseEvent) => {
-    if (
-      !this.menu.contains(e.target as Node) &&
-      !this.element.contains(e.target as Node)
-    ) {
-      this.hideMenu();
+    if (!this.menu.contains(e.target as Node) && !this.element.contains(e.target as Node)) {
+      this.hideMenu()
     }
-  };
+  }
 
   handleScroll = () => {
-    if (this.menu.style.display !== "none") {
-      this.hideMenu();
+    if (this.menu.style.display !== 'none') {
+      this.hideMenu()
     }
     // Optional: re-check handle position or hide it
     // this.scheduleHide()
-  };
+  }
 
   scheduleHide() {
     this.hideTimer = setTimeout(() => {
-      if (this.menu.style.display === "none") {
-        this.element.style.opacity = "0";
-        this.element.style.pointerEvents = "none";
+      if (this.menu.style.display === 'none') {
+        this.element.style.opacity = '0'
+        this.element.style.pointerEvents = 'none'
       }
-    }, 200);
+    }, 200)
   }
 
   cancelHide() {
     if (this.hideTimer) {
-      clearTimeout(this.hideTimer);
-      this.hideTimer = null;
+      clearTimeout(this.hideTimer)
+      this.hideTimer = null
     }
-    this.element.style.opacity = "1";
-    this.element.style.pointerEvents = "auto";
+    this.element.style.opacity = '1'
+    this.element.style.pointerEvents = 'auto'
   }
 
   private getVisualBlockFromResolvedPos(resolvedPos: any) {
     if (resolvedPos.depth < 1) {
-      const node = this.editorView.state.doc.nodeAt(resolvedPos.pos);
-      if (!node) return null;
+      const node = this.editorView.state.doc.nodeAt(resolvedPos.pos)
+      if (!node) return null
       return {
         pos: resolvedPos.pos,
         node,
-      };
+      }
     }
 
     for (let depth = resolvedPos.depth; depth >= 2; depth -= 1) {
-      const node = resolvedPos.node(depth);
-      if (node?.type?.name === "listItem" || node?.type?.name === "taskItem") {
+      const node = resolvedPos.node(depth)
+      if (node?.type?.name === 'listItem' || node?.type?.name === 'taskItem') {
         return {
           pos: resolvedPos.before(depth),
           node,
-        };
+        }
       }
     }
 
     return {
       pos: resolvedPos.before(1),
       node: resolvedPos.node(1),
-    };
+    }
   }
 
   private getVisualBlockFromDomTarget(target: HTMLElement | null) {
-    if (!target) return null;
-    const root = this.editorView.dom as HTMLElement;
-    let block: HTMLElement | null = target;
+    if (!target) return null
+    const root = this.editorView.dom as HTMLElement
+    let block: HTMLElement | null = target
     while (block && block.parentElement && block.parentElement !== root) {
-      block = block.parentElement;
+      block = block.parentElement
     }
-    if (!block || block.parentElement !== root) return null;
+    if (!block || block.parentElement !== root) return null
     try {
-      const pos = this.editorView.posAtDOM(block, 0);
-      const node = this.editorView.state.doc.nodeAt(pos);
-      if (!node) return null;
-      return { pos, node };
+      const pos = this.editorView.posAtDOM(block, 0)
+      const node = this.editorView.state.doc.nodeAt(pos)
+      if (!node) return null
+      return { pos, node }
     } catch {
-      return null;
+      return null
     }
   }
 
   private getNodeDom(pos: number): HTMLElement | null {
-    const dom = this.editorView.nodeDOM(pos);
-    return dom instanceof HTMLElement ? dom : null;
+    const dom = this.editorView.nodeDOM(pos)
+    return dom instanceof HTMLElement ? dom : null
   }
 
-  private shouldHideForImageInteraction(
-    target: HTMLElement | null,
-    clientX: number,
-  ) {
-    const figure = target?.closest(".be-image-figure") as HTMLElement | null;
-    if (!figure) return false;
+  private shouldHideForImageInteraction(target: HTMLElement | null, clientX: number) {
+    const figure = target?.closest('.be-image-figure') as HTMLElement | null
+    if (!figure) return false
+    if (figure.classList.contains('be-image-caption-editing')) return true
 
-    const rect = figure.getBoundingClientRect();
-    const nearLeftEdge = clientX <= rect.left + 24;
-    if (nearLeftEdge) return false;
+    const rect = figure.getBoundingClientRect()
+    const nearLeftEdge = clientX <= rect.left + 24
+    if (nearLeftEdge) return false
 
-    if (target?.closest(".be-image-align-bar")) return true;
-    if (target?.closest(".be-resize-handle")) return true;
-    if (target?.closest(".be-image-caption")) return true;
-    if (target?.closest('[data-be-image-preview="true"]')) return true;
-    if (figure.classList.contains("be-image-controls-active")) return true;
-    return false;
+    if (target?.closest('.be-image-align-bar')) return true
+    if (target?.closest('.be-resize-handle')) return true
+    if (target?.closest('.be-image-caption')) return true
+    if (target?.closest('[data-be-image-preview="true"]')) return true
+    if (figure.classList.contains('be-image-controls-active')) return true
+    return false
   }
 
   private setSourceDraggingClass(active: boolean) {
-    if (this.draggingBlockPos === null) return;
-    const sourceDom = this.getNodeDom(this.draggingBlockPos);
-    if (!sourceDom) return;
-    sourceDom.classList.toggle("be-block-drag-source", active);
+    if (this.draggingBlockGroup && this.draggingBlockGroup.length > 0) {
+      for (const pos of this.draggingBlockGroup) {
+        const dom = this.getNodeDom(pos)
+        if (dom) dom.classList.toggle('be-block-drag-source', active)
+      }
+      return
+    }
+    if (this.draggingBlockPos !== null) {
+      const sourceDom = this.getNodeDom(this.draggingBlockPos)
+      if (sourceDom) sourceDom.classList.toggle('be-block-drag-source', active)
+    }
+  }
+
+  private hideHandleImmediately() {
+    this.cancelHide()
+    this.element.style.display = 'none'
+    this.element.style.opacity = '0'
+    this.element.style.pointerEvents = 'none'
+  }
+
+  private handlePointerTrackMove = (event: MouseEvent) => {
+    if (!this.pointerTracking) return
+    const dx = event.clientX - this.pointerDownX
+    const dy = event.clientY - this.pointerDownY
+    const distance = Math.sqrt(dx * dx + dy * dy)
+    if (distance > this.pointerMaxDistance) {
+      this.pointerMaxDistance = distance
+    }
+  }
+
+  private handlePointerTrackEnd = () => {
+    this.pointerTracking = false
+    this.pointerMaxDistance = 0
   }
 
   private clearDropTarget() {
     if (this.dropTargetPos !== null) {
-      const oldDom = this.getNodeDom(this.dropTargetPos);
+      const oldDom = this.getNodeDom(this.dropTargetPos)
       if (oldDom) {
-        oldDom.classList.remove("be-block-drop-target", "is-before", "is-after");
-        oldDom.removeAttribute("data-drop-placement");
+        oldDom.classList.remove('be-block-drop-target', 'is-before', 'is-after')
+        oldDom.removeAttribute('data-drop-placement')
       }
     }
-    this.dropTargetPos = null;
+    this.dropTargetPos = null
   }
 
-  private setDropTarget(pos: number, placement: "before" | "after") {
-    if (this.dropTargetPos === pos && this.dropPlacement === placement) return;
+  private setDropTarget(pos: number, placement: 'before' | 'after') {
+    if (this.dropTargetPos === pos && this.dropPlacement === placement) return
 
-    this.clearDropTarget();
-    this.dropTargetPos = pos;
-    this.dropPlacement = placement;
+    this.clearDropTarget()
+    this.dropTargetPos = pos
+    this.dropPlacement = placement
 
-    const dom = this.getNodeDom(pos);
-    if (!dom) return;
-    dom.classList.add("be-block-drop-target");
-    dom.classList.add(placement === "before" ? "is-before" : "is-after");
-    dom.setAttribute("data-drop-placement", placement);
+    const dom = this.getNodeDom(pos)
+    if (!dom) return
+    dom.classList.add('be-block-drop-target')
+    dom.classList.add(placement === 'before' ? 'is-before' : 'is-after')
+    dom.setAttribute('data-drop-placement', placement)
   }
 
-  private reorderBlockByDrop(
-    sourcePos: number,
-    targetPos: number,
-    placement: "before" | "after",
-  ) {
-    const { state } = this.editorView;
-    const sourceNode = state.doc.nodeAt(sourcePos);
-    const targetNode = state.doc.nodeAt(targetPos);
-    if (!sourceNode || !targetNode) return;
-    if (sourcePos === targetPos) return;
+  private reorderBlockByDrop(sourcePos: number, targetPos: number, placement: 'before' | 'after') {
+    const { state } = this.editorView
+    const sourceNode = state.doc.nodeAt(sourcePos)
+    const targetNode = state.doc.nodeAt(targetPos)
+    if (!sourceNode || !targetNode) return
+    if (sourcePos === targetPos) return
 
-    const sourceSize = sourceNode.nodeSize;
-    const targetSize = targetNode.nodeSize;
-    let insertPos = targetPos + (placement === "after" ? targetSize : 0);
+    const sourceSize = sourceNode.nodeSize
+    const targetSize = targetNode.nodeSize
+    let insertPos = targetPos + (placement === 'after' ? targetSize : 0)
     if (sourcePos < targetPos) {
-      insertPos -= sourceSize;
+      insertPos -= sourceSize
     }
 
     try {
-      const tr = state.tr.delete(sourcePos, sourcePos + sourceSize);
-      const boundedInsertPos = Math.max(0, Math.min(insertPos, tr.doc.content.size));
-      tr.insert(boundedInsertPos, sourceNode);
-      const cursorPos = Math.max(
-        1,
-        Math.min(boundedInsertPos + 1, tr.doc.content.size),
-      );
-      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos), 1));
-      this.editorView.dispatch(tr);
-      this.currentBlockPos = boundedInsertPos;
-      this.editorView.focus();
+      const tr = state.tr.delete(sourcePos, sourcePos + sourceSize)
+      const boundedInsertPos = Math.max(0, Math.min(insertPos, tr.doc.content.size))
+      tr.insert(boundedInsertPos, sourceNode)
+      const cursorPos = Math.max(1, Math.min(boundedInsertPos + 1, tr.doc.content.size))
+      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos), 1))
+      this.editorView.dispatch(tr)
+      this.currentBlockPos = boundedInsertPos
+      this.editorView.focus()
     } catch (error) {
       // Ignore invalid cross-parent insertion attempts.
-      console.warn("[BlockHandle] drag reorder failed", error);
+      console.warn('[BlockHandle] drag reorder failed', error)
     }
   }
 
   handleMouseMove = throttle((event: MouseEvent) => {
+    if (document.documentElement.getAttribute('data-be-marquee-selecting') === '1') {
+      this.hideHandleImmediately()
+      return
+    }
+
     if (!this.isEnabled()) {
-      this.hideMenu();
-      this.element.style.display = "none";
-      return;
+      this.hideMenu()
+      this.element.style.display = 'none'
+      return
     }
 
     // throttled at 16ms (~60fps)
-    this.update();
+    this.update()
 
-    if (this.menu.style.display === "flex") return;
+    if (this.menu.style.display === 'flex') return
 
-    const parent = this.editorView.dom.parentNode as HTMLElement;
-    if (!parent) return;
+    const parent = this.editorView.dom.parentNode as HTMLElement
+    if (!parent) return
 
-    const parentRect = parent.getBoundingClientRect();
-    const { clientX, clientY } = event;
+    const parentRect = parent.getBoundingClientRect()
+    const { clientX, clientY } = event
 
     // Check if mouse is near the editor (including gutter)
-    const buffer = 50;
+    const buffer = 50
     if (
       clientX < parentRect.left - buffer ||
       clientX > parentRect.right + buffer ||
       clientY < parentRect.top - buffer ||
       clientY > parentRect.bottom + buffer
     ) {
-      this.scheduleHide();
-      return;
+      this.scheduleHide()
+      return
     }
 
     // Don't update if hovering the handle itself
     if (this.element.contains(event.target as Node)) {
-      this.cancelHide();
-      return;
+      this.cancelHide()
+      return
     }
 
-    const target = event.target as HTMLElement | null;
-    if (target?.closest(".be-table-handle") || target?.closest("table")) {
-      this.scheduleHide();
-      return;
+    const target = event.target as HTMLElement | null
+    if (target?.closest('.be-table-handle') || target?.closest('table')) {
+      this.hideHandleImmediately()
+      return
     }
     if (this.shouldHideForImageInteraction(target, clientX)) {
-      this.scheduleHide();
-      return;
+      this.hideHandleImmediately()
+      return
     }
 
-    const pos = this.editorView.posAtCoords({ left: clientX, top: clientY });
-    if (!pos) return;
+    const pos = this.editorView.posAtCoords({ left: clientX, top: clientY })
+    if (!pos) return
 
-    const resolvedPos = this.editorView.state.doc.resolve(pos.pos);
+    const resolvedPos = this.editorView.state.doc.resolve(pos.pos)
     const visual =
-      this.getVisualBlockFromResolvedPos(resolvedPos) ||
-      this.getVisualBlockFromDomTarget(target);
-    if (!visual?.node) return;
+      this.getVisualBlockFromResolvedPos(resolvedPos) || this.getVisualBlockFromDomTarget(target)
+    if (!visual?.node) return
 
-    this.currentBlockPos = visual.pos;
-    this.showHandle(visual.pos, visual.node);
-    this.cancelHide();
-  }, 16);
+    this.currentBlockPos = visual.pos
+    this.showHandle(visual.pos, visual.node)
+    this.cancelHide()
+  }, 16)
 
   showHandle(pos: number, node: any) {
-    const container = this.getEditorContainer();
-    if (!container) return;
+    const container = this.getEditorContainer()
+    if (!container) return
 
-    const containerRect = container.getBoundingClientRect();
-    const editorRect = (this.editorView.dom as HTMLElement).getBoundingClientRect();
-    const nodeDom = this.editorView.nodeDOM(pos) as HTMLElement | null;
+    const containerRect = container.getBoundingClientRect()
+    const editorRect = (this.editorView.dom as HTMLElement).getBoundingClientRect()
+    const nodeDom = this.editorView.nodeDOM(pos) as HTMLElement | null
 
-    let top = 0;
-    const left = editorRect.left - containerRect.left - 28;
+    let top = 0
+    const left = editorRect.left - containerRect.left - 28
 
     if (nodeDom) {
-      const blockRect = nodeDom.getBoundingClientRect();
-      top = blockRect.top - containerRect.top + 1;
+      const blockRect = nodeDom.getBoundingClientRect()
+      top = blockRect.top - containerRect.top + 1
     } else {
-      const isEmpty = node.content.size === 0;
-      const alignPos = isEmpty ? pos : pos + 1;
-      const coords = this.editorView.coordsAtPos(alignPos);
-      top = coords.top - containerRect.top + 1;
+      const isEmpty = node.content.size === 0
+      const alignPos = isEmpty ? pos : pos + 1
+      const coords = this.editorView.coordsAtPos(alignPos)
+      top = coords.top - containerRect.top + 1
     }
 
-    this.element.style.top = `${top}px`;
-    this.element.style.left = `${left}px`;
-    this.element.style.display = "flex";
+    this.element.style.top = `${top}px`
+    this.element.style.left = `${left}px`
+    this.element.style.display = 'flex'
   }
 
   toggleMenu() {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) return
 
-    if (this.menu.style.display === "none") {
-      this.ensureMenuHost();
-      this.renderMenu();
-      const rect = this.element.getBoundingClientRect();
+    if (this.menu.style.display === 'none') {
+      this.ensureMenuHost()
+      this.renderMenu()
+      const rect = this.element.getBoundingClientRect()
       if (this.menuHideTimer) {
-        window.clearTimeout(this.menuHideTimer);
-        this.menuHideTimer = null;
+        window.clearTimeout(this.menuHideTimer)
+        this.menuHideTimer = null
       }
-      this.menu.style.display = "block";
-      this.menu.style.top = `${rect.bottom + 4}px`;
-      this.menu.style.left = `${rect.left}px`;
-      this.menu.style.opacity = "0";
-      this.menu.style.transform = "translateY(-6px) scale(0.98)";
+      this.menu.style.display = 'block'
+      this.menu.style.top = `${rect.bottom + 4}px`
+      this.menu.style.left = `${rect.left}px`
+      this.menu.style.opacity = '0'
+      this.menu.style.transform = 'translateY(-6px) scale(0.98)'
       requestAnimationFrame(() => {
-        this.menu.style.transition = "opacity 0.15s ease, transform 0.15s ease";
-        this.menu.style.opacity = "1";
-        this.menu.style.transform = "translateY(0) scale(1)";
-      });
-      this.editor.commands.setBlockMenuOpen(true);
-      this.editor.commands.setInteractionMode("block-selection");
+        this.menu.style.transition = 'opacity 0.15s ease, transform 0.15s ease'
+        this.menu.style.opacity = '1'
+        this.menu.style.transform = 'translateY(0) scale(1)'
+      })
+      this.editor.commands.setBlockMenuOpen(true)
+      this.editor.commands.setInteractionMode('block-selection')
     } else {
-      this.hideMenu();
+      this.hideMenu()
     }
   }
 
   hideMenu() {
-    if (this.menu.style.display === "none") return;
+    if (this.menu.style.display === 'none') return
 
     if (this.menuHideTimer) {
-      window.clearTimeout(this.menuHideTimer);
-      this.menuHideTimer = null;
+      window.clearTimeout(this.menuHideTimer)
+      this.menuHideTimer = null
     }
-    this.menu.style.transition = "opacity 0.12s ease, transform 0.12s ease";
-    this.menu.style.opacity = "0";
-    this.menu.style.transform = "translateY(-4px) scale(0.98)";
+    this.menu.style.transition = 'opacity 0.12s ease, transform 0.12s ease'
+    this.menu.style.opacity = '0'
+    this.menu.style.transform = 'translateY(-4px) scale(0.98)'
     this.menuHideTimer = window.setTimeout(() => {
-      this.menu.style.display = "none";
-      this.menu.style.transition = "";
-      this.menu.style.opacity = "";
-      this.menu.style.transform = "";
-      this.menuHideTimer = null;
-    }, 120);
-    this.editor.commands.setBlockMenuOpen(false);
+      this.menu.style.display = 'none'
+      this.menu.style.transition = ''
+      this.menu.style.opacity = ''
+      this.menu.style.transform = ''
+      this.menuHideTimer = null
+    }, 120)
+    this.editor.commands.setBlockMenuOpen(false)
 
-    if (this.editor.isActive("table")) {
-      this.editor.commands.setInteractionMode("table-editing");
-      return;
+    if (this.editor.isActive('table')) {
+      this.editor.commands.setInteractionMode('table-editing')
+      return
     }
 
-    const mode = this.editor.state.selection.empty ? "idle" : "text-selection";
-    this.editor.commands.setInteractionMode(mode);
+    const mode = this.editor.state.selection.empty ? 'idle' : 'text-selection'
+    this.editor.commands.setInteractionMode(mode)
   }
 
   private finishDrag() {
-    this.element.classList.remove("is-dragging");
-    this.setSourceDraggingClass(false);
-    this.clearDropTarget();
-    this.draggingBlockPos = null;
+    this.element.classList.remove('is-dragging')
+    this.setSourceDraggingClass(false)
+    this.clearDropTarget()
+    this.draggingBlockPos = null
+    this.draggingBlockGroup = null
+    this.handlePointerTrackEnd()
   }
 
   handleDragStart = (event: DragEvent) => {
-    if (!this.isEnabled()) return;
-    if (this.currentBlockPos === null) return;
-    this.ignoreMenuClickUntil = Date.now() + 260;
-    this.hideMenu();
-    this.draggingBlockPos = this.currentBlockPos;
-    this.element.classList.add("is-dragging");
-    this.setSourceDraggingClass(true);
+    if (!this.isEnabled()) return
+    if (this.currentBlockPos === null) return
+    if (event.isTrusted && !this.isDragActivationReady()) {
+      event.preventDefault()
+      this.finishDrag()
+      return
+    }
+    this.ignoreMenuClickUntil = Date.now() + 260
+    this.hideMenu()
+    this.draggingBlockPos = this.currentBlockPos
+    this.draggingBlockGroup = null
+
+    const selectedPositions = this.editor?.storage?.blockMultiSelect?.selectedPositions as
+      | Set<number>
+      | undefined
+    if (
+      selectedPositions &&
+      selectedPositions.size > 1 &&
+      selectedPositions.has(this.currentBlockPos)
+    ) {
+      this.draggingBlockGroup = Array.from(selectedPositions).sort((a, b) => a - b)
+    }
+    this.element.classList.add('is-dragging')
+    this.setSourceDraggingClass(true)
 
     if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", "be-block-drag");
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', 'be-block-drag')
+      const groupPayload =
+        this.draggingBlockGroup && this.draggingBlockGroup.length > 0
+          ? this.draggingBlockGroup.join(',')
+          : String(this.currentBlockPos)
+      event.dataTransfer.setData('application/x-be-block-drag', groupPayload)
+      const ghost = document.createElement('div')
+      ghost.style.width = '1px'
+      ghost.style.height = '1px'
+      ghost.style.opacity = '0'
+      ghost.style.pointerEvents = 'none'
+      document.body.appendChild(ghost)
+      event.dataTransfer.setDragImage(ghost, 0, 0)
+      window.setTimeout(() => ghost.remove(), 0)
     }
-  };
+  }
 
   handleDragOver = (event: DragEvent) => {
-    if (this.draggingBlockPos === null) return;
-    event.preventDefault();
+    if (!this.isBlockDragEvent(event) && this.draggingBlockPos === null) return
+    event.preventDefault()
     if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
+      event.dataTransfer.dropEffect = 'move'
     }
+    if (this.draggingBlockPos === null) return
 
     const pos = this.editorView.posAtCoords({
       left: event.clientX,
       top: event.clientY,
-    });
-    if (!pos) return;
-    const resolvedPos = this.editorView.state.doc.resolve(pos.pos);
+    })
+    if (!pos) return
+    const resolvedPos = this.editorView.state.doc.resolve(pos.pos)
     const visual =
       this.getVisualBlockFromResolvedPos(resolvedPos) ||
-      this.getVisualBlockFromDomTarget(event.target as HTMLElement | null);
-    if (!visual?.node) return;
-    if (visual.pos === this.draggingBlockPos) {
-      this.clearDropTarget();
-      return;
+      this.getVisualBlockFromDomTarget(event.target as HTMLElement | null)
+    if (!visual?.node) return
+    if (
+      visual.pos === this.draggingBlockPos ||
+      (this.draggingBlockGroup && this.draggingBlockGroup.includes(visual.pos))
+    ) {
+      this.clearDropTarget()
+      return
     }
 
-    const nodeDom = this.getNodeDom(visual.pos);
-    const rect = nodeDom?.getBoundingClientRect();
-    const placement =
-      rect && event.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    this.setDropTarget(visual.pos, placement);
-  };
+    const nodeDom = this.getNodeDom(visual.pos)
+    const rect = nodeDom?.getBoundingClientRect()
+    const placement = rect && event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+    this.setDropTarget(visual.pos, placement)
+  }
 
   handleDrop = (event: DragEvent) => {
-    if (this.draggingBlockPos === null) return;
-    event.preventDefault();
-    const sourcePos = this.draggingBlockPos;
-    const targetPos = this.dropTargetPos;
-    const placement = this.dropPlacement;
-    this.finishDrag();
+    if (!this.isBlockDragEvent(event) && this.draggingBlockPos === null) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (this.draggingBlockPos === null) return
+    const sourcePos = this.draggingBlockPos
+    const sourceGroup = this.draggingBlockGroup
+    const targetPos = this.dropTargetPos
+    const placement = this.dropPlacement
+    this.finishDrag()
 
-    if (targetPos === null || sourcePos === targetPos) return;
-    this.reorderBlockByDrop(sourcePos, targetPos, placement);
-  };
+    if (targetPos === null || sourcePos === targetPos) return
+    if (sourceGroup && sourceGroup.length > 1) {
+      this.editor.commands.moveSelectedBlocksToTarget(targetPos, placement)
+      return
+    }
+    this.reorderBlockByDrop(sourcePos, targetPos, placement)
+  }
 
   handleDragEnd = () => {
-    this.finishDrag();
-  };
+    this.finishDrag()
+  }
 
   destroy() {
-    this.element.remove();
-    this.menu.remove();
-    this.element.removeEventListener("dragstart", this.handleDragStart);
-    this.element.removeEventListener("dragend", this.handleDragEnd);
-    window.removeEventListener("mousemove", this.handleMouseMove);
-    document.removeEventListener("dragover", this.handleDragOver);
-    document.removeEventListener("drop", this.handleDrop);
-    document.removeEventListener("click", this.handleGlobalClick);
+    this.element.remove()
+    this.menu.remove()
+    this.element.removeEventListener('dragstart', this.handleDragStart)
+    this.element.removeEventListener('dragend', this.handleDragEnd)
+    window.removeEventListener('mousemove', this.handleMouseMove)
+    document.removeEventListener('dragover', this.handleDragOver, true)
+    document.removeEventListener('drop', this.handleDrop, true)
+    document.removeEventListener('click', this.handleGlobalClick)
+    document.removeEventListener('mousemove', this.handlePointerTrackMove, true)
+    document.removeEventListener('mouseup', this.handlePointerTrackEnd, true)
+    window.removeEventListener('blur', this.handlePointerTrackEnd)
     if (this.scrollTarget === document) {
-      document.removeEventListener("scroll", this.handleScroll, true);
+      document.removeEventListener('scroll', this.handleScroll, true)
     } else {
-      (this.scrollTarget as HTMLElement).removeEventListener("scroll", this.handleScroll);
+      ;(this.scrollTarget as HTMLElement).removeEventListener('scroll', this.handleScroll)
     }
-    if (this.hideTimer) clearTimeout(this.hideTimer);
-    if (this.menuHideTimer) window.clearTimeout(this.menuHideTimer);
+    if (this.hideTimer) clearTimeout(this.hideTimer)
+    if (this.menuHideTimer) window.clearTimeout(this.menuHideTimer)
   }
 }

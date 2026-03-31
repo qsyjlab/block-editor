@@ -30,6 +30,7 @@
 - `ui/Outline.ts`
 
 目标：
+
 - 先完成主题 Token 收口，保证核心编辑、评论、大纲、表格视觉一致。
 
 ### P1（第二批）
@@ -40,6 +41,7 @@
 - `extensions/Callout.ts`
 
 目标：
+
 - 收敛弹窗/高级功能面板颜色，减少“局部风格漂移”。
 
 ### P2（第三批）
@@ -48,6 +50,7 @@
 - 其他零散文件（Exporter、ImageEnhanced、block-handle、input/dialog 组件）
 
 目标：
+
 - 补全示例站与边角组件，保证演示与实际一致。
 
 ## 迁移规则（执行时遵循）
@@ -55,4 +58,3 @@
 1. 禁止新增十六进制颜色到 TS 业务逻辑内。
 2. 状态色（danger/success/warning/info）统一走语义变量。
 3. 阴影也纳入 Token（`--be-shadow-*`），不再散落写。
-

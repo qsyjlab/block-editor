@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: "Block Editor"
-  text: "模块化可扩展编辑器"
-  tagline: "统一的使用文档 + 开发者文档"
+  name: 'Block Editor'
+  text: '模块化可扩展编辑器'
+  tagline: '统一的使用文档 + 开发者文档'
   actions:
     - theme: brand
       text: 使用文档

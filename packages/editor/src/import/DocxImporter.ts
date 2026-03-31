@@ -124,11 +124,11 @@ export class DocxImporter {
         "p[style-name='成功块'] => div[data-callout-type='success'] > p:fresh",
         // Inline styles
         "r[style-name='Strong'] => strong",
-        "b => strong",
-        "i => em",
-        "u => u",
-        "strike => s",
-        "comment-reference => sup",
+        'b => strong',
+        'i => em',
+        'u => u',
+        'strike => s',
+        'comment-reference => sup',
       ],
       includeDefaultStyleMap: true,
       // Preserve indentation via style attributes so postProcessHtml can convert them

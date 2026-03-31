@@ -47,7 +47,8 @@ export class TableBubbleMenu {
 
   private render(): HTMLElement {
     const menu = document.createElement('div')
-    menu.className = 'table-bubble-menu toolbar be-fixed be-z-[1000] be-rounded-md be-shadow-lg be-p-1 be-gap-1'
+    menu.className =
+      'table-bubble-menu toolbar be-fixed be-z-[1000] be-rounded-md be-shadow-lg be-p-1 be-gap-1'
     menu.style.display = 'none'
     menu.setAttribute('role', 'toolbar')
     menu.setAttribute('aria-label', this.editorCore.i18n.toolbar.tableToolbar)
@@ -58,7 +59,7 @@ export class TableBubbleMenu {
   }
 
   private renderItems(container: HTMLElement, items: ToolbarItemType[]) {
-    items.forEach(item => {
+    items.forEach((item) => {
       if (item.type === 'button') {
         const component = new ToolbarItem(item, this.editorCore)
         container.appendChild(component.getElement())

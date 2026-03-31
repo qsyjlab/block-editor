@@ -31,8 +31,8 @@ export const LineHeight = Extension.create<LineHeightOptions>({
         attributes: {
           lineHeight: {
             default: null,
-            parseHTML: element => element.style.lineHeight || null,
-            renderHTML: attributes => {
+            parseHTML: (element) => element.style.lineHeight || null,
+            renderHTML: (attributes) => {
               if (!attributes.lineHeight) {
                 return {}
               }
@@ -48,12 +48,16 @@ export const LineHeight = Extension.create<LineHeightOptions>({
 
   addCommands() {
     return {
-      setLineHeight: (lineHeight) => ({ commands }) => {
-        return this.options.types.every(type => commands.updateAttributes(type, { lineHeight }))
-      },
-      unsetLineHeight: () => ({ commands }) => {
-        return this.options.types.every(type => commands.resetAttributes(type, 'lineHeight'))
-      },
+      setLineHeight:
+        (lineHeight) =>
+        ({ commands }) => {
+          return this.options.types.every((type) => commands.updateAttributes(type, { lineHeight }))
+        },
+      unsetLineHeight:
+        () =>
+        ({ commands }) => {
+          return this.options.types.every((type) => commands.resetAttributes(type, 'lineHeight'))
+        },
     }
   },
 })

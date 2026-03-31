@@ -102,9 +102,7 @@ function cleanHtml(html: string): string {
 export function isInCodePasteContext(editor: SmartPasteEditorLike): boolean {
   const { $from } = editor.state.selection
   return (
-    editor.isActive('codeBlock') ||
-    editor.isActive('code') ||
-    Boolean($from.parent.type.spec?.code)
+    editor.isActive('codeBlock') || editor.isActive('code') || Boolean($from.parent.type.spec?.code)
   )
 }
 

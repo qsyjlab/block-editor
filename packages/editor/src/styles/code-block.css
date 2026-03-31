@@ -151,19 +151,19 @@
   color: color-mix(in srgb, #dc2626 72%, var(--text-color));
 }
 
-[data-be-theme="dark"] .code-block-content code .hljs-string,
-[data-be-theme="dark"] .code-block-content code .hljs-title,
-[data-be-theme="dark"] .code-block-content code .hljs-section,
-[data-be-theme="dark"] .code-block-content code .hljs-attribute,
-[data-be-theme="dark"] .code-block-content code .hljs-symbol,
-[data-be-theme="dark"] .code-block-content code .hljs-bullet,
-[data-be-theme="dark"] .code-block-content code .hljs-addition {
+[data-be-theme='dark'] .code-block-content code .hljs-string,
+[data-be-theme='dark'] .code-block-content code .hljs-title,
+[data-be-theme='dark'] .code-block-content code .hljs-section,
+[data-be-theme='dark'] .code-block-content code .hljs-attribute,
+[data-be-theme='dark'] .code-block-content code .hljs-symbol,
+[data-be-theme='dark'] .code-block-content code .hljs-bullet,
+[data-be-theme='dark'] .code-block-content code .hljs-addition {
   color: #86efac;
 }
 
-[data-be-theme="dark"] .code-block-content code .hljs-number,
-[data-be-theme="dark"] .code-block-content code .hljs-type,
-[data-be-theme="dark"] .code-block-content code .hljs-tag {
+[data-be-theme='dark'] .code-block-content code .hljs-number,
+[data-be-theme='dark'] .code-block-content code .hljs-type,
+[data-be-theme='dark'] .code-block-content code .hljs-tag {
   color: #fbbf24;
 }
 

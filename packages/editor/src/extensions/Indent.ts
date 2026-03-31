@@ -21,11 +21,7 @@ function applyIndent(editor: any, nextIndent: number) {
       .run()
   }
 
-  return editor
-    .chain()
-    .focus()
-    .updateAttributes('paragraph', { indent: nextIndent })
-    .run()
+  return editor.chain().focus().updateAttributes('paragraph', { indent: nextIndent }).run()
 }
 
 export const Indent = Extension.create({

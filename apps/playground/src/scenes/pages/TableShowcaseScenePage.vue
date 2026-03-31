@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
-import SceneFrame from "../SceneFrame.vue";
-import { useSceneEditor } from "../useSceneEditor";
+import { ref } from 'vue'
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
+import SceneFrame from '../SceneFrame.vue'
+import { useSceneEditor } from '../useSceneEditor'
 
-const editorContainer = ref<HTMLElement | null>(null);
+const editorContainer = ref<HTMLElement | null>(null)
 
 const TABLE_SHOWCASE_CONTENT = `
   <h2>表格专项回归场景</h2>
@@ -28,39 +28,39 @@ const TABLE_SHOWCASE_CONTENT = `
   </table>
 
   <p id="table-showcase-footer">尾段落：用于验证表格 handle 与 block handle 的视觉边界。</p>
-`;
+`
 
 useSceneEditor(
-  "table-showcase",
+  'table-showcase',
   editorContainer,
   (container, context) => {
     const core = new EditorCore({
-      element: document.createElement("div"),
+      element: document.createElement('div'),
       content: TABLE_SHOWCASE_CONTENT,
       collaboration: {
         enabled: context.collaborationEnabled,
         roomName: context.room,
-        websocketUrl: "wss://demos.yjs.dev",
+        websocketUrl: 'wss://demos.yjs.dev',
         user: { name: context.userName, color: context.userColor },
       },
       i18n: context.editorLocale,
       uiConfig: {
-        toolbar: { preset: "full" },
-        selectionToolbar: { preset: "full" },
+        toolbar: { preset: 'full' },
+        selectionToolbar: { preset: 'full' },
       },
-    } as any);
+    } as any)
 
     new EditorUIRenderer(core, container, {
       i18n: context.editorLocale,
       theme: context.theme,
-      toolbarMode: "top",
+      toolbarMode: 'top',
       commentPanelDefaultVisible: true,
-    } as any);
+    } as any)
 
-    return core;
+    return core
   },
   { defaultCollaborationEnabled: false },
-);
+)
 </script>
 
 <template>

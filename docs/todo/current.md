@@ -1,6 +1,6 @@
 # 当前代办清单（唯一执行入口）
 
-最后更新：2026-03-28  
+最后更新：2026-03-30  
 状态：进行中  
 维护规则：后续所有代办更新统一写在本页面。
 
@@ -8,16 +8,60 @@
 
 来源：`docs/todo/history/image-interaction-dnd-todo.md`（历史来源，不再继续维护）
 
-- [ ] P0-1 固化复现脚本（3类问题：图片点击异常、预览样式异常、非图片块长按拖拽失败）。
-- [ ] P0-2 建立块类型拖拽矩阵（段落/标题/引用/代码块/列表/Callout/表格/图片）。
-- [ ] P0-3 输出并确认图片交互状态机（`idle -> selected -> toolbar-open -> preview-open`）。
-- [ ] P0-4 处理 caption 编辑与 block-handle 抢焦点/抢 hover 冲突。
-- [ ] P0-5 完成“长按拖拽阈值”规则（时间阈值 + 位移阈值）。
-- [ ] P0-6 统一拖拽落点反馈样式（段落/引用/代码块/表格等一致高亮）。
-- [ ] P0-7 统一拖拽结束清理（handle/drop-target/selection/ghost）。
-- [ ] P0-8 修复“拖拽后重复插入图片/文本”回归问题并稳定复现验证。
+- [x] P0-1 固化复现脚本（3类问题：图片点击异常、预览样式异常、非图片块长按拖拽失败）。
+- [x] P0-2 建立块类型拖拽矩阵（段落/标题/引用/代码块/列表/Callout/表格/图片）。
+- [x] P0-3 输出并确认图片交互状态机（`idle -> selected -> toolbar-open -> preview-open`）。
+- [x] P0-4 处理 caption 编辑与 block-handle 抢焦点/抢 hover 冲突。
+- [x] P0-5 完成“长按拖拽阈值”规则（时间阈值 + 位移阈值）。
+- [x] P0-6 统一拖拽落点反馈样式（段落/引用/代码块/表格等一致高亮）。
+- [x] P0-7 统一拖拽结束清理（handle/drop-target/selection/ghost）。
+- [x] P0-8 修复“拖拽后重复插入图片/文本”回归问题并稳定复现验证。
 - [ ] P0-9 补齐 e2e：图片点击状态机、预览弹层、长按拖拽矩阵、原生拖拽干扰防回归。
 - [ ] P0-10 更新行为基准与评分卡（新增 H4 系列项）并完成一轮验收报告。
+
+## P0 多选框选与工具栏一致性收口（进行中）
+
+来源：2026-03-30 连续交互回归反馈（框选卡顿、选中态不一致、工具栏定位异常）
+
+- [x] P0-M1 修复框选 `mouseup` 卡死主链路（降载：拖动仅画框、松手一次提交、全量重渲染剪枝）。
+- [x] P0-M2 框选触发阈值化（单击不触发，拖动超过阈值才进入 marquee）。
+- [x] P0-M3 框选高亮改为独立 overlay 层（不直接改正文块 class，减少重排风险）。
+- [x] P0-M4 多选工具栏视觉统一（按钮风格与主工具栏一致，图标体系一致，保留“已选 N 块”）。
+- [x] P0-M5 多选工具栏定位限制在编辑写入区（不漂到 header 顶部工具栏区域）。
+- [x] P0-M6 框选坐标系改为容器局部坐标并补滚动/缩放重排（起始点一致，不随视口漂移）。
+- [x] P0-M7 点击选中与框选选中样式统一为“竖线 + 浅底色”视觉语言。
+- [ ] P0-M8 回归验收补齐（playground 手工回放 + e2e 稳定性补强）。
+
+## P0 查找替换能力（新增）
+
+来源：2026-03-30 新需求
+
+- [x] P0-FR1 实现“查找”面板（关键词输入、上一条/下一条、命中计数）。
+- [x] P0-FR2 实现“替换”能力（替换当前、全部替换、保留撤销链）。
+- [x] P0-FR3 支持命中定位与滚动跟随（跳转到命中文本并高亮当前命中）。
+- [x] P0-FR4 补齐快捷键（`Cmd/Ctrl+F`、`Enter/Shift+Enter`、`Cmd/Ctrl+H` 可选）与 i18n 文案。
+- [x] P0-FR5 补齐测试与文档（unit/e2e、usage/developer/call-chains）。
+- [x] P0-FR6 修复交互回归（滚动贴顶定位稳定、输入时不抢焦点跳回编辑区）。
+
+## P0 快捷键统一治理与演示页（新增）
+
+来源：2026-03-30 新增需求（快捷键统一管理 + 文档体现 + 演示页面）
+
+- [x] P0-SK1 盘点现有快捷键入口（Toolbar/Selection/Table/Comment/FindReplace/全局监听）并输出映射表。
+- [x] P0-SK2 设计并落地快捷键注册中心（统一 schema：`id/scope/combo/when/action/priority/i18nKey`）。
+- [x] P0-SK3 建立平台映射层（Mac `⌘` / Win `Ctrl`）并统一展示文案。
+- [x] P0-SK4 建立冲突检测机制（注册冲突告警 + 文档化冲突白名单）。
+- [x] P0-SK5 抽离统一快捷键执行分发（避免散落在各模块 `keydown` 里）。
+- [ ] P0-SK6 接入核心能力（撤销/重做/粗体/斜体/下划线/查找/替换）。
+- [ ] P0-SK7 接入块与选区能力（多选工具栏、块转换、删除、移动）。
+- [ ] P0-SK8 接入表格与评论能力（表格操作、评论开关与提交链路）。
+- [ ] P0-SK9 统一 tooltip 与菜单快捷键提示来源（全部由 i18n + registry 输出）。
+- [ ] P0-SK10 新增 playground 快捷键演示页（路由独立，支持分类过滤、触发日志、平台切换）。
+- [ ] P0-SK11 为演示页补示例脚本（覆盖编辑/选区/表格/评论/查找替换）。
+- [ ] P0-SK12 补齐单测（注册/冲突/解析/焦点优先级）。
+- [ ] P0-SK13 补齐 e2e（输入框不抢焦点、弹层优先、按钮与快捷键一致性）。
+- [ ] P0-SK14 更新使用文档（快捷键总览、场景示例、常见冲突处理）。
+- [ ] P0-SK15 更新开发文档（架构、调用链路、扩展方式、维护约束）。
 
 ## P1 全链路对标未收口项（未开始）
 
@@ -36,8 +80,12 @@
 1. 先完成 `P0-1 ~ P0-4`（明确行为边界和状态机）。
 2. 再完成 `P0-5 ~ P0-8`（拖拽核心链路收口）。
 3. 然后完成 `P0-9 ~ P0-10`（自动化与评分补齐）。
-4. 再推进 `P1-1 ~ P1-2`（工程稳定性守护）。
-5. 最后推进 `P1-3 ~ P1-7`（服务端化与体验增强收口）。
+4. 再完成 `P0-M8`（多选链路回归补齐）。
+5. 接着完成 `P0-SK1 ~ P0-SK5`（快捷键统一治理基建）。
+6. 再推进 `P0-SK6 ~ P0-SK11`（模块接入 + 演示页落地）。
+7. 然后完成 `P0-SK12 ~ P0-SK15`（测试与文档闭环）。
+8. 再推进 `P1-1 ~ P1-2`（工程稳定性守护）。
+9. 最后推进 `P1-3 ~ P1-7`（服务端化与体验增强收口）。
 
 ## 执行规范入口
 
@@ -94,3 +142,123 @@
 - 验证结果：通过。
 - 文档更新：`docs/todo/current.md`、`docs/todo/executed.md`、`docs/todo/history/*`、`docs/usage/behavior-benchmark.md`、`docs/usage/behavior-gap-analysis.md`、`docs/developer/call-chains.md`、`docs/developer/behavior-scorecard.md`
 - 风险与待办：后续所有新需求与执行日志只更新 `docs/todo/current.md`，执行完成后同步到 `docs/todo/executed.md` 与对应 history 页。
+
+### 2026-03-30 11:20
+
+- 任务ID：P0-1~P0-4 首批执行
+- 状态变更：doing -> done
+- 代码改动：新增 P0 复现脚本与拖拽矩阵文档；补充图片交互状态机调用链路；将图片 caption 改为可配置开关（默认关闭），并在 caption 编辑态增加 block-handle 避让逻辑；拖拽专项场景扩展为 8 类块覆盖并开启 caption 专项回归。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter block-editor-playground test:e2e`、`pnpm --dir docs docs:build`
+- 验证结果：通过（22/22、39/39、docs build 通过）。
+- 文档更新：`docs/usage/regression-checklist.md`、`docs/developer/call-chains.md`、`docs/todo/current.md`
+- 风险与待办：下一轮推进 `P0-5 ~ P0-8`（长按阈值、落点样式、拖拽结束清理、重复插入回归）。
+
+### 2026-03-30 11:45
+
+- 任务ID：P0-5~P0-8 拖拽链路收口
+- 状态变更：doing -> done
+- 代码改动：`block-handle` 增加长按拖拽阈值（180ms + 6px）；拖拽事件改 capture 监听并使用 `application/x-be-block-drag` 拦截默认 drop；补齐拖拽结束统一清理；统一落点高亮样式（背景/边框/高亮线）；拖拽专项场景覆盖保持 8 类块回放。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter block-editor-playground test:e2e`、`pnpm --dir docs docs:build`
+- 验证结果：通过（22/22、39/39、docs build 通过）。
+- 文档更新：`docs/usage/regression-checklist.md`、`docs/developer/call-chains.md`、`docs/todo/current.md`
+- 风险与待办：下一轮推进 `P0-9 ~ P0-10`（e2e 增补 + 行为基准评分收口）。
+
+### 2026-03-30 12:05
+
+- 任务ID：多选框选与组拖拽能力增强
+- 状态变更：doing -> done
+- 代码改动：`BlockMultiSelect` 新增框选（gutter marquee）交互、`setBlockSelectionPositions` 与 `moveSelectedBlocksToTarget` 命令；`block-handle` 支持识别多选集合并拖拽整组选中块；补齐对应单测与 e2e（H3.17）。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter block-editor-playground test:e2e`、`pnpm --dir docs docs:build`
+- 验证结果：通过（23/23、40/40、docs build 通过）。
+- 文档更新：`docs/usage/regression-checklist.md`、`docs/developer/call-chains.md`、`docs/todo/current.md`
+- 风险与待办：框选（marquee）目前先以手工回归为主，后续可补充更稳定的自动化断言。
+
+### 2026-03-30 16:30
+
+- 任务ID：P0-M1~P0-M3 框选稳定性止血
+- 状态变更：doing -> done
+- 代码改动：连续收敛 `BlockMultiSelect` 性能路径，修复“按住/松手卡死”；将框选激活改为阈值触发；框选高亮迁移为独立 overlay 层绘制，避免正文节点频繁改类。
+- 验证命令：`pnpm --filter @block-editor/editor test`
+- 验证结果：通过（23/23）。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：`P0-M8` 需补 e2e 稳定性断言，当前以手工回归为主。
+
+### 2026-03-30 16:40
+
+- 任务ID：P0-M4~P0-M7 多选工具栏与选中态统一
+- 状态变更：doing -> done
+- 代码改动：多选工具栏按钮样式切换到主工具栏 `icon-btn` 体系并统一图标；工具栏定位限制在编辑区可视区域；框选坐标改为容器局部坐标并补滚动/resize 重排；点击选中与框选选中统一为“竖线 + 浅底色”视觉语言。
+- 验证命令：`pnpm --filter @block-editor/editor test`
+- 验证结果：通过（23/23）。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：仍需一轮 playground 回归确认“长文档滚动 + 多选工具栏遮挡”边界场景。
+
+### 2026-03-30 16:45
+
+- 任务ID：新增查找替换需求入列（P0-FR）
+- 状态变更：todo -> doing
+- 代码改动：无（本次先更新代办与执行日志）。
+- 验证命令：无（文档变更）。
+- 验证结果：待执行。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：下一轮按 `P0-FR1 -> P0-FR5` 顺序实现查找、替换与定位能力。
+
+### 2026-03-30 17:10
+
+- 任务ID：P0-FR1~P0-FR5 查找替换与定位能力落地
+- 状态变更：doing -> done
+- 代码改动：新增 `FindReplace` 扩展（匹配状态存储 + decorations 高亮）；新增 `FindReplacePanel`（查找/替换 UI、上一条/下一条、替换当前/全部替换、`Cmd/Ctrl+F` & `Cmd/Ctrl+H` & `Enter/Shift+Enter` & `Esc`）；工具栏新增“查找替换”按钮；补齐中英文 i18n 与样式。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter block-editor-playground build`
+- 验证结果：通过（23/23，playground build 通过）。
+- 文档更新：`docs/usage/regression-checklist.md`、`docs/developer/call-chains.md`、`docs/todo/current.md`
+- 风险与待办：后续可补 e2e 用例覆盖“跨节点匹配/超长文档替换性能”边界。
+
+### 2026-03-30 17:35
+
+- 任务ID：P0-FR6 查找替换面板定位与焦点回归修复
+- 状态变更：doing -> done
+- 代码改动：`FindReplacePanel` 增加滚动容器锚点定位（随 scroll/resize 重算 top-right，稳定贴顶）；查找输入改为仅刷新匹配不抢焦点；面板事件拦截避免冒泡干扰编辑区输入；替换后仍保留命中定位能力。
+- 验证命令：`pnpm --filter @block-editor/editor build`、`pnpm --filter block-editor-playground build`
+- 验证结果：通过（editor build 通过，playground build 通过）。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：下一轮补 e2e 场景（滚动贴顶 + 输入连续键入焦点稳定）避免回归。
+
+### 2026-03-30 18:10
+
+- 任务ID：快捷键统一治理计划建档
+- 状态变更：todo -> doing
+- 代码改动：新增快捷键专项计划，细化为 15 个执行项（统一注册、冲突检测、平台映射、演示页、测试与文档）；更新执行顺序。
+- 验证命令：`pnpm --dir docs docs:build`
+- 验证结果：待执行。
+- 文档更新：`docs/todo/current.md`、`docs/developer/shortcut-governance-plan.md`
+- 风险与待办：下一轮从 `P0-SK1` 开始执行并同步调用链路文档。
+
+### 2026-03-31 10:15
+
+- 任务ID：P0-SK1~P0-SK5 快捷键治理第一批落地
+- 状态变更：doing -> done
+- 代码改动：新增 `ShortcutRegistry` 与 `ShortcutManager`（统一注册、平台映射、冲突检测、统一分发）；`EditorUIRenderer` 接入快捷键分发根；迁移 `FindReplacePanel` 与 `BlockMultiSelectBar` 的全局键盘监听到注册中心；新增快捷键入口盘点文档。
+- 验证命令：`pnpm --filter @block-editor/editor test`、`pnpm --filter @block-editor/editor build`、`pnpm --dir docs docs:build`
+- 验证结果：通过。
+- 文档更新：`docs/developer/shortcut-inventory.md`、`docs/developer/call-chains.md`、`docs/usage/regression-checklist.md`、`docs/todo/current.md`
+- 风险与待办：`Toolbar/Dropdown/ImagePreview` 仍有局部 `keydown` 待迁移，下一轮推进 `P0-SK6~P0-SK9`。
+
+### 2026-03-31 11:05
+
+- 任务ID：oxlint 接入与代码修复
+- 状态变更：doing -> done
+- 代码改动：在 `@block-editor/editor` 安装 `oxlint`；新增根脚本与 editor 包脚本（`lint:oxlint` / `lint:oxlint:fix`）；执行 `oxlint --fix` 后手工修复 5 条告警（`async.ts` this-alias、`VersionHistory.ts` unused vars、`ToolbarItem.ts` catch unused）。
+- 验证命令：`pnpm lint:oxlint:fix`、`pnpm --filter @block-editor/editor test`、`pnpm --filter @block-editor/editor build`、`pnpm --filter block-editor-playground build`
+- 验证结果：通过（oxlint 0 warnings / 0 errors，unit/build 全绿）。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：目前 oxlint 仅覆盖 `packages/editor/src` 与 `apps/playground/src`；后续可扩展到其他 app 包。
+
+### 2026-03-31 11:45
+
+- 任务ID：根目录 ESLint + Prettier 迁移
+- 状态变更：doing -> done
+- 代码改动：根目录新增 `eslint.config.mjs`（flat config）与 `.prettierrc.json`、`.prettierignore`；根 `package.json` 替换 lint/format 脚本为 ESLint + Prettier；将 ESLint 相关依赖归并到根 `devDependencies`；移除 editor 包内 `oxlint` 脚本。
+- 验证命令：`pnpm lint`
+- 验证结果：通过（当前 0 error，15 warnings）。
+- 文档更新：`docs/todo/current.md`
+- 风险与待办：当前 `pnpm` store 环境限制导致未补装 `vue-eslint-parser`，因此根 lint 先覆盖 `js/ts` 文件；待环境允许后补齐 `.vue` 文件 lint。

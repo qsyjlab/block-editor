@@ -6,17 +6,17 @@
 
 ## 每次功能完成后的必做项
 
-1. 更新调用链路文档  
-   - 文件：`/docs/developer/call-chains.md`  
+1. 更新调用链路文档
+   - 文件：`/docs/developer/call-chains.md`
    - 要写清楚：入口事件、核心模块、状态变更、UI 落点。
-2. 更新使用文档  
-   - 文件：`/docs/usage/*`  
+2. 更新使用文档
+   - 文件：`/docs/usage/*`
    - 要写清楚：怎么用、有什么变化、如何验证。
-3. 更新开发者文档  
-   - 文件：`/docs/developer/*`  
+3. 更新开发者文档
+   - 文件：`/docs/developer/*`
    - 要写清楚：代码位置、改造边界、回归风险。
-4. 更新代办日志  
-   - 文件：`/docs/todo/current.md`  
+4. 更新代办日志
+   - 文件：`/docs/todo/current.md`
    - 要写清楚：改动范围、验证结果、遗留问题。
 
 ## 合并前检查清单

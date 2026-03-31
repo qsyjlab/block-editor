@@ -3,14 +3,13 @@
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: any
 
   return function (this: any, ...args: Parameters<T>) {
-    const context = this
     clearTimeout(timeout)
-    timeout = setTimeout(() => func.apply(context, args), wait)
+    timeout = setTimeout(() => func.apply(this, args), wait)
   }
 }
 
@@ -19,14 +18,13 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
-  let inThrottle: boolean
-  
+  let inThrottle = false
+
   return function (this: any, ...args: Parameters<T>) {
-    const context = this
     if (!inThrottle) {
-      func.apply(context, args)
+      func.apply(this, args)
       inThrottle = true
       setTimeout(() => (inThrottle = false), limit)
     }

@@ -19,67 +19,71 @@ export function resolveEditorI18n(input?: string | Partial<EditorI18n> | null): 
     locale: input.locale || base.locale,
     toolbar: {
       ...base.toolbar,
-      ...(input.toolbar || {}),
+      ...input.toolbar,
     },
     outline: {
       ...base.outline,
-      ...(input.outline || {}),
+      ...input.outline,
     },
     dialogs: {
       ...base.dialogs,
-      ...(input.dialogs || {}),
+      ...input.dialogs,
       insertLink: {
         ...base.dialogs.insertLink,
-        ...(input.dialogs?.insertLink || {}),
+        ...input.dialogs?.insertLink,
       },
       insertImage: {
         ...base.dialogs.insertImage,
-        ...(input.dialogs?.insertImage || {}),
+        ...input.dialogs?.insertImage,
       },
       versionHistory: {
         ...base.dialogs.versionHistory,
-        ...(input.dialogs?.versionHistory || {}),
+        ...input.dialogs?.versionHistory,
       },
     },
     commentPanel: {
       ...base.commentPanel,
-      ...(input.commentPanel || {}),
+      ...input.commentPanel,
     },
     blockHandle: {
       ...base.blockHandle,
-      ...(input.blockHandle || {}),
+      ...input.blockHandle,
     },
     blockMultiSelectBar: {
       ...base.blockMultiSelectBar,
-      ...(input.blockMultiSelectBar || {}),
+      ...input.blockMultiSelectBar,
     },
     slashCommand: {
       ...base.slashCommand,
-      ...(input.slashCommand || {}),
+      ...input.slashCommand,
     },
     colorPicker: {
       ...base.colorPicker,
-      ...(input.colorPicker || {}),
+      ...input.colorPicker,
     },
     commentExtension: {
       ...base.commentExtension,
-      ...(input.commentExtension || {}),
+      ...input.commentExtension,
     },
     versionHistoryCore: {
       ...base.versionHistoryCore,
-      ...(input.versionHistoryCore || {}),
+      ...input.versionHistoryCore,
     },
     imageEnhanced: {
       ...base.imageEnhanced,
-      ...(input.imageEnhanced || {}),
+      ...input.imageEnhanced,
     },
     callout: {
       ...base.callout,
-      ...(input.callout || {}),
+      ...input.callout,
     },
     codeBlock: {
       ...base.codeBlock,
-      ...(input.codeBlock || {}),
+      ...input.codeBlock,
+    },
+    findReplace: {
+      ...base.findReplace,
+      ...input.findReplace,
     },
   }
 }

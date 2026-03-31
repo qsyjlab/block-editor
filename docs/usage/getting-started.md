@@ -75,19 +75,19 @@ pnpm docs:build
 ## 4. 最小接入示例
 
 ```ts
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
 
 const core = new EditorCore({
-  element: document.createElement("div"),
-  i18n: "zh-CN",
+  element: document.createElement('div'),
+  i18n: 'zh-CN',
   uiConfig: {
-    toolbar: { preset: "basic" },
+    toolbar: { preset: 'basic' },
   },
-});
+})
 
-new EditorUIRenderer(core, document.querySelector("#app")!, {
-  toolbarMode: "top",
-  theme: "auto",
+new EditorUIRenderer(core, document.querySelector('#app')!, {
+  toolbarMode: 'top',
+  theme: 'auto',
   commentPanelDefaultVisible: true,
-});
+})
 ```

@@ -185,25 +185,25 @@
 
 当前覆盖：
 
-- `packages/editor/src/extensions/__tests__/SmartPaste.spec.ts`  
-  - 代码块上下文粘贴放行（不触发 SmartPaste 重写）  
-  - 普通文本上下文 URL 粘贴转链接  
-  - 图片 URL 粘贴自动转图片节点（选中文本时保持链接语义）  
+- `packages/editor/src/extensions/__tests__/SmartPaste.spec.ts`
+  - 代码块上下文粘贴放行（不触发 SmartPaste 重写）
+  - 普通文本上下文 URL 粘贴转链接
+  - 图片 URL 粘贴自动转图片节点（选中文本时保持链接语义）
   - HTML 清洗（危险标签/脏样式/类名移除）。
-- `packages/editor/src/extensions/__tests__/InteractionState.spec.ts`  
-  - `idle/text-selection/block-selection/table-editing` 模式切换  
+- `packages/editor/src/extensions/__tests__/InteractionState.spec.ts`
+  - `idle/text-selection/block-selection/table-editing` 模式切换
   - block 菜单开关状态切换。
-- `packages/editor/src/extensions/__tests__/BlockMultiSelect.spec.ts`  
-  - 块多选 toggle/range/clear  
-  - 批量删除（倒序删除）  
-  - 批量转换（paragraph）  
+- `packages/editor/src/extensions/__tests__/BlockMultiSelect.spec.ts`
+  - 块多选 toggle/range/clear
+  - 批量删除（倒序删除）
+  - 批量转换（paragraph）
   - 批量移动（up）与选区位置更新。
-- `packages/editor/src/extensions/__tests__/CommentStore.spec.ts`  
-  - 线程新增/回复/解决/重开/删除  
+- `packages/editor/src/extensions/__tests__/CommentStore.spec.ts`
+  - 线程新增/回复/解决/重开/删除
   - LocalStorage 加载恢复。
-- `packages/editor/src/ui/__tests__/comment-panel-logic.spec.ts`  
-  - 选区预填引用快照（规范化/截断）  
-  - 当前选区与最近选区兜底策略  
+- `packages/editor/src/ui/__tests__/comment-panel-logic.spec.ts`
+  - 选区预填引用快照（规范化/截断）
+  - 当前选区与最近选区兜底策略
   - 确认保存规则（空输入不保存、无选区不保存、有引用时保存）。
 
 ## 15. 行为基准执行链路
@@ -258,6 +258,28 @@
 
 - `packages/editor/src/ui/CommentPanel.ts`
 
+## 19. 快捷键统一分发链路（P0-SK2~SK5）
+
+`EditorUIRenderer` 初始化  
+-> `editorCore.shortcuts.setEditorRoot(...)` + `shortcuts.start()`  
+-> `ShortcutManager` 捕获 `document keydown(capture)`  
+-> 仅处理当前编辑器作用域事件（target 或 activeElement 在 editorRoot 内）  
+-> `ShortcutRegistry.dispatch()` 根据平台映射、优先级、`when` 条件决策  
+-> 命中后执行对应命令（如 `find.open` / `find.close` / `multiselect.clear`）。
+
+补充：
+
+- 冲突检测：注册时按 `scope + combo` 计算冲突并输出告警。
+- 输入框保护：默认输入控件不触发全局快捷键，个别能力（`find.open`）可显式 `allowInInput`。
+
+关键文件：
+
+- `packages/editor/src/core/ShortcutManager.ts`
+- `packages/editor/src/core/ShortcutRegistry.ts`
+- `packages/editor/src/ui/EditorUIRenderer.ts`
+- `packages/editor/src/ui/menus/find-replace-panel.ts`
+- `packages/editor/src/ui/menus/block-multi-select-bar.ts`
+
 ## 19. 表格 Handle 选中态链路
 
 鼠标进入表格区域  
@@ -278,6 +300,35 @@
 - `packages/editor/src/styles/index.css`
 
 ## 20. 代码高亮按需懒加载链路
+
+## 21. 查找替换链路（Find / Replace）
+
+`Toolbar` 查找按钮点击 或 `Cmd/Ctrl+F`
+-> `EditorCore.events.emit("openFindReplace")`
+-> `FindReplacePanel.open()` 打开面板并同步输入框
+-> `collectMatches(doc, query)` 生成命中区间
+-> `editor.commands.setFindReplaceState({ query, matches, activeIndex })`
+-> `FindReplace` 扩展触发 `findReplaceUpdate` transaction meta
+-> ProseMirror decorations 渲染 `.be-find-match / .be-find-match-active` 高亮
+-> `next/prev` 切换时 `setTextSelection + scrollIntoView` 定位到对应命中。
+
+替换链路：
+
+`replace current`
+-> `tr.insertText(replacement, from, to)`
+-> `dispatch(tr)`
+-> `refreshMatches()` 重新计算命中并定位当前项。
+
+`replace all`
+-> 倒序遍历 matches 执行 `tr.insertText(...)`
+-> `dispatch(tr)`（单事务保留撤销链）
+-> `refreshMatches()` 更新命中计数与高亮。
+
+关键文件：
+
+- `packages/editor/src/extensions/FindReplace.ts`
+- `packages/editor/src/ui/menus/find-replace-panel.ts`
+- `packages/editor/src/ui/toolbar/defaultToolbarItems.ts`
 
 代码块初始化/语言切换  
 -> `CodeBlockView.ensureLanguageLoaded()`  
@@ -514,4 +565,82 @@
 - `packages/editor/src/extensions/ImageEnhanced.ts`
 - `packages/editor/src/extensions/block-handle.ts`
 - `packages/editor/src/extensions/CodeBlockView.ts`
+- `apps/playground/tests/e2e/regression.spec.ts`
+
+## 32. 图片交互状态机链路（P0-3）
+
+状态机定义：`idle -> selected -> toolbar-open -> preview-open`
+
+- `idle`：无图片节点选中。
+- `selected`：首次点击图片，设置 `NodeSelection(image)`。
+- `toolbar-open`：图片工具条显示（对齐/预览），文本选区工具栏互斥隐藏。
+- `preview-open`：再次单击图片、双击图片或点击预览按钮进入弹层预览。
+
+核心流转：
+
+`ImageEnhanced.img.click`  
+-> `selectCurrentImageNode()`  
+-> `setControlsVisible(true)`  
+-> 若此前已 `toolbar-open`，触发 `openImagePreviewFromImage()` 进入 `preview-open`  
+-> 关闭预览后返回 `toolbar-open/selected` 上下文。
+
+关键文件：
+
+- `packages/editor/src/extensions/ImageEnhanced.ts`
+- `packages/editor/src/extensions/SelectionTooltip.ts`
+- `packages/editor/src/ui/components/ImagePreviewModal.ts`
+
+## 33. caption 编辑与 block-handle 避让链路（P0-4）
+
+`EditorCore` 按场景传入 `imageCaptionEnabled`  
+-> `ImageEnhanced` 动态启用 caption（默认关闭）  
+-> caption `focus/mousedown` 时给 figure 打标 `be-image-caption-editing` 并收起图片工具条  
+-> `block-handle.shouldHideForImageInteraction` 识别该标记并立即隐藏 handle  
+-> 避免 caption 输入阶段的焦点抢占与 hover 抢占。
+
+关键文件：
+
+- `packages/editor/src/core/EditorCore.ts`
+- `packages/editor/src/extensions/ImageEnhanced.ts`
+- `packages/editor/src/extensions/block-handle.ts`
+- `apps/playground/src/scenes/pages/DragShowcaseScenePage.vue`
+
+## 34. 长按拖拽阈值与清理链路（P0-5 / P0-7 / P0-8）
+
+`block-handle.mousedown`  
+-> 记录按下时间与起始坐标（`pointerDownAt/x/y`）  
+-> `mousemove` 追踪最大位移  
+-> `dragstart`（真实用户事件）仅在满足 `longPressMs(180ms) + dragDistancePx(6px)` 时放行  
+-> `dragover/drop` 走 capture 监听优先 `preventDefault`（防止 ProseMirror/浏览器默认 drop 造成重复插入）  
+-> `finishDrag` 统一清理 `is-dragging / be-block-drag-source / be-block-drop-target / pointerTracking`。
+
+补充：
+
+- 自动化合成 DragEvent（`event.isTrusted=false`）不受长按阈值限制，保证 e2e 可稳定回放。
+- `application/x-be-block-drag` 自定义类型用于识别本编辑器内部块拖拽链路并拦截默认 drop。
+
+关键文件：
+
+- `packages/editor/src/extensions/block-handle.ts`
+- `packages/editor/src/styles/index.css`
+
+## 35. 框选多块 + handle 组拖拽链路
+
+左侧 gutter `mousedown`（在编辑区左边距）  
+-> `BlockMultiSelectOverlayView` 进入 marquee 模式并绘制框选框  
+-> `mousemove` 实时计算框与顶层块 DOM 交集，更新 `selectedPositions`  
+-> `mouseup` 结束框选，保留多选覆盖层和多选操作栏。
+
+组拖拽：
+
+在任一已选块 handle 上 `dragstart`  
+-> `block-handle` 识别当前块属于 `selectedPositions` 且数量 > 1  
+-> 将 `draggingBlockGroup` 设为整组选中块  
+-> `drop` 时调用 `moveSelectedBlocksToTarget(targetPos, placement)`  
+-> 选中组整体移动并保持组内顺序。
+
+关键文件：
+
+- `packages/editor/src/extensions/BlockMultiSelect.ts`
+- `packages/editor/src/extensions/block-handle.ts`
 - `apps/playground/tests/e2e/regression.spec.ts`

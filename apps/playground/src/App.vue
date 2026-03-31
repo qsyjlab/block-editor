@@ -1,31 +1,43 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { RouterLink, RouterView, useRoute } from "vue-router";
-import { SCENE_NAV_ITEMS } from "./router";
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { SCENE_NAV_ITEMS } from './router'
 
-const route = useRoute();
+const route = useRoute()
 const theme = computed(() => {
-  const raw = String(route.query.theme || "light").toLowerCase();
-  return raw === "dark" || raw === "auto" ? raw : "light";
-});
+  const raw = String(route.query.theme || 'light').toLowerCase()
+  return raw === 'dark' || raw === 'auto' ? raw : 'light'
+})
 
 const links = computed(() => {
-  const query = route.query;
+  const query = route.query
   return SCENE_NAV_ITEMS.map((item) => ({
     key: item.key,
     title: item.title,
     to: { path: item.path, query },
-  }));
-});
+  }))
+})
 
 const themeLinks = computed(() => {
-  const baseQuery = { ...route.query };
+  const baseQuery = { ...route.query }
   return [
-    { key: "light", label: "浅色", to: { path: route.path, query: { ...baseQuery, theme: "light" } } },
-    { key: "dark", label: "暗黑", to: { path: route.path, query: { ...baseQuery, theme: "dark" } } },
-    { key: "auto", label: "跟随系统", to: { path: route.path, query: { ...baseQuery, theme: "auto" } } },
-  ];
-});
+    {
+      key: 'light',
+      label: '浅色',
+      to: { path: route.path, query: { ...baseQuery, theme: 'light' } },
+    },
+    {
+      key: 'dark',
+      label: '暗黑',
+      to: { path: route.path, query: { ...baseQuery, theme: 'dark' } },
+    },
+    {
+      key: 'auto',
+      label: '跟随系统',
+      to: { path: route.path, query: { ...baseQuery, theme: 'auto' } },
+    },
+  ]
+})
 </script>
 
 <template>
@@ -71,8 +83,8 @@ body,
   width: 100%;
   height: 100%;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
 }
 
 .app-layout {
@@ -90,7 +102,7 @@ body,
   color: var(--pg-text);
 }
 
-.app-layout[data-play-theme="dark"] {
+.app-layout[data-play-theme='dark'] {
   --pg-bg: #0f172a;
   --pg-surface: #111827;
   --pg-surface-soft: #1f2937;

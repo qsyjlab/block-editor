@@ -19,10 +19,9 @@ declare module '@tiptap/core' {
 
 const DEFAULT_CALLOUT_I18N: CalloutI18n = resolveEditorI18n('en-US').callout
 
-function buildCalloutStyles(i18n: CalloutI18n): Record<
-  CalloutType,
-  { icon: string; label: string }
-> {
+function buildCalloutStyles(
+  i18n: CalloutI18n,
+): Record<CalloutType, { icon: string; label: string }> {
   return {
     info: {
       icon: 'ℹ️',
@@ -61,7 +60,11 @@ function attachTypeSwitcher(
   }
 
   const onOutside = (e: MouseEvent) => {
-    if (popup && !popup.contains(e.target as globalThis.Node) && !iconEl.contains(e.target as globalThis.Node)) {
+    if (
+      popup &&
+      !popup.contains(e.target as globalThis.Node) &&
+      !iconEl.contains(e.target as globalThis.Node)
+    ) {
       closePopup()
     }
   }
@@ -166,11 +169,7 @@ export const Callout = TiptapNode.create<CalloutOptions>({
         },
         style.icon,
       ],
-      [
-        'div',
-        { class: 'be-callout-content', style: 'flex:1;min-width:0;' },
-        0,
-      ],
+      ['div', { class: 'be-callout-content', style: 'flex:1;min-width:0;' }, 0],
     ]
   },
 

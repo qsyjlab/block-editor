@@ -7,16 +7,16 @@
 ```ts
 new EditorUIRenderer(core, root, {
   layoutBuilder: ({ container }) => {
-    const toolbar = document.createElement("div");
-    const main = document.createElement("div");
-    const editor = document.createElement("div");
-    const outline = document.createElement("aside");
-    const comment = document.createElement("aside");
+    const toolbar = document.createElement('div')
+    const main = document.createElement('div')
+    const editor = document.createElement('div')
+    const outline = document.createElement('aside')
+    const comment = document.createElement('aside')
 
-    main.style.display = "grid";
-    main.style.gridTemplateColumns = "260px 1fr 320px";
-    main.append(outline, editor, comment);
-    container.append(toolbar, main);
+    main.style.display = 'grid'
+    main.style.gridTemplateColumns = '260px 1fr 320px'
+    main.append(outline, editor, comment)
+    container.append(toolbar, main)
 
     return {
       toolbarContainer: toolbar,
@@ -25,9 +25,9 @@ new EditorUIRenderer(core, root, {
       overlayContainer: container,
       outlineContainer: outline,
       commentContainer: comment,
-    };
+    }
   },
-});
+})
 ```
 
 ## 2. layoutSchema（模块区域控制）
@@ -42,12 +42,12 @@ new EditorUIRenderer(core, root, {
       comment: { visible: true, width: 320, order: 3 },
     },
     modules: {
-      selectionToolbar: { enabled: true, region: "overlay" },
-      commentPanel: { enabled: true, region: "comment" },
-      blockHandle: { enabled: true, region: "editor" },
+      selectionToolbar: { enabled: true, region: 'overlay' },
+      commentPanel: { enabled: true, region: 'comment' },
+      blockHandle: { enabled: true, region: 'editor' },
     },
   },
-});
+})
 ```
 
 ## 3. 当前已支持模块

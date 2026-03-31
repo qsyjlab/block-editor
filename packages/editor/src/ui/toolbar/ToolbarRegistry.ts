@@ -56,10 +56,10 @@ export interface ToolbarDividerConfig {
   type: 'divider'
 }
 
-export type ToolbarItemType = 
-  | ToolbarItemConfig 
-  | ToolbarDropdownConfig 
-  | ToolbarColorConfig 
+export type ToolbarItemType =
+  | ToolbarItemConfig
+  | ToolbarDropdownConfig
+  | ToolbarColorConfig
   | ToolbarDividerConfig
 
 export class ToolbarRegistry {

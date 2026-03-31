@@ -1,101 +1,86 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from "vue";
-import {
-  EditorCore,
-  EditorUIRenderer,
-  type EditorUILayoutSlots,
-} from "@block-editor/editor";
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { EditorCore, EditorUIRenderer, type EditorUILayoutSlots } from '@block-editor/editor'
 
-const editorContainer = ref<HTMLElement | null>(null);
-let editor: EditorCore | null = null;
+const editorContainer = ref<HTMLElement | null>(null)
+let editor: EditorCore | null = null
 
-const params = new URLSearchParams(window.location.search);
-const room = params.get("room") || "block-editor-custom-layout-room";
-const userName =
-  params.get("user") || `用户-${Math.random().toString(36).slice(2, 6)}`;
-const userColor = `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`;
-const locale = (
-  params.get("lang") ||
-  navigator.language ||
-  "zh-CN"
-).toLowerCase();
-const editorLocale = locale.startsWith("en") ? "en-US" : "zh-CN";
-const rawTheme = (params.get("theme") || "auto").toLowerCase();
+const params = new URLSearchParams(window.location.search)
+const room = params.get('room') || 'block-editor-custom-layout-room'
+const userName = params.get('user') || `用户-${Math.random().toString(36).slice(2, 6)}`
+const userColor = `hsl(${Math.floor(Math.random() * 360)} 80% 60%)`
+const locale = (params.get('lang') || navigator.language || 'zh-CN').toLowerCase()
+const editorLocale = locale.startsWith('en') ? 'en-US' : 'zh-CN'
+const rawTheme = (params.get('theme') || 'auto').toLowerCase()
 const editorTheme =
-  rawTheme === "dark" || rawTheme === "light" || rawTheme === "auto"
-    ? rawTheme
-    : "auto";
+  rawTheme === 'dark' || rawTheme === 'light' || rawTheme === 'auto' ? rawTheme : 'auto'
 
-function createCustomLayout(
-  container: HTMLElement,
-  core: EditorCore,
-): EditorUILayoutSlots {
-  container.innerHTML = "";
-  container.className = "custom-layout-root";
+function createCustomLayout(container: HTMLElement, core: EditorCore): EditorUILayoutSlots {
+  container.innerHTML = ''
+  container.className = 'custom-layout-root'
 
-  const workspace = document.createElement("div");
-  workspace.className = "custom-layout-workspace";
-  container.appendChild(workspace);
+  const workspace = document.createElement('div')
+  workspace.className = 'custom-layout-workspace'
+  container.appendChild(workspace)
 
-  const leftSidebar = document.createElement("aside");
-  leftSidebar.className = "custom-sidebar custom-sidebar-left";
-  workspace.appendChild(leftSidebar);
+  const leftSidebar = document.createElement('aside')
+  leftSidebar.className = 'custom-sidebar custom-sidebar-left'
+  workspace.appendChild(leftSidebar)
 
-  const leftTitle = document.createElement("h3");
-  leftTitle.textContent = "Outline + Custom Blocks";
-  leftSidebar.appendChild(leftTitle);
+  const leftTitle = document.createElement('h3')
+  leftTitle.textContent = 'Outline + Custom Blocks'
+  leftSidebar.appendChild(leftTitle)
 
-  const customBlock = document.createElement("section");
-  customBlock.className = "custom-block-card";
+  const customBlock = document.createElement('section')
+  customBlock.className = 'custom-block-card'
   customBlock.innerHTML = `
     <div class="custom-block-card__title">自定义区块</div>
     <div class="custom-block-card__desc">示例：将区块操作集成在大纲侧栏。</div>
-  `;
+  `
 
-  const actionRow = document.createElement("div");
-  actionRow.className = "custom-block-actions";
+  const actionRow = document.createElement('div')
+  actionRow.className = 'custom-block-actions'
 
-  const toggleCommentBtn = document.createElement("button");
-  toggleCommentBtn.textContent = "切换评论区";
-  toggleCommentBtn.onclick = () => core.events.emit("toggleCommentPanel");
+  const toggleCommentBtn = document.createElement('button')
+  toggleCommentBtn.textContent = '切换评论区'
+  toggleCommentBtn.onclick = () => core.events.emit('toggleCommentPanel')
 
-  const insertCalloutBtn = document.createElement("button");
-  insertCalloutBtn.textContent = "插入 Callout";
-  insertCalloutBtn.onclick = () =>
-    core.editor.chain().focus().insertCallout("info").run();
+  const insertCalloutBtn = document.createElement('button')
+  insertCalloutBtn.textContent = '插入 Callout'
+  insertCalloutBtn.onclick = () => core.editor.chain().focus().insertCallout('info').run()
 
-  actionRow.appendChild(toggleCommentBtn);
-  actionRow.appendChild(insertCalloutBtn);
-  customBlock.appendChild(actionRow);
-  leftSidebar.appendChild(customBlock);
+  actionRow.appendChild(toggleCommentBtn)
+  actionRow.appendChild(insertCalloutBtn)
+  customBlock.appendChild(actionRow)
+  leftSidebar.appendChild(customBlock)
 
-  const outlineMount = document.createElement("div");
-  outlineMount.className = "custom-outline-mount";
-  leftSidebar.appendChild(outlineMount);
+  const outlineMount = document.createElement('div')
+  outlineMount.className = 'custom-outline-mount'
+  leftSidebar.appendChild(outlineMount)
 
-  const center = document.createElement("main");
-  center.className = "custom-editor-main";
-  workspace.appendChild(center);
+  const center = document.createElement('main')
+  center.className = 'custom-editor-main'
+  workspace.appendChild(center)
 
-  const scrollArea = document.createElement("div");
-  scrollArea.className = "editor-scroll-area custom-scroll-area";
-  center.appendChild(scrollArea);
+  const scrollArea = document.createElement('div')
+  scrollArea.className = 'editor-scroll-area custom-scroll-area'
+  center.appendChild(scrollArea)
 
-  const editorPaper = document.createElement("div");
-  editorPaper.className = "editor-container custom-editor-paper";
-  scrollArea.appendChild(editorPaper);
+  const editorPaper = document.createElement('div')
+  editorPaper.className = 'editor-container custom-editor-paper'
+  scrollArea.appendChild(editorPaper)
 
-  const rightSidebar = document.createElement("aside");
-  rightSidebar.className = "custom-sidebar custom-sidebar-right";
-  workspace.appendChild(rightSidebar);
+  const rightSidebar = document.createElement('aside')
+  rightSidebar.className = 'custom-sidebar custom-sidebar-right'
+  workspace.appendChild(rightSidebar)
 
-  const rightTitle = document.createElement("h3");
-  rightTitle.textContent = "Comments Hub";
-  rightSidebar.appendChild(rightTitle);
+  const rightTitle = document.createElement('h3')
+  rightTitle.textContent = 'Comments Hub'
+  rightSidebar.appendChild(rightTitle)
 
-  const commentMount = document.createElement("div");
-  commentMount.className = "custom-comment-mount";
-  rightSidebar.appendChild(commentMount);
+  const commentMount = document.createElement('div')
+  commentMount.className = 'custom-comment-mount'
+  rightSidebar.appendChild(commentMount)
 
   return {
     toolbarContainer: null,
@@ -104,30 +89,30 @@ function createCustomLayout(
     overlayContainer: container,
     outlineContainer: outlineMount,
     commentContainer: commentMount,
-  };
+  }
 }
 
 onMounted(() => {
-  if (!editorContainer.value) return;
+  if (!editorContainer.value) return
 
   const core = new EditorCore({
-    element: document.createElement("div"),
+    element: document.createElement('div'),
     content:
-      "<p>Custom layout demo：无顶部 toolbar，使用行内模式。选中文本后会出现完整工具栏。</p><p>左侧集成了大纲与自定义区块，右侧集成评论区。</p>",
+      '<p>Custom layout demo：无顶部 toolbar，使用行内模式。选中文本后会出现完整工具栏。</p><p>左侧集成了大纲与自定义区块，右侧集成评论区。</p>',
     collaboration: {
       enabled: true,
       roomName: room,
-      websocketUrl: "wss://demos.yjs.dev",
+      websocketUrl: 'wss://demos.yjs.dev',
       user: {
         name: userName,
         color: userColor,
       },
     },
     i18n: editorLocale,
-  } as any);
+  } as any)
 
   new EditorUIRenderer(core, editorContainer.value, {
-    toolbarMode: "inline",
+    toolbarMode: 'inline',
     commentPanelDefaultVisible: true,
     i18n: editorLocale,
     theme: editorTheme,
@@ -135,20 +120,20 @@ onMounted(() => {
       container,
       editorCore,
     }: {
-      container: HTMLElement;
-      editorCore: EditorCore;
+      container: HTMLElement
+      editorCore: EditorCore
     }) => createCustomLayout(container, editorCore),
-  } as any);
+  } as any)
 
-  editor = core;
-});
+  editor = core
+})
 
 onBeforeUnmount(() => {
-  editor?.destroy();
+  editor?.destroy()
   if (editorContainer.value) {
-    editorContainer.value.innerHTML = "";
+    editorContainer.value.innerHTML = ''
   }
-});
+})
 </script>
 
 <template>
@@ -259,8 +244,6 @@ onBeforeUnmount(() => {
 body {
   margin: 0;
   padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
 </style>

@@ -12,6 +12,7 @@ export interface BlockMultiSelectStorage {
 }
 
 type MoveDirection = 'up' | 'down'
+type DropPlacement = 'before' | 'after'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -22,12 +23,16 @@ declare module '@tiptap/core' {
       rangeSelectBlocks: (fromPos: number, toPos: number) => ReturnType
       /** 清除所有多选块 */
       clearBlockSelection: () => ReturnType
+      /** 直接设置多选块（覆盖） */
+      setBlockSelectionPositions: (positions: number[]) => ReturnType
       /** 删除所有选中块 */
       deleteSelectedBlocks: () => ReturnType
       /** 转换选中块类型 */
       convertSelectedBlocks: (nodeType: string, attrs?: Record<string, any>) => ReturnType
       /** 批量移动选中块 */
       moveSelectedBlocks: (direction: MoveDirection) => ReturnType
+      /** 将当前选中块组拖放到目标块前/后 */
+      moveSelectedBlocksToTarget: (targetPos: number, placement: DropPlacement) => ReturnType
     }
   }
 }
@@ -83,6 +88,20 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           return true
         },
 
+      setBlockSelectionPositions:
+        (positions: number[]) =>
+        ({ editor }) => {
+          const storage = editor.storage.blockMultiSelect as BlockMultiSelectStorage
+          const next = new Set<number>(positions.filter((pos) => Number.isFinite(pos)))
+          const prev = storage.selectedPositions
+          const unchanged =
+            prev.size === next.size && Array.from(prev).every((pos) => next.has(pos))
+          if (unchanged) return true
+          storage.selectedPositions = next
+          editor.view.dispatch(editor.state.tr.setMeta('blockMultiSelectUpdate', true))
+          return true
+        },
+
       deleteSelectedBlocks:
         () =>
         ({ editor }) => {
@@ -124,7 +143,10 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           const toParagraph = (node: ProseMirrorNode): ProseMirrorNode => {
             if (node.type === paragraphType) return node
             if (node.isTextblock) return paragraphType.create(null, node.content)
-            return paragraphType.create(null, node.textContent ? schema.text(node.textContent) : undefined)
+            return paragraphType.create(
+              null,
+              node.textContent ? schema.text(node.textContent) : undefined,
+            )
           }
 
           const wrapAsList = (
@@ -157,7 +179,7 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
             if (!wrapperType) return null
             const paragraph = toParagraph(baseNode)
             if (wrapperName === 'callout') {
-              return wrapperType.create({ calloutType: 'info', ...(attrs || {}) }, paragraph)
+              return wrapperType.create({ calloutType: 'info', ...attrs }, paragraph)
             }
             return wrapperType.create(attrs || null, paragraph)
           }
@@ -179,7 +201,7 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
                 rebuilt.push(node)
                 return
               }
-              rebuilt.push(headingType.create({ level: 1, ...(attrs || {}) }, toParagraph(node).content))
+              rebuilt.push(headingType.create({ level: 1, ...attrs }, toParagraph(node).content))
               return
             }
 
@@ -189,7 +211,11 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
               return
             }
 
-            if (nodeType === 'bulletList' || nodeType === 'orderedList' || nodeType === 'taskList') {
+            if (
+              nodeType === 'bulletList' ||
+              nodeType === 'orderedList' ||
+              nodeType === 'taskList'
+            ) {
               const wrapped = wrapAsList(node, nodeType)
               rebuilt.push(wrapped ?? node)
               return
@@ -202,7 +228,7 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
             }
 
             try {
-              rebuilt.push(targetType.create({ ...node.attrs, ...(attrs || {}) }, node.content, node.marks))
+              rebuilt.push(targetType.create({ ...node.attrs, ...attrs }, node.content, node.marks))
             } catch {
               rebuilt.push(node)
             }
@@ -282,6 +308,71 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))
           return true
         },
+
+      moveSelectedBlocksToTarget:
+        (targetPos: number, placement: DropPlacement) =>
+        ({ editor }) => {
+          const storage = editor.storage.blockMultiSelect as BlockMultiSelectStorage
+          if (storage.selectedPositions.size === 0) return false
+
+          const nodes: ProseMirrorNode[] = []
+          const offsets: number[] = []
+          editor.state.doc.forEach((node, offset) => {
+            nodes.push(node)
+            offsets.push(offset)
+          })
+          if (nodes.length <= 1) return false
+
+          const selectedIndexSet = new Set<number>()
+          offsets.forEach((offset, i) => {
+            if (storage.selectedPositions.has(offset)) selectedIndexSet.add(i)
+          })
+          if (selectedIndexSet.size === 0) return false
+
+          const targetIndex = offsets.findIndex((offset) => offset === targetPos)
+          if (targetIndex < 0) return false
+          if (selectedIndexSet.has(targetIndex)) return false
+
+          const movingNodes: ProseMirrorNode[] = []
+          const remainingNodes: ProseMirrorNode[] = []
+          const remainingOriginalIndices: number[] = []
+
+          for (let i = 0; i < nodes.length; i += 1) {
+            if (selectedIndexSet.has(i)) {
+              movingNodes.push(nodes[i])
+            } else {
+              remainingNodes.push(nodes[i])
+              remainingOriginalIndices.push(i)
+            }
+          }
+          if (movingNodes.length === 0 || remainingNodes.length === 0) return false
+
+          const targetInRemaining = remainingOriginalIndices.indexOf(targetIndex)
+          if (targetInRemaining < 0) return false
+
+          const insertAt = placement === 'after' ? targetInRemaining + 1 : targetInRemaining
+          const reorderedNodes = remainingNodes.slice()
+          reorderedNodes.splice(insertAt, 0, ...movingNodes)
+
+          const movingNodeSet = new Set(movingNodes)
+          const newSelected = new Set<number>()
+          let runningOffset = 0
+          for (const node of reorderedNodes) {
+            if (movingNodeSet.has(node)) {
+              newSelected.add(runningOffset)
+            }
+            runningOffset += node.nodeSize
+          }
+          storage.selectedPositions = newSelected
+
+          const tr = editor.state.tr.replaceWith(
+            0,
+            editor.state.doc.content.size,
+            Fragment.fromArray(reorderedNodes),
+          )
+          editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))
+          return true
+        },
     }
   },
 
@@ -304,6 +395,31 @@ class BlockMultiSelectOverlayView {
   private view: EditorView
   private storage: BlockMultiSelectStorage
   private overlayContainer: HTMLElement
+  private marqueeBox: HTMLElement
+  private mountedContainer: HTMLElement | null = null
+  private listenersBound = false
+  private selectedOverlayRects: HTMLElement[] = []
+  private marqueeActive = false
+  private marqueePending = false
+  private pendingStartX = 0
+  private pendingStartY = 0
+  private marqueeStartLocalX = 0
+  private marqueeStartLocalY = 0
+  private marqueeCurrentX = 0
+  private marqueeCurrentY = 0
+  private marqueeCurrentLocalX = 0
+  private marqueeCurrentLocalY = 0
+  private marqueeRafId: number | null = null
+  private viewportRafId: number | null = null
+  private blockSnapshot: Array<{
+    top: number
+    bottom: number
+    left: number
+    right: number
+    topLevelPos: number
+  }> = []
+  private readonly marqueeSelectingAttr = 'data-be-marquee-selecting'
+  private lastSelectionKey = ''
 
   constructor(view: EditorView, storage: BlockMultiSelectStorage) {
     this.view = view
@@ -315,73 +431,392 @@ class BlockMultiSelectOverlayView {
       position: 'absolute',
       top: '0',
       left: '0',
+      right: '0',
+      bottom: '0',
+      width: '100%',
+      height: '100%',
       pointerEvents: 'none',
-      zIndex: '5',
+      zIndex: '80',
     })
 
-    const container = view.dom.closest('.editor-container') as HTMLElement
-    if (container) {
-      if (getComputedStyle(container).position === 'static') {
-        container.style.position = 'relative'
-      }
-      container.appendChild(this.overlayContainer)
-    }
+    this.marqueeBox = document.createElement('div')
+    this.marqueeBox.className = 'be-block-multiselect-marquee'
+    Object.assign(this.marqueeBox.style, {
+      position: 'absolute',
+      display: 'none',
+      pointerEvents: 'none',
+      border: '1px solid color-mix(in srgb, var(--primary-color) 78%, transparent)',
+      background: 'color-mix(in srgb, var(--primary-color) 12%, transparent)',
+      borderRadius: '4px',
+      zIndex: '81',
+    })
+    this.overlayContainer.appendChild(this.marqueeBox)
+    this.ensureMounted()
   }
 
-  update(_view: EditorView, _prevState: any) {
+  update(view: EditorView, prevState: any) {
+    this.ensureMounted()
+    const nextSelectionKey = this.getSelectionKey(this.storage.selectedPositions)
+    const docUnchanged = !!prevState && prevState.doc === view.state.doc
+    if (!this.marqueeActive && docUnchanged && nextSelectionKey === this.lastSelectionKey) {
+      return
+    }
+    this.lastSelectionKey = nextSelectionKey
     this.renderOverlays()
   }
 
   renderOverlays() {
+    const existingMarquee = this.marqueeBox
     this.overlayContainer.innerHTML = ''
 
-    if (this.storage.selectedPositions.size === 0) return
+    this.overlayContainer.appendChild(existingMarquee)
+    this.applyHighlightedSelection(this.storage.selectedPositions)
+  }
 
-    const container = this.view.dom.closest('.editor-container') as HTMLElement
+  private applyHighlightedSelection(selectedPositions: Set<number>) {
+    this.clearSelectedOverlays()
+    if (selectedPositions.size === 0) return
+    const container = this.getEditorContainer()
     if (!container) return
     const containerRect = container.getBoundingClientRect()
+    const root = this.view.dom as HTMLElement
+    const topBlocks = Array.from(root.children) as HTMLElement[]
+    const topLevelOffsets = this.getTopLevelOffsets()
+    const limit = Math.min(topBlocks.length, topLevelOffsets.length)
 
-    for (const pos of this.storage.selectedPositions) {
-      const node = this.view.state.doc.nodeAt(pos)
-      if (!node) continue
+    for (let i = 0; i < limit; i += 1) {
+      const topLevelPos = topLevelOffsets[i]
+      if (!selectedPositions.has(topLevelPos)) continue
+      const blockRect = topBlocks[i].getBoundingClientRect()
+      const overlay = document.createElement('div')
+      overlay.className = 'be-block-multiselect-selected-overlay'
+      Object.assign(overlay.style, {
+        position: 'absolute',
+        left: `${Math.max(0, blockRect.left - containerRect.left)}px`,
+        top: `${Math.max(0, blockRect.top - containerRect.top)}px`,
+        width: `${Math.max(0, blockRect.width)}px`,
+        height: `${Math.max(0, blockRect.height)}px`,
+        borderRadius: '4px',
+        outline: '1px solid color-mix(in srgb, var(--primary-color) 60%, transparent)',
+        background: 'color-mix(in srgb, var(--primary-color) 12%, transparent)',
+        pointerEvents: 'none',
+        zIndex: '79',
+      })
+      const accent = document.createElement('div')
+      Object.assign(accent.style, {
+        position: 'absolute',
+        left: '-10px',
+        top: '2px',
+        bottom: '2px',
+        width: '4px',
+        borderRadius: '999px',
+        background: 'color-mix(in srgb, var(--primary-color) 76%, transparent)',
+      })
+      overlay.appendChild(accent)
+      this.overlayContainer.appendChild(overlay)
+      this.selectedOverlayRects.push(overlay)
+    }
+  }
 
-      try {
-        const startCoords = this.view.coordsAtPos(pos + 1)
-        const endPos = Math.min(pos + node.nodeSize - 1, this.view.state.doc.content.size)
-        const endCoords = this.view.coordsAtPos(endPos)
+  private getTopLevelOffsets() {
+    const offsets: number[] = []
+    this.view.state.doc.forEach((_node, offset) => {
+      offsets.push(offset)
+    })
+    return offsets
+  }
 
-        const top = startCoords.top - containerRect.top - 2
-        const height = endCoords.bottom - startCoords.top + 4
-        const left = 0
-        const width = container.clientWidth
+  private getSelectionKey(selected: Set<number>) {
+    if (selected.size === 0) return ''
+    return Array.from(selected)
+      .sort((a, b) => a - b)
+      .join(',')
+  }
 
-        const overlay = document.createElement('div')
-        overlay.className = 'be-block-multiselect-overlay'
+  private clearSelectedOverlays() {
+    for (const overlay of this.selectedOverlayRects) {
+      overlay.remove()
+    }
+    this.selectedOverlayRects = []
+  }
 
-        const primary = getComputedStyle(document.documentElement)
-          .getPropertyValue('--primary-color')
-          .trim() || 'oklch(62.3% 0.214 259.815)'
+  private getEditorContainer() {
+    const dom = this.view.dom as HTMLElement
+    return (
+      (dom.closest('[data-be-editor-container="true"]') as HTMLElement | null) ||
+      (dom.closest('.editor-container') as HTMLElement | null) ||
+      dom.parentElement
+    )
+  }
 
-        Object.assign(overlay.style, {
-          position: 'absolute',
-          top: `${top}px`,
-          left: `${left}px`,
-          width: `${width}px`,
-          height: `${height}px`,
-          background: `color-mix(in oklab, ${primary} 18%, transparent)`,
-          border: `1.5px solid ${primary}`,
-          boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${primary} 55%, transparent)`,
-          borderRadius: '4px',
-          pointerEvents: 'none',
-        })
-        this.overlayContainer.appendChild(overlay)
-      } catch {
-        // coordsAtPos may throw for out-of-range positions
+  private ensureMounted() {
+    const container = this.getEditorContainer()
+    if (!container) return
+
+    if (this.mountedContainer !== container || !container.contains(this.overlayContainer)) {
+      this.overlayContainer.remove()
+      if (getComputedStyle(container).position === 'static') {
+        container.style.position = 'relative'
       }
+      container.appendChild(this.overlayContainer)
+      this.mountedContainer = container
+    }
+
+    if (!this.listenersBound) {
+      window.addEventListener('mousedown', this.handleMouseDown, true)
+      window.addEventListener('mousemove', this.handleMouseMove, true)
+      window.addEventListener('mouseup', this.handleMouseUp, true)
+      window.addEventListener('scroll', this.handleScroll, true)
+      window.addEventListener('resize', this.handleViewportChange, {
+        passive: true,
+      })
+      this.listenersBound = true
+    }
+  }
+
+  private getCanvasBounds() {
+    const container = this.getEditorContainer()
+    const prose = this.view.dom as HTMLElement
+    if (!container || !prose) return null
+    const c = container.getBoundingClientRect()
+    const p = prose.getBoundingClientRect()
+    return {
+      containerRect: c,
+      proseRect: p,
+      gutterRight: p.left + 20,
+      marqueeStartLeft: p.left - 140,
+      marqueeStartRight: p.left + 56,
+    }
+  }
+
+  private handleMouseDown = (event: MouseEvent) => {
+    if (event.button !== 0) return
+    if ((event.target as HTMLElement)?.closest('.be-block-handle')) return
+    if ((event.target as HTMLElement)?.closest('.be-block-handle-menu')) return
+    if ((event.target as HTMLElement)?.closest('.be-toolbar')) return
+    if ((event.target as HTMLElement)?.closest('.be-table-toolbar')) return
+    if ((event.target as HTMLElement)?.closest('.be-selection-tooltip')) return
+
+    const bounds = this.getCanvasBounds()
+    if (!bounds) return
+    const inMarqueeArea =
+      event.clientX >= bounds.marqueeStartLeft &&
+      event.clientX <= bounds.marqueeStartRight &&
+      event.clientY >= bounds.proseRect.top &&
+      event.clientY <= bounds.proseRect.bottom
+    if (!inMarqueeArea) return
+
+    this.marqueePending = true
+    this.pendingStartX = event.clientX
+    this.pendingStartY = event.clientY
+  }
+
+  private handleMouseMove = (event: MouseEvent) => {
+    if (!this.marqueeActive) {
+      if (!this.marqueePending) return
+      const dx = event.clientX - this.pendingStartX
+      const dy = event.clientY - this.pendingStartY
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      if (distance < 4) return
+
+      this.marqueePending = false
+      this.marqueeActive = true
+      const startLocal = this.clientToLocal(this.pendingStartX, this.pendingStartY)
+      this.marqueeStartLocalX = startLocal.x
+      this.marqueeStartLocalY = startLocal.y
+      this.marqueeCurrentX = event.clientX
+      this.marqueeCurrentY = event.clientY
+      const currentLocal = this.clientToLocal(event.clientX, event.clientY)
+      this.marqueeCurrentLocalX = currentLocal.x
+      this.marqueeCurrentLocalY = currentLocal.y
+      this.setMarqueeSelectingState(true)
+      this.captureBlockSnapshot()
+      this.updateMarqueeBox()
+      this.clearSelectedOverlays()
+    }
+
+    this.marqueeCurrentX = event.clientX
+    this.marqueeCurrentY = event.clientY
+    const currentLocal = this.clientToLocal(event.clientX, event.clientY)
+    this.marqueeCurrentLocalX = currentLocal.x
+    this.marqueeCurrentLocalY = currentLocal.y
+    this.scheduleMarqueeFrame()
+  }
+
+  private handleMouseUp = (event: MouseEvent) => {
+    if (this.marqueePending && !this.marqueeActive) {
+      this.marqueePending = false
+      return
+    }
+    if (!this.marqueeActive) return
+    this.marqueeCurrentX = event.clientX
+    this.marqueeCurrentY = event.clientY
+    const currentLocal = this.clientToLocal(event.clientX, event.clientY)
+    this.marqueeCurrentLocalX = currentLocal.x
+    this.marqueeCurrentLocalY = currentLocal.y
+    this.flushMarqueeFrame()
+    this.updateSelectionByMarquee(true)
+    this.marqueeActive = false
+    this.marqueeBox.style.display = 'none'
+    this.blockSnapshot = []
+    this.setMarqueeSelectingState(false)
+    this.marqueePending = false
+  }
+
+  private handleScroll = () => {
+    if (this.marqueeActive) {
+      const currentLocal = this.clientToLocal(this.marqueeCurrentX, this.marqueeCurrentY)
+      this.marqueeCurrentLocalX = currentLocal.x
+      this.marqueeCurrentLocalY = currentLocal.y
+      this.scheduleMarqueeFrame()
+      return
+    }
+    this.scheduleViewportRefresh()
+  }
+
+  private handleViewportChange = () => {
+    this.scheduleViewportRefresh()
+  }
+
+  private scheduleViewportRefresh() {
+    if (this.marqueeActive) return
+    if (this.storage.selectedPositions.size === 0) return
+    if (this.viewportRafId !== null) return
+    this.viewportRafId = window.requestAnimationFrame(() => {
+      this.viewportRafId = null
+      this.renderOverlays()
+    })
+  }
+
+  private setMarqueeSelectingState(active: boolean) {
+    const root = document.documentElement
+    if (active) {
+      root.setAttribute(this.marqueeSelectingAttr, '1')
+    } else {
+      root.removeAttribute(this.marqueeSelectingAttr)
+    }
+    const container = this.getEditorContainer()
+    const prose = this.view.dom as HTMLElement
+    if (container) {
+      container.style.userSelect = active ? 'none' : ''
+      container.style.cursor = active ? 'crosshair' : ''
+    }
+    if (prose) {
+      prose.style.userSelect = active ? 'none' : ''
+    }
+  }
+
+  private scheduleMarqueeFrame() {
+    if (this.marqueeRafId !== null) return
+    this.marqueeRafId = window.requestAnimationFrame(() => {
+      this.marqueeRafId = null
+      this.flushMarqueeFrame()
+    })
+  }
+
+  private flushMarqueeFrame() {
+    if (!this.marqueeActive) return
+    this.updateMarqueeBox()
+  }
+
+  private captureBlockSnapshot() {
+    const bounds = this.getCanvasBounds()
+    if (!bounds) return
+    const root = this.view.dom as HTMLElement
+    const topBlocks = Array.from(root.children) as HTMLElement[]
+    const topLevelOffsets = this.getTopLevelOffsets()
+    const limit = Math.min(topBlocks.length, topLevelOffsets.length)
+    const next: Array<{
+      top: number
+      bottom: number
+      left: number
+      right: number
+      topLevelPos: number
+    }> = []
+    for (let i = 0; i < limit; i += 1) {
+      const block = topBlocks[i]
+      const rect = block.getBoundingClientRect()
+      next.push({
+        top: rect.top - bounds.containerRect.top,
+        bottom: rect.bottom - bounds.containerRect.top,
+        left: rect.left - bounds.containerRect.left,
+        right: rect.right - bounds.containerRect.left,
+        topLevelPos: topLevelOffsets[i],
+      })
+    }
+    this.blockSnapshot = next
+  }
+
+  private updateMarqueeBox() {
+    const left = Math.min(this.marqueeStartLocalX, this.marqueeCurrentLocalX)
+    const top = Math.min(this.marqueeStartLocalY, this.marqueeCurrentLocalY)
+    const width = Math.abs(this.marqueeCurrentLocalX - this.marqueeStartLocalX)
+    const height = Math.abs(this.marqueeCurrentLocalY - this.marqueeStartLocalY)
+    Object.assign(this.marqueeBox.style, {
+      display: 'block',
+      left: `${Math.max(0, left)}px`,
+      top: `${Math.max(0, top)}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+    })
+  }
+
+  private updateSelectionByMarquee(commit: boolean) {
+    const minX = Math.min(this.marqueeStartLocalX, this.marqueeCurrentLocalX)
+    const maxX = Math.max(this.marqueeStartLocalX, this.marqueeCurrentLocalX)
+    const minY = Math.min(this.marqueeStartLocalY, this.marqueeCurrentLocalY)
+    const maxY = Math.max(this.marqueeStartLocalY, this.marqueeCurrentLocalY)
+
+    const selected = new Set<number>()
+    const source = this.blockSnapshot
+    for (const item of source) {
+      if (item.bottom < minY) continue
+      if (item.top > maxY) break
+      const intersectsX = item.right >= minX && item.left <= maxX
+      if (!intersectsX) continue
+      selected.add(item.topLevelPos)
+    }
+
+    const prev = this.storage.selectedPositions
+    const changed =
+      prev.size !== selected.size || Array.from(prev).some((pos) => !selected.has(pos))
+    if (!changed) return
+
+    if (!commit) return
+    this.storage.selectedPositions = selected
+    this.view.dispatch(this.view.state.tr.setMeta('blockMultiSelectUpdate', true))
+  }
+
+  private clientToLocal(clientX: number, clientY: number) {
+    const bounds = this.getCanvasBounds()
+    if (!bounds) return { x: 0, y: 0 }
+    return {
+      x: clientX - bounds.containerRect.left,
+      y: clientY - bounds.containerRect.top,
     }
   }
 
   destroy() {
+    this.clearSelectedOverlays()
+    this.setMarqueeSelectingState(false)
+    this.marqueePending = false
+    if (this.marqueeRafId !== null) {
+      window.cancelAnimationFrame(this.marqueeRafId)
+      this.marqueeRafId = null
+    }
+    if (this.viewportRafId !== null) {
+      window.cancelAnimationFrame(this.viewportRafId)
+      this.viewportRafId = null
+    }
+    if (this.listenersBound) {
+      window.removeEventListener('mousedown', this.handleMouseDown, true)
+      window.removeEventListener('mousemove', this.handleMouseMove, true)
+      window.removeEventListener('mouseup', this.handleMouseUp, true)
+      window.removeEventListener('scroll', this.handleScroll, true)
+      window.removeEventListener('resize', this.handleViewportChange)
+      this.listenersBound = false
+    }
     this.overlayContainer.remove()
+    this.mountedContainer = null
   }
 }

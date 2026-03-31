@@ -15,16 +15,19 @@
 文件：`packages/editor/src/ui/CommentPanel.ts`  
 现状：标题、按钮、提示、操作文案存在大量直接写死。  
 建议：
+
 - 全部改为 `i18n.comments.*` 注入（含 `aria-label`）。
 
 ### 2. 块多选栏（高优先级）
 
 文件：
+
 - `packages/editor/src/ui/menus/block-multi-select-bar.ts`
 - `packages/editor/src/ui/menus/BlockMultiSelectBar.ts`
 
 现状：操作文案写死中文，且存在重复实现。  
 建议：
+
 - 先合并实现，再统一接 i18n。
 
 ### 3. block-handle 菜单（高优先级）
@@ -32,6 +35,7 @@
 文件：`packages/editor/src/extensions/block-handle.ts`  
 现状：菜单项文案写死中文。  
 建议：
+
 - 新增 `i18n.blockHandle.*` 词条并映射。
 
 ### 4. slash command（中优先级）
@@ -39,11 +43,13 @@
 文件：`packages/editor/src/extensions/SlashCommand.ts`  
 现状：标题、描述、关键词直接硬编码。  
 建议：
+
 - 支持 i18n 词条 + 本地关键词 fallback。
 
 ### 5. 弹窗与辅助组件（中优先级）
 
 文件：
+
 - `ui/toolbar/dialogs/version-history-dialog.ts`
 - `ui/toolbar/dialogs/insert-image-dialog.ts`
 - `ui/toolbar/dialogs/insert-link-dialog.ts`
@@ -51,6 +57,7 @@
 
 现状：部分中文/英文字符串混用。  
 建议：
+
 - 统一通过 i18n 注入，组件层仅接收 props。
 
 ## 非问题区域（无需误判）
@@ -63,4 +70,3 @@
 1. 组件/模块禁止直接写业务文案。
 2. 所有可见文案（包含 tooltip、empty text、aria）必须支持 i18n 注入。
 3. 新增功能默认中英双词条，不允许只补中文。
-

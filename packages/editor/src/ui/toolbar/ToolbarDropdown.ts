@@ -1,4 +1,4 @@
-import { computePosition, flip, shift, offset, autoUpdate, hide } from '@floating-ui/dom';
+import { computePosition, flip, shift, offset, autoUpdate, hide } from '@floating-ui/dom'
 import { EditorCore } from '../../core/EditorCore'
 import { icons } from './icons'
 import { ToolbarDropdownConfig, DropdownOptionConfig } from './ToolbarRegistry'
@@ -7,7 +7,7 @@ import {
   createDropdownMenu,
   focusDropdownItem,
   getFocusableDropdownItems,
-} from "../components/DropdownMenu";
+} from '../components/DropdownMenu'
 
 export type ToolbarDropdownProps = ToolbarDropdownConfig
 
@@ -116,7 +116,8 @@ export class ToolbarDropdown {
 
     const labelSpan = document.createElement('span')
     labelSpan.className = 'dropdown-label'
-    labelSpan.style.cssText = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:4px;flex:1;text-align:left;display:flex;align-items:center;'
+    labelSpan.style.cssText =
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:4px;flex:1;text-align:left;display:flex;align-items:center;'
     if (this.props.icon && icons[this.props.icon]) {
       labelSpan.innerHTML = icons[this.props.icon]
     } else {
@@ -164,8 +165,8 @@ export class ToolbarDropdown {
 
     // ── Menu container ─────────────────────────────────────────────────────────
     this.menu = createDropdownMenu({
-      role: "listbox",
-      layout: this.props.layout === "row" ? "row" : "list",
+      role: 'listbox',
+      layout: this.props.layout === 'row' ? 'row' : 'list',
     })
 
     wrapper.appendChild(this.trigger)
@@ -192,7 +193,9 @@ export class ToolbarDropdown {
     if (chevron) chevron.style.transform = 'rotate(180deg)'
 
     // Portal to body
-    const ownerMoreMenu = this.element.closest('.toolbar-dropdown-menu[data-be-more-id]') as HTMLElement | null
+    const ownerMoreMenu = this.element.closest(
+      '.toolbar-dropdown-menu[data-be-more-id]',
+    ) as HTMLElement | null
     const openedFromMoreMenu = Boolean(ownerMoreMenu)
     this.menu.dataset.ownerInMore = openedFromMoreMenu ? 'true' : 'false'
     this.menu.dataset.ownerMoreId = ownerMoreMenu?.dataset.beMoreId ?? ''
@@ -341,8 +344,8 @@ export class ToolbarDropdown {
         iconHtml: opt.icon && icons[opt.icon] ? icons[opt.icon] : undefined,
         active: isActive,
         disabled: isDisabled,
-        tooltip: this.props.layout === "row" ? (opt.tooltip || opt.label) : undefined,
-        title: this.props.layout === "row" ? (opt.tooltip || opt.label) : undefined,
+        tooltip: this.props.layout === 'row' ? opt.tooltip || opt.label : undefined,
+        title: this.props.layout === 'row' ? opt.tooltip || opt.label : undefined,
       })
 
       if (this.props.layout === 'row') {

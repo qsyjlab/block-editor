@@ -41,7 +41,9 @@ const LINE_HEIGHTS = [
   { label: '3.0', value: '3.0' },
 ]
 
-export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n> | null): ToolbarItemType[][] {
+export function buildDefaultToolbarItems(
+  i18nInput?: string | Partial<EditorI18n> | null,
+): ToolbarItemType[][] {
   const i18n = resolveEditorI18n(i18nInput)
   const t = i18n.toolbar
 
@@ -66,10 +68,37 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
         width: '80px',
         layout: 'list',
         options: [
-          { label: t.normal, icon: 'paragraph', value: 'paragraph', command: 'setParagraph', isActive: (editor) => editor.isActive('paragraph') },
-          { label: t.heading1, icon: 'h1', value: 'h1', command: 'toggleHeading', args: { level: 1 }, isActive: (editor) => editor.isActive('heading', { level: 1 }) },
-          { label: t.heading2, icon: 'h2', value: 'h2', command: 'toggleHeading', args: { level: 2 }, isActive: (editor) => editor.isActive('heading', { level: 2 }) },
-          { label: t.heading3, icon: 'h3', value: 'h3', command: 'toggleHeading', args: { level: 3 }, isActive: (editor) => editor.isActive('heading', { level: 3 }) },
+          {
+            label: t.normal,
+            icon: 'paragraph',
+            value: 'paragraph',
+            command: 'setParagraph',
+            isActive: (editor) => editor.isActive('paragraph'),
+          },
+          {
+            label: t.heading1,
+            icon: 'h1',
+            value: 'h1',
+            command: 'toggleHeading',
+            args: { level: 1 },
+            isActive: (editor) => editor.isActive('heading', { level: 1 }),
+          },
+          {
+            label: t.heading2,
+            icon: 'h2',
+            value: 'h2',
+            command: 'toggleHeading',
+            args: { level: 2 },
+            isActive: (editor) => editor.isActive('heading', { level: 2 }),
+          },
+          {
+            label: t.heading3,
+            icon: 'h3',
+            value: 'h3',
+            command: 'toggleHeading',
+            args: { level: 3 },
+            isActive: (editor) => editor.isActive('heading', { level: 3 }),
+          },
         ],
       },
       {
@@ -103,14 +132,63 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
       },
     ],
     [
-      { type: 'button', label: t.bold, icon: 'bold', command: 'toggleBold', activeName: 'bold', shortcut: '⌘B' },
-      { type: 'button', label: t.italic, icon: 'italic', command: 'toggleItalic', activeName: 'italic', shortcut: '⌘I' },
-      { type: 'button', label: t.underline, icon: 'underline', command: 'toggleUnderline', activeName: 'underline', shortcut: '⌘U' },
-      { type: 'button', label: t.strike, icon: 'strike', command: 'toggleStrike', activeName: 'strike', shortcut: '⇧⌘X' },
+      {
+        type: 'button',
+        label: t.bold,
+        icon: 'bold',
+        command: 'toggleBold',
+        activeName: 'bold',
+        shortcut: '⌘B',
+      },
+      {
+        type: 'button',
+        label: t.italic,
+        icon: 'italic',
+        command: 'toggleItalic',
+        activeName: 'italic',
+        shortcut: '⌘I',
+      },
+      {
+        type: 'button',
+        label: t.underline,
+        icon: 'underline',
+        command: 'toggleUnderline',
+        activeName: 'underline',
+        shortcut: '⌘U',
+      },
+      {
+        type: 'button',
+        label: t.strike,
+        icon: 'strike',
+        command: 'toggleStrike',
+        activeName: 'strike',
+        shortcut: '⇧⌘X',
+      },
       { type: 'color', label: t.textColor, command: 'setColor' },
-      { type: 'button', label: t.highlight, icon: 'highlighter', command: 'toggleHighlight', activeName: 'highlight', shortcut: '⇧⌘H' },
-      { type: 'button', label: t.code, icon: 'code', command: 'toggleCode', activeName: 'code', shortcut: '⌘E' },
-      { type: 'button', label: t.codeBlock, icon: 'code', command: 'toggleCodeBlock', activeName: 'codeBlock', shortcut: '⌥⌘C' },
+      {
+        type: 'button',
+        label: t.highlight,
+        icon: 'highlighter',
+        command: 'toggleHighlight',
+        activeName: 'highlight',
+        shortcut: '⇧⌘H',
+      },
+      {
+        type: 'button',
+        label: t.code,
+        icon: 'code',
+        command: 'toggleCode',
+        activeName: 'code',
+        shortcut: '⌘E',
+      },
+      {
+        type: 'button',
+        label: t.codeBlock,
+        icon: 'code',
+        command: 'toggleCodeBlock',
+        activeName: 'codeBlock',
+        shortcut: '⌥⌘C',
+      },
       {
         type: 'button',
         label: t.clearFormatting,
@@ -129,10 +207,38 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
         width: '40px',
         layout: 'row',
         options: [
-          { label: t.left, icon: 'alignLeft', value: 'left', command: 'setTextAlign', args: 'left', isActive: (editor) => editor.isActive({ textAlign: 'left' }) },
-          { label: t.center, icon: 'alignCenter', value: 'center', command: 'setTextAlign', args: 'center', isActive: (editor) => editor.isActive({ textAlign: 'center' }) },
-          { label: t.right, icon: 'alignRight', value: 'right', command: 'setTextAlign', args: 'right', isActive: (editor) => editor.isActive({ textAlign: 'right' }) },
-          { label: t.justify, icon: 'alignJustify', value: 'justify', command: 'setTextAlign', args: 'justify', isActive: (editor) => editor.isActive({ textAlign: 'justify' }) },
+          {
+            label: t.left,
+            icon: 'alignLeft',
+            value: 'left',
+            command: 'setTextAlign',
+            args: 'left',
+            isActive: (editor) => editor.isActive({ textAlign: 'left' }),
+          },
+          {
+            label: t.center,
+            icon: 'alignCenter',
+            value: 'center',
+            command: 'setTextAlign',
+            args: 'center',
+            isActive: (editor) => editor.isActive({ textAlign: 'center' }),
+          },
+          {
+            label: t.right,
+            icon: 'alignRight',
+            value: 'right',
+            command: 'setTextAlign',
+            args: 'right',
+            isActive: (editor) => editor.isActive({ textAlign: 'right' }),
+          },
+          {
+            label: t.justify,
+            icon: 'alignJustify',
+            value: 'justify',
+            command: 'setTextAlign',
+            args: 'justify',
+            isActive: (editor) => editor.isActive({ textAlign: 'justify' }),
+          },
         ],
       },
       {
@@ -149,10 +255,38 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
       },
       { type: 'button', label: t.indent, icon: 'indent', command: 'indent', shortcut: '⌘]' },
       { type: 'button', label: t.outdent, icon: 'outdent', command: 'outdent', shortcut: '⌘[' },
-      { type: 'button', label: t.bulletList, icon: 'list', command: 'toggleBulletList', activeName: 'bulletList', shortcut: '⇧⌘8' },
-      { type: 'button', label: t.orderedList, icon: 'listOrdered', command: 'toggleOrderedList', activeName: 'orderedList', shortcut: '⇧⌘7' },
-      { type: 'button', label: t.taskList, icon: 'task', command: 'toggleTaskList', activeName: 'taskList', shortcut: '⇧⌘9' },
-      { type: 'button', label: t.blockquote, icon: 'quote', command: 'toggleBlockquote', activeName: 'blockquote', shortcut: '⇧⌘B' },
+      {
+        type: 'button',
+        label: t.bulletList,
+        icon: 'list',
+        command: 'toggleBulletList',
+        activeName: 'bulletList',
+        shortcut: '⇧⌘8',
+      },
+      {
+        type: 'button',
+        label: t.orderedList,
+        icon: 'listOrdered',
+        command: 'toggleOrderedList',
+        activeName: 'orderedList',
+        shortcut: '⇧⌘7',
+      },
+      {
+        type: 'button',
+        label: t.taskList,
+        icon: 'task',
+        command: 'toggleTaskList',
+        activeName: 'taskList',
+        shortcut: '⇧⌘9',
+      },
+      {
+        type: 'button',
+        label: t.blockquote,
+        icon: 'quote',
+        command: 'toggleBlockquote',
+        activeName: 'blockquote',
+        shortcut: '⇧⌘B',
+      },
     ],
     [
       {
@@ -289,7 +423,10 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
             icon: 'fileText',
             value: 'performance-baseline',
             onExecute: async (core: EditorCore) => {
-              const baseline = await core.runPerformanceBenchmark({ paragraphs: 2000, selectionOps: 200 })
+              const baseline = await core.runPerformanceBenchmark({
+                paragraphs: 2000,
+                selectionOps: 200,
+              })
               console.table(baseline)
               alert(t.performanceBaselineResult(baseline.setContentMs, baseline.selectionSweepMs))
             },
@@ -298,6 +435,15 @@ export function buildDefaultToolbarItems(i18nInput?: string | Partial<EditorI18n
       },
     ],
     [
+      {
+        type: 'button',
+        label: t.findReplace,
+        icon: 'search',
+        shortcut: '⌘F',
+        onExecute: (core: EditorCore) => {
+          core.events.emit('openFindReplace', false)
+        },
+      },
       {
         type: 'button',
         label: t.addComment,

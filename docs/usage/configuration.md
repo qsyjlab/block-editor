@@ -24,10 +24,10 @@
 
 ```ts
 new EditorUIRenderer(core, container, {
-  toolbarMode: "top",
-  theme: "dark",
+  toolbarMode: 'top',
+  theme: 'dark',
   commentPanelDefaultVisible: true,
-});
+})
 ```
 
 ## 主题建议

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
-import SceneFrame from "../SceneFrame.vue";
-import { SELECTION_COMPACT_ITEMS } from "../shared";
-import { useSceneEditor } from "../useSceneEditor";
+import { ref } from 'vue'
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
+import SceneFrame from '../SceneFrame.vue'
+import { SELECTION_COMPACT_ITEMS } from '../shared'
+import { useSceneEditor } from '../useSceneEditor'
 
-const editorContainer = ref<HTMLElement | null>(null);
+const editorContainer = ref<HTMLElement | null>(null)
 
-useSceneEditor("modular-layout", editorContainer, (container, context) => {
+useSceneEditor('modular-layout', editorContainer, (container, context) => {
   const core = new EditorCore({
-    element: document.createElement("div"),
+    element: document.createElement('div'),
     content: `
       <h2>模块化布局示例</h2>
       <p>选中文本后，selection toolbar 应挂在编辑区区域；多选块时工具条会出现在顶部区域。</p>
@@ -25,24 +25,24 @@ useSceneEditor("modular-layout", editorContainer, (container, context) => {
     collaboration: {
       enabled: context.collaborationEnabled,
       roomName: context.room,
-      websocketUrl: "wss://demos.yjs.dev",
+      websocketUrl: 'wss://demos.yjs.dev',
       user: { name: context.userName, color: context.userColor },
     },
     i18n: context.editorLocale,
     uiConfig: {
       toolbar: {
-        preset: "basic",
+        preset: 'basic',
       },
       selectionToolbar: {
         items: SELECTION_COMPACT_ITEMS,
       },
     },
-  } as any);
+  } as any)
 
   new EditorUIRenderer(core, container, {
     i18n: context.editorLocale,
     theme: context.theme,
-    toolbarMode: "top",
+    toolbarMode: 'top',
     commentPanelDefaultVisible: true,
     layoutSchema: {
       regions: {
@@ -51,19 +51,19 @@ useSceneEditor("modular-layout", editorContainer, (container, context) => {
         comment: { width: 320 },
       },
       modules: {
-        toolbar: { region: "toolbar", enabled: true },
-        selectionToolbar: { region: "editor", enabled: true },
-        outline: { region: "outline", enabled: true },
-        commentPanel: { region: "comment", enabled: true },
-        blockHandle: { region: "editor", enabled: true },
-        tableBubbleMenu: { region: "editor", enabled: true },
-        blockMultiSelectBar: { region: "toolbar", enabled: true },
+        toolbar: { region: 'toolbar', enabled: true },
+        selectionToolbar: { region: 'editor', enabled: true },
+        outline: { region: 'outline', enabled: true },
+        commentPanel: { region: 'comment', enabled: true },
+        blockHandle: { region: 'editor', enabled: true },
+        tableBubbleMenu: { region: 'editor', enabled: true },
+        blockMultiSelectBar: { region: 'toolbar', enabled: true },
       },
     },
-  } as any);
+  } as any)
 
-  return core;
-});
+  return core
+})
 </script>
 
 <template>

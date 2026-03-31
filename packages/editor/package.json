@@ -19,6 +19,10 @@
     "build": "pnpm run build:css && tsc",
     "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/style.css",
     "dev": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/style.css --watch",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx,vue}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx,vue}\" --fix",
+    "format": "prettier src --write",
+    "format:check": "prettier src --check",
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {

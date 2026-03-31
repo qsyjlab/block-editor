@@ -69,7 +69,10 @@ function normalizeMarkdownHtml(html: string): string {
     }
 
     if (el.firstChild?.nodeType === Node.TEXT_NODE) {
-      el.firstChild.textContent = (el.firstChild.textContent || '').replace(/^\[indent:\d+\]\s*/i, '')
+      el.firstChild.textContent = (el.firstChild.textContent || '').replace(
+        /^\[indent:\d+\]\s*/i,
+        '',
+      )
     } else {
       el.textContent = (el.textContent || '').replace(/^\[indent:\d+\]\s*/i, '')
     }

@@ -13,16 +13,20 @@ function transformCalloutToMarkdownFriendlyHtml(sourceHtml: string): string {
   const doc = parser.parseFromString(sourceHtml, 'text/html')
 
   // 缩进属性用文本前缀保留，导入时再还原为 data-indent
-  doc.querySelectorAll<HTMLElement>('p[data-indent],h1[data-indent],h2[data-indent],h3[data-indent],h4[data-indent],h5[data-indent],h6[data-indent]').forEach((el) => {
-    const level = Number(el.getAttribute('data-indent') || 0)
-    if (level <= 0) return
-    const prefix = `[indent:${level}] `
-    if (el.firstChild?.nodeType === Node.TEXT_NODE) {
-      el.firstChild.textContent = `${prefix}${el.firstChild.textContent || ''}`
-    } else {
-      el.insertBefore(doc.createTextNode(prefix), el.firstChild)
-    }
-  })
+  doc
+    .querySelectorAll<HTMLElement>(
+      'p[data-indent],h1[data-indent],h2[data-indent],h3[data-indent],h4[data-indent],h5[data-indent],h6[data-indent]',
+    )
+    .forEach((el) => {
+      const level = Number(el.getAttribute('data-indent') || 0)
+      if (level <= 0) return
+      const prefix = `[indent:${level}] `
+      if (el.firstChild?.nodeType === Node.TEXT_NODE) {
+        el.firstChild.textContent = `${prefix}${el.firstChild.textContent || ''}`
+      } else {
+        el.insertBefore(doc.createTextNode(prefix), el.firstChild)
+      }
+    })
 
   // callout 保留为 [!TYPE] 风格
   doc.querySelectorAll('div[data-callout-type]').forEach((callout) => {
@@ -132,7 +136,7 @@ export class Exporter {
     clonedDoc.querySelectorAll('style').forEach((styleEl) => {
       const cssText = styleEl.textContent
       if (!cssText || !cssText.includes('oklch(')) return
-      styleEl.textContent = cssText.replace(/oklch\([^\)]*\)/g, '#3b82f6')
+      styleEl.textContent = cssText.replace(/oklch\([^)]*\)/g, '#3b82f6')
     })
   }
 
@@ -143,11 +147,11 @@ export class Exporter {
     const originalTitle = document.title
     const docTitleInput = document.querySelector('.doc-title-input') as HTMLInputElement
     if (docTitleInput && docTitleInput.value) {
-        document.title = docTitleInput.value
+      document.title = docTitleInput.value
     }
-    
+
     window.print()
-    
+
     document.title = originalTitle
   }
 
@@ -167,7 +171,9 @@ export class Exporter {
     const docTitleInput = document.querySelector('.doc-title-input') as HTMLInputElement
     let finalFilename = filename
     if (docTitleInput && docTitleInput.value) {
-      finalFilename = docTitleInput.value.endsWith('.pdf') ? docTitleInput.value : `${docTitleInput.value}.pdf`
+      finalFilename = docTitleInput.value.endsWith('.pdf')
+        ? docTitleInput.value
+        : `${docTitleInput.value}.pdf`
     }
 
     const opt = {
@@ -224,7 +230,6 @@ export class Exporter {
       // 如果没有指定后缀，自动添加
       const finalFilename = filename.endsWith('.docx') ? filename : `${filename}.docx`
       saveAs(blob, finalFilename)
-
     } catch (error) {
       console.error('DOCX export failed:', error)
       alert('导出 Word 文档失败，请查看控制台错误信息。')

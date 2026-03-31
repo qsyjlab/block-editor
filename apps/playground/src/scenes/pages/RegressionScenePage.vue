@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
-import SceneFrame from "../SceneFrame.vue";
-import { useSceneEditor } from "../useSceneEditor";
+import { ref } from 'vue'
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
+import SceneFrame from '../SceneFrame.vue'
+import { useSceneEditor } from '../useSceneEditor'
 
-const editorContainer = ref<HTMLElement | null>(null);
+const editorContainer = ref<HTMLElement | null>(null)
 
-useSceneEditor("regression", editorContainer, (container, context) => {
+useSceneEditor('regression', editorContainer, (container, context) => {
   const core = new EditorCore({
-    element: document.createElement("div"),
+    element: document.createElement('div'),
     content: `
       <h2>回归验证工作台</h2>
       <p>请选中这一段文本后点击工具栏 <strong>添加评论</strong>，验证评论侧栏是否自动展开并预填引用。</p>
@@ -33,25 +33,25 @@ function buildRegressionResult(): RegressionResult {
     collaboration: {
       enabled: context.collaborationEnabled,
       roomName: context.room,
-      websocketUrl: "wss://demos.yjs.dev",
+      websocketUrl: 'wss://demos.yjs.dev',
       user: { name: context.userName, color: context.userColor },
     },
     i18n: context.editorLocale,
     uiConfig: {
-      toolbar: { preset: "full" },
-      selectionToolbar: { preset: "full" },
+      toolbar: { preset: 'full' },
+      selectionToolbar: { preset: 'full' },
     },
-  } as any);
+  } as any)
 
   new EditorUIRenderer(core, container, {
     i18n: context.editorLocale,
     theme: context.theme,
-    toolbarMode: "top",
+    toolbarMode: 'top',
     commentPanelDefaultVisible: true,
-  } as any);
+  } as any)
 
-  return core;
-});
+  return core
+})
 </script>
 
 <template>

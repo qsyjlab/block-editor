@@ -49,6 +49,7 @@ export interface ToolbarI18n {
   performanceBaseline: string
   performanceBaselineResult: (setContentMs: number, selectionMs: number) => string
   addComment: string
+  findReplace: string
   tableToolbar: string
   tableBackgroundColor: string
   tableColumnOperations: string
@@ -63,6 +64,20 @@ export interface ToolbarI18n {
   mergeCells: string
   splitCell: string
   deleteTable: string
+}
+
+export interface FindReplaceI18n {
+  findPlaceholder: string
+  replacePlaceholder: string
+  previous: string
+  next: string
+  replace: string
+  replaceAll: string
+  toggleReplace: string
+  close: string
+  noResult: string
+  empty: string
+  counter: (current: number, total: number) => string
 }
 
 export interface InsertLinkDialogI18n {
@@ -302,4 +317,5 @@ export interface EditorI18n {
   imageEnhanced: ImageEnhancedI18n
   callout: CalloutI18n
   codeBlock: CodeBlockI18n
+  findReplace: FindReplaceI18n
 }

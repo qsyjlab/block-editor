@@ -23,18 +23,14 @@ export const InteractionState = Extension.create({
 
   addCommands() {
     return {
-      setInteractionMode:
-        (mode: InteractionMode) =>
-        () => {
-          ;(this.editor.storage.interactionState as { mode: InteractionMode }).mode = mode
-          return true
-        },
-      setBlockMenuOpen:
-        (open: boolean) =>
-        () => {
-          ;(this.editor.storage.interactionState as { blockMenuOpen: boolean }).blockMenuOpen = open
-          return true
-        },
+      setInteractionMode: (mode: InteractionMode) => () => {
+        ;(this.editor.storage.interactionState as { mode: InteractionMode }).mode = mode
+        return true
+      },
+      setBlockMenuOpen: (open: boolean) => () => {
+        ;(this.editor.storage.interactionState as { blockMenuOpen: boolean }).blockMenuOpen = open
+        return true
+      },
     }
   },
 })

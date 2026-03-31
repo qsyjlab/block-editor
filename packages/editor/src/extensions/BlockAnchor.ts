@@ -25,7 +25,8 @@ export const BlockAnchor = Extension.create({
         attributes: {
           blockId: {
             default: null,
-            parseHTML: (element) => element.getAttribute('data-block-id') || element.getAttribute('id') || null,
+            parseHTML: (element) =>
+              element.getAttribute('data-block-id') || element.getAttribute('id') || null,
             renderHTML: (attributes) => {
               const blockId = typeof attributes.blockId === 'string' ? attributes.blockId : ''
               if (!blockId) return {}

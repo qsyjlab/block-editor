@@ -27,16 +27,20 @@ function transformCalloutToMarkdownFriendlyHtml(sourceHtml: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(sourceHtml, 'text/html')
 
-  doc.querySelectorAll<HTMLElement>('p[data-indent],h1[data-indent],h2[data-indent],h3[data-indent],h4[data-indent],h5[data-indent],h6[data-indent]').forEach((el) => {
-    const level = Number(el.getAttribute('data-indent') || 0)
-    if (level <= 0) return
-    const prefix = `[indent:${level}] `
-    if (el.firstChild?.nodeType === Node.TEXT_NODE) {
-      el.firstChild.textContent = `${prefix}${el.firstChild.textContent || ''}`
-    } else {
-      el.insertBefore(doc.createTextNode(prefix), el.firstChild)
-    }
-  })
+  doc
+    .querySelectorAll<HTMLElement>(
+      'p[data-indent],h1[data-indent],h2[data-indent],h3[data-indent],h4[data-indent],h5[data-indent],h6[data-indent]',
+    )
+    .forEach((el) => {
+      const level = Number(el.getAttribute('data-indent') || 0)
+      if (level <= 0) return
+      const prefix = `[indent:${level}] `
+      if (el.firstChild?.nodeType === Node.TEXT_NODE) {
+        el.firstChild.textContent = `${prefix}${el.firstChild.textContent || ''}`
+      } else {
+        el.insertBefore(doc.createTextNode(prefix), el.firstChild)
+      }
+    })
 
   doc.querySelectorAll('div[data-callout-type]').forEach((callout) => {
     const calloutType = normalizeCalloutLabel(callout.getAttribute('data-callout-type') || 'info')

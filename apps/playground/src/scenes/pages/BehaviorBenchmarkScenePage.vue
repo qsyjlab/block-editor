@@ -1,98 +1,98 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { EditorCore, EditorUIRenderer } from "@block-editor/editor";
-import SceneFrame from "../SceneFrame.vue";
-import { useSceneEditor } from "../useSceneEditor";
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
+import SceneFrame from '../SceneFrame.vue'
+import { useSceneEditor } from '../useSceneEditor'
 
-const editorContainer = ref<HTMLElement | null>(null);
-const route = useRoute();
-const router = useRouter();
+const editorContainer = ref<HTMLElement | null>(null)
+const route = useRoute()
+const router = useRouter()
 
 const BEHAVIOR_CASES = [
-  { id: "INP-001", title: "连续输入稳定性", anchorId: "case-inp-001" },
-  { id: "INP-002", title: "输入不中断", anchorId: "case-inp-002" },
-  { id: "INP-003", title: "基础输入落点", anchorId: "case-inp-003" },
-  { id: "INP-004", title: "软换行", anchorId: "case-inp-004" },
-  { id: "SEL-001", title: "Shift/鼠标选区一致性", anchorId: "case-sel-001" },
-  { id: "SEL-002", title: "选区工具栏可见", anchorId: "case-sel-002" },
-  { id: "SEL-003", title: "选区格式化后状态", anchorId: "case-sel-003" },
-  { id: "PST-001", title: "代码块粘贴放行", anchorId: "case-pst-001" },
-  { id: "PST-002", title: "URL 自动链接", anchorId: "case-pst-002" },
-  { id: "PST-003", title: "HTML 清洗", anchorId: "case-pst-003" },
-  { id: "PST-004", title: "粘贴落点连续编辑", anchorId: "case-pst-004" },
-  { id: "UND-001", title: "输入撤销重做", anchorId: "case-und-001" },
-  { id: "UND-002", title: "格式撤销重做", anchorId: "case-und-002" },
-  { id: "BLK-001", title: "块手柄可见与菜单", anchorId: "case-blk-001" },
-  { id: "BLK-002", title: "块上移下移", anchorId: "case-blk-002" },
-  { id: "BLK-003", title: "删除块后焦点", anchorId: "case-blk-003" },
-  { id: "CMT-001", title: "添加评论预填引用", anchorId: "case-cmt-001" },
-  { id: "CMT-002", title: "评论面板展开", anchorId: "case-cmt-002" },
-  { id: "CMT-003", title: "行内评论定位", anchorId: "case-cmt-003" },
-  { id: "CMT-004", title: "引用块跳转", anchorId: "case-cmt-004" },
-  { id: "LNK-001", title: "链接插入", anchorId: "case-lnk-001" },
-  { id: "LNK-002", title: "锚点跳转", anchorId: "case-lnk-002" },
-  { id: "TBL-001", title: "表格工具栏", anchorId: "case-tbl-001" },
-  { id: "TBL-002", title: "表格行操作", anchorId: "case-tbl-002" },
-  { id: "TOB-001", title: "顶部/选区工具栏一致", anchorId: "case-tob-001" },
-  { id: "TOB-002", title: "快捷键一致性", anchorId: "case-tob-002" },
-] as const;
+  { id: 'INP-001', title: '连续输入稳定性', anchorId: 'case-inp-001' },
+  { id: 'INP-002', title: '输入不中断', anchorId: 'case-inp-002' },
+  { id: 'INP-003', title: '基础输入落点', anchorId: 'case-inp-003' },
+  { id: 'INP-004', title: '软换行', anchorId: 'case-inp-004' },
+  { id: 'SEL-001', title: 'Shift/鼠标选区一致性', anchorId: 'case-sel-001' },
+  { id: 'SEL-002', title: '选区工具栏可见', anchorId: 'case-sel-002' },
+  { id: 'SEL-003', title: '选区格式化后状态', anchorId: 'case-sel-003' },
+  { id: 'PST-001', title: '代码块粘贴放行', anchorId: 'case-pst-001' },
+  { id: 'PST-002', title: 'URL 自动链接', anchorId: 'case-pst-002' },
+  { id: 'PST-003', title: 'HTML 清洗', anchorId: 'case-pst-003' },
+  { id: 'PST-004', title: '粘贴落点连续编辑', anchorId: 'case-pst-004' },
+  { id: 'UND-001', title: '输入撤销重做', anchorId: 'case-und-001' },
+  { id: 'UND-002', title: '格式撤销重做', anchorId: 'case-und-002' },
+  { id: 'BLK-001', title: '块手柄可见与菜单', anchorId: 'case-blk-001' },
+  { id: 'BLK-002', title: '块上移下移', anchorId: 'case-blk-002' },
+  { id: 'BLK-003', title: '删除块后焦点', anchorId: 'case-blk-003' },
+  { id: 'CMT-001', title: '添加评论预填引用', anchorId: 'case-cmt-001' },
+  { id: 'CMT-002', title: '评论面板展开', anchorId: 'case-cmt-002' },
+  { id: 'CMT-003', title: '行内评论定位', anchorId: 'case-cmt-003' },
+  { id: 'CMT-004', title: '引用块跳转', anchorId: 'case-cmt-004' },
+  { id: 'LNK-001', title: '链接插入', anchorId: 'case-lnk-001' },
+  { id: 'LNK-002', title: '锚点跳转', anchorId: 'case-lnk-002' },
+  { id: 'TBL-001', title: '表格工具栏', anchorId: 'case-tbl-001' },
+  { id: 'TBL-002', title: '表格行操作', anchorId: 'case-tbl-002' },
+  { id: 'TOB-001', title: '顶部/选区工具栏一致', anchorId: 'case-tob-001' },
+  { id: 'TOB-002', title: '快捷键一致性', anchorId: 'case-tob-002' },
+] as const
 
 const CASE_MAP = new Map<string, (typeof BEHAVIOR_CASES)[number]>(
   BEHAVIOR_CASES.map((item) => [item.id, item]),
-);
+)
 
 function normalizeCaseId(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return value.trim().toUpperCase();
+  if (typeof value !== 'string') return ''
+  return value.trim().toUpperCase()
 }
 
-const activeCaseId = computed(() => normalizeCaseId(route.query.case));
+const activeCaseId = computed(() => normalizeCaseId(route.query.case))
 
 function openCase(caseId: string) {
   const query = {
     ...route.query,
     case: caseId.toLowerCase(),
-    collab: String(route.query.collab ?? "0"),
-  };
-  router.replace({ path: route.path, query });
+    collab: String(route.query.collab ?? '0'),
+  }
+  router.replace({ path: route.path, query })
 }
 
-let focusTimer: number | null = null;
+let focusTimer: number | null = null
 
 function focusCaseTarget(caseId: string) {
-  const item = CASE_MAP.get(caseId);
-  const host = editorContainer.value;
-  if (!item || !host) return;
-  const target = host.querySelector<HTMLElement>(`#${item.anchorId}`);
-  if (!target) return;
-  target.scrollIntoView({ behavior: "smooth", block: "center" });
-  target.classList.add("scene-case-target--active");
+  const item = CASE_MAP.get(caseId)
+  const host = editorContainer.value
+  if (!item || !host) return
+  const target = host.querySelector<HTMLElement>(`#${item.anchorId}`)
+  if (!target) return
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  target.classList.add('scene-case-target--active')
   window.setTimeout(() => {
-    target.classList.remove("scene-case-target--active");
-  }, 1300);
+    target.classList.remove('scene-case-target--active')
+  }, 1300)
 }
 
 function scheduleFocusCase() {
-  if (focusTimer) window.clearTimeout(focusTimer);
-  const targetCaseId = activeCaseId.value;
-  if (!targetCaseId) return;
+  if (focusTimer) window.clearTimeout(focusTimer)
+  const targetCaseId = activeCaseId.value
+  if (!targetCaseId) return
   focusTimer = window.setTimeout(() => {
-    focusCaseTarget(targetCaseId);
-  }, 140);
+    focusCaseTarget(targetCaseId)
+  }, 140)
 }
 
 watch(
   () => [route.query.case, route.query.theme, route.query.lang],
   () => {
-    scheduleFocusCase();
+    scheduleFocusCase()
   },
   { immediate: true },
-);
+)
 
 onBeforeUnmount(() => {
-  if (focusTimer) window.clearTimeout(focusTimer);
-});
+  if (focusTimer) window.clearTimeout(focusTimer)
+})
 
 const BEHAVIOR_BENCHMARK_CONTENT = `
   <h1>行为基准回放场景（P0）</h1>
@@ -163,43 +163,43 @@ function runBenchmark(): BenchmarkResult {
 }</code></pre>
   <p>图片示例（用于插图相关交互回放）：</p>
   <p><img src="https://picsum.photos/900/280" alt="benchmark-image" title="benchmark-image" /></p>
-`;
+`
 
 useSceneEditor(
-  "behavior-benchmark",
+  'behavior-benchmark',
   editorContainer,
   (container, context) => {
     const core = new EditorCore({
-      element: document.createElement("div"),
+      element: document.createElement('div'),
       content: BEHAVIOR_BENCHMARK_CONTENT,
       collaboration: {
         enabled: context.collaborationEnabled,
         roomName: context.room,
-        websocketUrl: "wss://demos.yjs.dev",
+        websocketUrl: 'wss://demos.yjs.dev',
         user: { name: context.userName, color: context.userColor },
       },
       i18n: context.editorLocale,
       uiConfig: {
-        toolbar: { preset: "full" },
-        selectionToolbar: { preset: "full" },
+        toolbar: { preset: 'full' },
+        selectionToolbar: { preset: 'full' },
       },
-    } as any);
+    } as any)
 
     new EditorUIRenderer(core, container, {
       i18n: context.editorLocale,
       theme: context.theme,
-      toolbarMode: "top",
+      toolbarMode: 'top',
       commentPanelDefaultVisible: true,
-    } as any);
+    } as any)
 
     queueMicrotask(() => {
-      scheduleFocusCase();
-    });
+      scheduleFocusCase()
+    })
 
-    return core;
+    return core
   },
   { defaultCollaborationEnabled: false },
-);
+)
 </script>
 
 <template>
@@ -252,11 +252,7 @@ useSceneEditor(
 .benchmark-case-btn--active {
   color: var(--primary-color, #4f7cff);
   border-color: var(--primary-color, #4f7cff);
-  background: color-mix(
-    in srgb,
-    var(--primary-color, #4f7cff) 14%,
-    var(--pg-surface)
-  );
+  background: color-mix(in srgb, var(--primary-color, #4f7cff) 14%, var(--pg-surface));
 }
 
 :deep(.scene-case-target--active) {
@@ -268,11 +264,7 @@ useSceneEditor(
 
 @keyframes scene-case-flash {
   0% {
-    background: color-mix(
-      in srgb,
-      var(--primary-color, #4f7cff) 24%,
-      transparent
-    );
+    background: color-mix(in srgb, var(--primary-color, #4f7cff) 24%, transparent);
   }
   100% {
     background: transparent;

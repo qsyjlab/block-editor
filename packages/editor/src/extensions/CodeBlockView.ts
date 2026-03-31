@@ -1,12 +1,31 @@
 import { icons } from '../ui/toolbar/icons'
-import type { CodeBlockI18n } from "../i18n";
-import { ensureCodeLanguageRegistered } from "./code-highlighting";
+import type { CodeBlockI18n } from '../i18n'
+import { ensureCodeLanguageRegistered } from './code-highlighting'
 
 // Common programming languages
 const LANGUAGES = [
-  'plaintext', 'javascript', 'typescript', 'html', 'css', 'json', 'java', 'python', 
-  'go', 'rust', 'c', 'cpp', 'csharp', 'php', 'ruby', 'swift', 'kotlin', 'sql', 
-  'shell', 'yaml', 'xml', 'markdown'
+  'plaintext',
+  'javascript',
+  'typescript',
+  'html',
+  'css',
+  'json',
+  'java',
+  'python',
+  'go',
+  'rust',
+  'c',
+  'cpp',
+  'csharp',
+  'php',
+  'ruby',
+  'swift',
+  'kotlin',
+  'sql',
+  'shell',
+  'yaml',
+  'xml',
+  'markdown',
 ]
 
 export class CodeBlockView {
@@ -40,8 +59,11 @@ export class CodeBlockView {
     this.updateAttributes = (attrs) => {
       const pos = getPos()
       if (pos === undefined) return
-      
-      const tr = editor.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, ...attrs })
+
+      const tr = editor.view.state.tr.setNodeMarkup(pos, undefined, {
+        ...this.node.attrs,
+        ...attrs,
+      })
       editor.view.dispatch(tr)
     }
 
@@ -56,7 +78,7 @@ export class CodeBlockView {
     // Header Left
     const left = document.createElement('div')
     left.className = 'code-block-header-left'
-    
+
     // Collapse Icon
     const arrow = document.createElement('span')
     arrow.className = 'code-block-collapse-icon'
@@ -66,13 +88,13 @@ export class CodeBlockView {
     arrow.style.display = 'flex'
     arrow.style.cursor = 'pointer'
     arrow.style.transition = 'transform 0.2s'
-    
+
     // Toggle Collapse
     arrow.onclick = (e) => {
-        e.stopPropagation() // Prevent selection
-        this.toggleCollapse()
+      e.stopPropagation() // Prevent selection
+      this.toggleCollapse()
     }
-    
+
     const label = document.createElement('span')
     label.textContent = this.i18n.blockTitle
 
@@ -89,7 +111,7 @@ export class CodeBlockView {
 
     this.langSelect = document.createElement('div')
     this.langSelect.className = 'code-block-lang-select'
-    
+
     // Create static structure for langSelect to avoid innerHTML replacements causing event target issues
     const langSpan = document.createElement('span')
     langSpan.className = 'lang-name'
@@ -97,21 +119,21 @@ export class CodeBlockView {
     iconSpan.className = 'lang-icon'
     iconSpan.innerHTML = icons.chevronDown
     iconSpan.style.display = 'flex'
-    
+
     this.langSelect.appendChild(langSpan)
     this.langSelect.appendChild(iconSpan)
 
     this.updateLangLabel()
     void this.ensureLanguageLoaded(this.node.attrs.language)
-    
+
     this.langSelect.onclick = (e) => {
-        e.stopPropagation()
-        this.toggleLangDropdown()
+      e.stopPropagation()
+      this.toggleLangDropdown()
     }
 
     this.langDropdown = document.createElement('div')
     this.langDropdown.className = 'lang-dropdown-menu'
-    
+
     // Search Input
     const searchInput = document.createElement('input')
     searchInput.className = 'lang-search-input'
@@ -152,7 +174,7 @@ export class CodeBlockView {
     // Content
     this.contentWrapper = document.createElement('div')
     this.contentWrapper.className = 'code-block-content'
-    
+
     const pre = document.createElement('pre')
     const code = document.createElement('code')
     this.contentDOM = code
@@ -164,12 +186,12 @@ export class CodeBlockView {
 
     // Close dropdown on click outside
     const clickHandler = (e: MouseEvent) => {
-        const target = e.target as Node
-        // Check if click is inside container OR if target is no longer in document (handle DOM updates)
-        if (langContainer.contains(target) || !document.body.contains(target)) {
-            return
-        }
-        this.langDropdown.classList.remove('show')
+      const target = e.target as Node
+      // Check if click is inside container OR if target is no longer in document (handle DOM updates)
+      if (langContainer.contains(target) || !document.body.contains(target)) {
+        return
+      }
+      this.langDropdown.classList.remove('show')
     }
     document.addEventListener('click', clickHandler)
     this.clickHandler = clickHandler
@@ -184,16 +206,16 @@ export class CodeBlockView {
     const prevLanguage = this.node.attrs.language
     this.node = node
     this.updateLangLabel()
-    if ((node.attrs.language || "plaintext") !== (prevLanguage || "plaintext")) {
-        void this.ensureLanguageLoaded(node.attrs.language)
+    if ((node.attrs.language || 'plaintext') !== (prevLanguage || 'plaintext')) {
+      void this.ensureLanguageLoaded(node.attrs.language)
     }
     // Re-render language list to update active state
     const list = this.langDropdown.querySelector('.lang-list') as HTMLElement
     if (list) {
-        // Keep current filter if input has value
-        const input = this.langDropdown.querySelector('input')
-        const filter = input ? input.value : ''
-        this.renderLangList(list, filter)
+      // Keep current filter if input has value
+      const input = this.langDropdown.querySelector('input')
+      const filter = input ? input.value : ''
+      this.renderLangList(list, filter)
     }
     return true
   }
@@ -219,141 +241,141 @@ export class CodeBlockView {
     const lang = this.node.attrs.language || 'auto'
     const span = this.langSelect.querySelector('.lang-name')
     if (span) {
-        span.textContent = lang
+      span.textContent = lang
     }
   }
 
   private toggleLangDropdown() {
     this.langDropdown.classList.toggle('show')
     if (this.langDropdown.classList.contains('show')) {
-        const input = this.langDropdown.querySelector('input')
-        if (input) input.focus()
+      const input = this.langDropdown.querySelector('input')
+      if (input) input.focus()
     }
   }
 
   private renderLangList(container: HTMLElement, filter = '') {
     container.innerHTML = ''
-    LANGUAGES.filter(l => l.toLowerCase().includes(filter.toLowerCase())).forEach(lang => {
-        const item = document.createElement('div')
-        item.className = 'lang-item'
-        item.textContent = lang
-        if (lang === (this.node.attrs.language || 'plaintext')) {
-            item.classList.add('active')
-            item.innerHTML += icons.check
-        }
-        item.onmousedown = (e) => {
-            e.preventDefault()
-            e.stopPropagation()
-        }
-        item.onclick = (e) => {
-            e.stopPropagation()
-            void this.switchLanguage(lang)
-        }
-        container.appendChild(item)
+    LANGUAGES.filter((l) => l.toLowerCase().includes(filter.toLowerCase())).forEach((lang) => {
+      const item = document.createElement('div')
+      item.className = 'lang-item'
+      item.textContent = lang
+      if (lang === (this.node.attrs.language || 'plaintext')) {
+        item.classList.add('active')
+        item.innerHTML += icons.check
+      }
+      item.onmousedown = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      item.onclick = (e) => {
+        e.stopPropagation()
+        void this.switchLanguage(lang)
+      }
+      container.appendChild(item)
     })
   }
 
   private filterLanguages(text: string) {
-      const list = this.langDropdown.querySelector('.lang-list') as HTMLElement
-      if (list) this.renderLangList(list, text)
+    const list = this.langDropdown.querySelector('.lang-list') as HTMLElement
+    if (list) this.renderLangList(list, text)
   }
 
   private toggleCollapse() {
-      const isCollapsed = this.contentWrapper.style.display === 'none'
-      this.contentWrapper.style.display = isCollapsed ? 'block' : 'none'
-      
-      // Rotate arrow
-      const arrow = this.dom.querySelector('.code-block-collapse-icon') as HTMLElement
-      if (arrow) {
-          arrow.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)'
-      }
+    const isCollapsed = this.contentWrapper.style.display === 'none'
+    this.contentWrapper.style.display = isCollapsed ? 'block' : 'none'
+
+    // Rotate arrow
+    const arrow = this.dom.querySelector('.code-block-collapse-icon') as HTMLElement
+    if (arrow) {
+      arrow.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)'
+    }
   }
 
   private toggleWrap() {
-      const isWrapped = this.contentWrapper.classList.contains('wrap-text')
-      if (isWrapped) {
-          this.contentWrapper.classList.remove('wrap-text')
-          this.wrapBtn.classList.remove('active')
-      } else {
-          this.contentWrapper.classList.add('wrap-text')
-          this.wrapBtn.classList.add('active')
-      }
+    const isWrapped = this.contentWrapper.classList.contains('wrap-text')
+    if (isWrapped) {
+      this.contentWrapper.classList.remove('wrap-text')
+      this.wrapBtn.classList.remove('active')
+    } else {
+      this.contentWrapper.classList.add('wrap-text')
+      this.wrapBtn.classList.add('active')
+    }
   }
 
   private copyCode() {
-      const text = this.node.textContent
-      navigator.clipboard.writeText(text).then(() => {
-          // Show feedback?
-          // For now, assume success
-      })
+    const text = this.node.textContent
+    navigator.clipboard.writeText(text).then(() => {
+      // Show feedback?
+      // For now, assume success
+    })
   }
 
   private async ensureLanguageLoaded(language?: string | null) {
-      const result = await ensureCodeLanguageRegistered(language)
+    const result = await ensureCodeLanguageRegistered(language)
 
-      const currentLanguage = (this.node.attrs.language || "plaintext") as string
-      if (currentLanguage !== result.language) {
-          this.updateAttributes({ language: result.language })
-          return
-      }
+    const currentLanguage = (this.node.attrs.language || 'plaintext') as string
+    if (currentLanguage !== result.language) {
+      this.updateAttributes({ language: result.language })
+      return
+    }
 
-      if (result.loadedNow) {
-          this.refreshHighlight()
-      }
+    if (result.loadedNow) {
+      this.refreshHighlight()
+    }
   }
 
   private async switchLanguage(nextLanguage: string) {
-      const seq = ++this.languageSwitchSeq
-      const currentLanguage = (this.node.attrs.language || "plaintext") as string
-      this.langDropdown.classList.remove('show')
+    const seq = ++this.languageSwitchSeq
+    const currentLanguage = (this.node.attrs.language || 'plaintext') as string
+    this.langDropdown.classList.remove('show')
 
-      if (nextLanguage !== currentLanguage) {
-          this.updateAttributes({ language: nextLanguage })
+    if (nextLanguage !== currentLanguage) {
+      this.updateAttributes({ language: nextLanguage })
+    }
+
+    this.langSelect.classList.add('is-loading')
+    this.langSelect.setAttribute('aria-busy', 'true')
+    try {
+      const result = await ensureCodeLanguageRegistered(nextLanguage)
+      if (seq !== this.languageSwitchSeq) return
+
+      if (result.language !== nextLanguage) {
+        this.updateAttributes({ language: result.language })
       }
 
-      this.langSelect.classList.add('is-loading')
-      this.langSelect.setAttribute('aria-busy', 'true')
-      try {
-          const result = await ensureCodeLanguageRegistered(nextLanguage)
-          if (seq !== this.languageSwitchSeq) return
-
-          if (result.language !== nextLanguage) {
-              this.updateAttributes({ language: result.language })
-          }
-
-          this.refreshHighlight()
-      } catch (error) {
-          console.warn('[CodeBlockView] switch language failed', error)
-      } finally {
-          if (seq === this.languageSwitchSeq) {
-              this.langSelect.classList.remove('is-loading')
-              this.langSelect.removeAttribute('aria-busy')
-          }
+      this.refreshHighlight()
+    } catch (error) {
+      console.warn('[CodeBlockView] switch language failed', error)
+    } finally {
+      if (seq === this.languageSwitchSeq) {
+        this.langSelect.classList.remove('is-loading')
+        this.langSelect.removeAttribute('aria-busy')
       }
+    }
   }
 
   private refreshHighlight() {
-      let pos: number | undefined
-      try {
-          pos = this.getPos?.()
-      } catch {
-          return
-      }
-      if (typeof pos !== "number") return
+    let pos: number | undefined
+    try {
+      pos = this.getPos?.()
+    } catch {
+      return
+    }
+    if (typeof pos !== 'number') return
 
-      const state = this.editor?.view?.state
-      if (!state) return
-      const node = state.doc.nodeAt(pos)
-      if (!node) return
+    const state = this.editor?.view?.state
+    if (!state) return
+    const node = state.doc.nodeAt(pos)
+    if (!node) return
 
-      const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs }, node.marks)
-      tr.setMeta("addToHistory", false)
-      this.editor.view.dispatch(tr)
+    const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs }, node.marks)
+    tr.setMeta('addToHistory', false)
+    this.editor.view.dispatch(tr)
   }
 
   destroy() {
-      if (this.clickHandler) {
-          document.removeEventListener('click', this.clickHandler)
-      }
+    if (this.clickHandler) {
+      document.removeEventListener('click', this.clickHandler)
+    }
   }
 }
