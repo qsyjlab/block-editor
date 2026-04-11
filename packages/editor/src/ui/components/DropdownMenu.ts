@@ -8,6 +8,7 @@ export interface DropdownMenuOptions {
 
 export interface DropdownItemOptions {
   label: string
+  description?: string
   iconHtml?: string
   title?: string
   tooltip?: string
@@ -63,18 +64,30 @@ export function createDropdownItem(options: DropdownItemOptions): HTMLElement {
   }
 
   const content = document.createElement('div')
-  content.style.cssText = 'display:flex;align-items:center;gap:8px;'
+  content.className = 'dropdown-item__content'
 
   if (options.iconHtml) {
     const iconSpan = document.createElement('span')
+    iconSpan.className = 'dropdown-item__icon'
     iconSpan.innerHTML = options.iconHtml
-    iconSpan.style.display = 'flex'
     content.appendChild(iconSpan)
   }
 
-  const textSpan = document.createElement('span')
-  textSpan.textContent = options.label
-  content.appendChild(textSpan)
+  const textWrap = document.createElement('span')
+  textWrap.className = 'dropdown-item__text'
+
+  const labelSpan = document.createElement('span')
+  labelSpan.className = 'dropdown-item__label'
+  labelSpan.textContent = options.label
+  textWrap.appendChild(labelSpan)
+
+  if (options.description) {
+    const descSpan = document.createElement('span')
+    descSpan.className = 'dropdown-item__description'
+    descSpan.textContent = options.description
+    textWrap.appendChild(descSpan)
+  }
+  content.appendChild(textWrap)
   item.appendChild(content)
 
   if (options.onSelect && !options.disabled) {

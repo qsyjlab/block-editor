@@ -200,35 +200,6 @@ class TableHandleView {
     return null
   }
 
-  private isInTableHotZone(tablePos: number, clientX: number, clientY: number) {
-    const table = this.getTableDom(tablePos)
-    if (!table) return false
-    const rect = table.getBoundingClientRect()
-    return (
-      clientX >= rect.left - 56 &&
-      clientX <= rect.right + 10 &&
-      clientY >= rect.top - 10 &&
-      clientY <= rect.bottom + 10
-    )
-  }
-
-  private showHandleAt(tablePos: number) {
-    const container = this.getEditorContainer()
-    if (!container) return
-    const table = this.getTableDom(tablePos)
-    if (!table) return
-
-    const tableRect = table.getBoundingClientRect()
-    const containerRect = container.getBoundingClientRect()
-    const top = tableRect.top - containerRect.top + 2
-    const left = tableRect.left - containerRect.left - 34
-
-    this.currentTablePos = tablePos
-    this.handle.style.top = `${top}px`
-    this.handle.style.left = `${left}px`
-    this.handle.style.display = 'flex'
-  }
-
   private hideHandle() {
     this.handle.style.display = 'none'
     this.currentTablePos = null
@@ -296,17 +267,26 @@ class TableHandleView {
     }
     const selection = this.editorView.state.selection
     const tableInfo = this.getTableInfoFromPos(selection.from)
-    if (!tableInfo) return
-    this.showHandleAt(tableInfo.pos)
+    if (!tableInfo) {
+      this.hideHandle()
+      this.clearSelectedTable()
+      return
+    }
+    const tableDom = this.getTableDom(tableInfo.pos)
+    if (!tableDom) {
+      this.hideHandle()
+      this.clearSelectedTable()
+      return
+    }
+    this.applySelectedTable(tableDom, tableInfo.pos)
+    this.hideHandle()
   }
 
   private handleScroll = () => {
-    if (this.currentTablePos !== null) {
-      this.showHandleAt(this.currentTablePos)
-    }
+    this.hideHandle()
   }
 
-  private handleMouseMove = throttle((event: MouseEvent) => {
+  private handleMouseMove = throttle(() => {
     if (document.documentElement.getAttribute('data-be-marquee-selecting') === '1') {
       this.hideHandle()
       return
@@ -318,55 +298,6 @@ class TableHandleView {
       return
     }
 
-    const target = event.target as HTMLElement | null
-    if (target?.closest('.be-block-handle-menu')) return
-    if (target && this.handle.contains(target)) {
-      if (this.currentTablePos !== null) {
-        this.showHandleAt(this.currentTablePos)
-      } else if (this.selectedTablePos !== null) {
-        this.showHandleAt(this.selectedTablePos)
-      }
-      return
-    }
-
-    if (
-      this.currentTablePos !== null &&
-      this.isInTableHotZone(this.currentTablePos, event.clientX, event.clientY)
-    ) {
-      this.showHandleAt(this.currentTablePos)
-      return
-    }
-    if (
-      this.selectedTablePos !== null &&
-      this.isInTableHotZone(this.selectedTablePos, event.clientX, event.clientY)
-    ) {
-      this.showHandleAt(this.selectedTablePos)
-      return
-    }
-
-    if (target?.closest('table')) {
-      const pos = this.editorView.posAtCoords({ left: event.clientX, top: event.clientY })
-      if (!pos) return
-      const tableInfo = this.getTableInfoFromPos(pos.pos)
-      if (tableInfo) {
-        this.showHandleAt(tableInfo.pos)
-        return
-      }
-    }
-
-    const pos = this.editorView.posAtCoords({ left: event.clientX, top: event.clientY })
-    if (!pos) {
-      if (!this.selectedTableDom) this.hideHandle()
-      return
-    }
-
-    const tableInfo = this.getTableInfoFromPos(pos.pos)
-    if (tableInfo) {
-      this.showHandleAt(tableInfo.pos)
-    } else if (this.selectedTablePos !== null) {
-      this.showHandleAt(this.selectedTablePos)
-    } else if (!this.selectedTableDom) {
-      this.hideHandle()
-    }
+    this.hideHandle()
   }, 16)
 }

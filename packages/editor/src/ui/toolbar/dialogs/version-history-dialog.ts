@@ -31,6 +31,8 @@ export class VersionHistoryDialog {
   private listRoot: HTMLElement
   private activeSnapshotId: string | null = null
   private expandedSnapshotId: string | null = null
+  private fullViewSnapshotId: string | null = null
+  private fullViewTab: 'diff' | 'blame' = 'diff'
   private readonly i18n: VersionHistoryDialogI18n
   private readonly locale: string
 
@@ -122,7 +124,12 @@ export class VersionHistoryDialog {
       header.style.background = expanded ? 'var(--surface-soft)' : 'var(--paper-bg)'
       header.addEventListener('click', () => {
         this.activeSnapshotId = snapshot.id
-        this.expandedSnapshotId = expanded ? null : snapshot.id
+        const nextExpanded = expanded ? null : snapshot.id
+        this.expandedSnapshotId = nextExpanded
+        if (!nextExpanded || nextExpanded !== this.fullViewSnapshotId) {
+          this.fullViewSnapshotId = null
+          this.fullViewTab = 'diff'
+        }
         this.renderList()
       })
 
@@ -157,7 +164,12 @@ export class VersionHistoryDialog {
       detailBtn.addEventListener('click', (e) => {
         e.stopPropagation()
         this.activeSnapshotId = snapshot.id
-        this.expandedSnapshotId = expanded ? null : snapshot.id
+        const nextExpanded = expanded ? null : snapshot.id
+        this.expandedSnapshotId = nextExpanded
+        if (!nextExpanded || nextExpanded !== this.fullViewSnapshotId) {
+          this.fullViewSnapshotId = null
+          this.fullViewTab = 'diff'
+        }
         this.renderList()
       })
 
@@ -277,16 +289,29 @@ export class VersionHistoryDialog {
 
           const fullBtn = document.createElement('button')
           fullBtn.type = 'button'
-          fullBtn.textContent = this.i18n.fullDiff
+          fullBtn.textContent =
+            this.fullViewSnapshotId === snapshot.id ? this.i18n.collapse : this.i18n.fullDiff
           fullBtn.className = 'be-dialog-btn be-dialog-btn--secondary'
           fullBtn.style.cssText =
             'padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;'
           fullBtn.addEventListener('click', (e) => {
             e.stopPropagation()
-            this.openFullDiffDialog(snapshot.id, previousSnapshotId)
+            this.activeSnapshotId = snapshot.id
+            if (this.fullViewSnapshotId === snapshot.id) {
+              this.fullViewSnapshotId = null
+            } else {
+              this.fullViewSnapshotId = snapshot.id
+              this.fullViewTab = 'diff'
+            }
+            this.renderList()
           })
           footer.appendChild(fullBtn)
           previewWrap.appendChild(footer)
+        }
+
+        if (this.fullViewSnapshotId === snapshot.id) {
+          const fullWrap = this.renderInlineFullView(snapshot.id, previousSnapshotId)
+          previewWrap.appendChild(fullWrap)
         }
 
         row.appendChild(previewWrap)
@@ -334,155 +359,214 @@ export class VersionHistoryDialog {
     return diff.lines.filter((line) => line.type !== 'context').slice(0, 3)
   }
 
-  private openFullDiffDialog(snapshotId: string, previousSnapshotId?: string) {
+  private renderInlineFullView(snapshotId: string, previousSnapshotId?: string) {
+    const root = document.createElement('div')
+    root.style.borderTop = '1px solid var(--border-color)'
+    root.style.background = 'var(--paper-bg)'
+
     const diff = this.editorCore.versionHistory.getSnapshotDiff(snapshotId, previousSnapshotId)
-    if (!diff) return
-
-    const changed = diff.lines.filter((line) => line.type !== 'context')
-
-    const content = document.createElement('div')
-    content.style.maxHeight = '70vh'
-    content.style.overflow = 'auto'
-    content.style.border = '1px solid var(--border-color)'
-    content.style.borderRadius = '8px'
-    content.style.background = 'var(--paper-bg)'
-
-    const head = document.createElement('div')
-    head.style.padding = '6px 10px'
-    head.style.fontSize = '12px'
-    head.style.color = 'var(--text-secondary)'
-    head.style.background = 'var(--surface-soft)'
-    head.style.borderBottom = '1px solid var(--border-color)'
-    head.textContent = this.i18n.fullDiffHeader(diff.baseSnapshot?.label || this.i18n.blankBase)
-    content.appendChild(head)
-
-    if (changed.length === 0) {
+    if (!diff) {
       const empty = document.createElement('div')
-      empty.style.padding = '10px'
-      empty.style.fontSize = '12px'
+      empty.className = 'be-p-3 be-text-sm'
       empty.style.color = 'var(--text-muted)'
-      empty.textContent = this.i18n.noChanges
-      content.appendChild(empty)
-    } else {
-      const stats = {
-        added: changed.filter((line) => line.type === 'added').length,
-        deleted: changed.filter((line) => line.type === 'deleted').length,
-        modified: changed.filter((line) => line.type === 'modified').length,
-      }
-
-      const summary = document.createElement('div')
-      summary.style.padding = '6px 10px'
-      summary.style.fontSize = '12px'
-      summary.style.color = 'var(--text-secondary)'
-      summary.style.borderBottom = '1px solid var(--border-color)'
-      summary.textContent = `+${stats.added}  -${stats.deleted}  ~${stats.modified}`
-      content.appendChild(summary)
-
-      const splitHead = document.createElement('div')
-      splitHead.style.display = 'grid'
-      splitHead.style.gridTemplateColumns = '56px 1fr 56px 1fr'
-      splitHead.style.borderBottom = '1px solid var(--border-color)'
-      splitHead.style.background = 'var(--surface-soft)'
-      splitHead.style.fontSize = '12px'
-      splitHead.style.color = 'var(--text-secondary)'
-
-      const oldHeadNo = document.createElement('div')
-      oldHeadNo.style.padding = '6px 8px'
-      oldHeadNo.textContent = this.i18n.oldLine
-      const oldHead = document.createElement('div')
-      oldHead.style.padding = '6px 8px'
-      oldHead.textContent = diff.baseSnapshot?.label || this.i18n.oldVersion
-      const newHeadNo = document.createElement('div')
-      newHeadNo.style.padding = '6px 8px'
-      newHeadNo.textContent = this.i18n.newLine
-      const newHead = document.createElement('div')
-      newHead.style.padding = '6px 8px'
-      newHead.textContent = diff.currentSnapshot.label
-
-      splitHead.appendChild(oldHeadNo)
-      splitHead.appendChild(oldHead)
-      splitHead.appendChild(newHeadNo)
-      splitHead.appendChild(newHead)
-      content.appendChild(splitHead)
-
-      diff.lines.forEach((line) => {
-        const row = document.createElement('div')
-        row.style.display = 'grid'
-        row.style.gridTemplateColumns = '44px 1fr 44px 1fr'
-        row.style.fontSize = '12px'
-        row.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
-        row.style.borderBottom =
-          '1px solid color-mix(in srgb, var(--border-color) 70%, transparent)'
-
-        const oldNo = document.createElement('div')
-        oldNo.style.padding = '3px 8px'
-        oldNo.style.color = 'var(--text-muted)'
-        oldNo.textContent = line.oldLineNumber === null ? '' : String(line.oldLineNumber)
-
-        const oldText = document.createElement('div')
-        oldText.style.padding = '3px 8px'
-        oldText.style.whiteSpace = 'pre-wrap'
-        oldText.style.wordBreak = 'break-word'
-        oldText.style.color = 'var(--text-color)'
-        oldText.style.borderRight = '1px solid var(--border-color)'
-        oldText.textContent = line.type === 'added' ? '' : line.oldText
-
-        const newNo = document.createElement('div')
-        newNo.style.padding = '3px 8px'
-        newNo.style.color = 'var(--text-muted)'
-        newNo.textContent = line.newLineNumber === null ? '' : String(line.newLineNumber)
-
-        const newText = document.createElement('div')
-        newText.style.padding = '3px 8px'
-        newText.style.whiteSpace = 'pre-wrap'
-        newText.style.wordBreak = 'break-word'
-        newText.style.color = 'var(--text-color)'
-        newText.textContent = line.type === 'deleted' ? '' : line.newText
-
-        if (line.type === 'deleted') {
-          oldNo.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
-          oldText.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
-        } else if (line.type === 'added') {
-          newNo.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
-          newText.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
-        } else if (line.type === 'context') {
-          oldNo.style.background = 'var(--paper-bg)'
-          oldText.style.background = 'var(--paper-bg)'
-          newNo.style.background = 'var(--paper-bg)'
-          newText.style.background = 'var(--paper-bg)'
-        } else {
-          oldNo.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
-          oldText.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
-          newNo.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
-          newText.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
-        }
-
-        row.appendChild(oldNo)
-        row.appendChild(oldText)
-        row.appendChild(newNo)
-        row.appendChild(newText)
-        content.appendChild(row)
-      })
+      empty.textContent = this.i18n.detailUnavailable
+      root.appendChild(empty)
+      return root
     }
 
-    const modal = new Dialog({
-      title: this.i18n.completeDiffTitle,
-      subtitle: this.i18n.fullDiffSubtitle(
-        diff.currentSnapshot.label,
-        diff.baseSnapshot?.label || this.i18n.blankBase,
-        formatTime(diff.currentSnapshot.createdAt, this.locale),
-      ),
-      closeAriaLabel: this.i18n.closeDialogAriaLabel,
-      icon: 'fileText',
-      iconBgClass: 'be-dialog-icon--primary',
-      host: (this.editorCore.editor.options.element as HTMLElement).closest(
-        '[data-be-ui-root="true"]',
-      ) as HTMLElement | null,
-      onClose: () => {},
-      width: '70%',
-    })
-    modal.setContent(content)
-    modal.show()
+    const header = document.createElement('div')
+    header.className = 'be-flex be-items-center be-justify-between be-gap-2 be-px-3 be-py-2'
+    header.style.background = 'var(--surface-soft)'
+    header.style.borderBottom = '1px solid var(--border-color)'
+
+    const summary = document.createElement('div')
+    summary.className = 'be-text-xs'
+    summary.style.color = 'var(--text-secondary)'
+    const changed = diff.lines.filter((line) => line.type !== 'context')
+    summary.textContent = `${this.i18n.fullDiffHeader(diff.baseSnapshot?.label || this.i18n.blankBase)} · +${changed.filter((line) => line.type === 'added').length}/-${changed.filter((line) => line.type === 'deleted').length}/~${changed.filter((line) => line.type === 'modified').length}`
+
+    const tabWrap = document.createElement('div')
+    tabWrap.className = 'be-flex be-gap-1'
+    const createTabBtn = (label: string, active: boolean, onClick: () => void) => {
+      const btn = document.createElement('button')
+      btn.textContent = label
+      btn.className = 'be-px-2.5 be-py-1 be-text-xs be-rounded-md be-border be-cursor-pointer'
+      btn.style.borderColor = active
+        ? 'color-mix(in srgb, var(--primary-color) 45%, var(--border-color))'
+        : 'var(--border-color)'
+      btn.style.background = active
+        ? 'color-mix(in srgb, var(--primary-color) 18%, var(--paper-bg))'
+        : 'var(--paper-bg)'
+      btn.style.color = active ? 'var(--primary-color)' : 'var(--text-secondary)'
+      btn.onclick = onClick
+      return btn
+    }
+    tabWrap.appendChild(
+      createTabBtn(this.i18n.diffView, this.fullViewTab === 'diff', () => {
+        this.fullViewTab = 'diff'
+        this.renderList()
+      }),
+    )
+    tabWrap.appendChild(
+      createTabBtn(this.i18n.blameView, this.fullViewTab === 'blame', () => {
+        this.fullViewTab = 'blame'
+        this.renderList()
+      }),
+    )
+
+    header.appendChild(summary)
+    header.appendChild(tabWrap)
+    root.appendChild(header)
+
+    const body = document.createElement('div')
+    body.style.maxHeight = '360px'
+    body.style.overflow = 'auto'
+    body.style.background = 'var(--paper-bg)'
+    body.style.fontSize = '12px'
+    body.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+
+    if (this.fullViewTab === 'diff') {
+      if (diff.lines.length === 0) {
+        const empty = document.createElement('div')
+        empty.style.padding = '10px'
+        empty.style.color = 'var(--text-muted)'
+        empty.textContent = this.i18n.noDiff
+        body.appendChild(empty)
+      } else {
+        const splitHead = document.createElement('div')
+        splitHead.style.display = 'grid'
+        splitHead.style.gridTemplateColumns = '56px 1fr 56px 1fr'
+        splitHead.style.borderBottom = '1px solid var(--border-color)'
+        splitHead.style.background = 'var(--surface-soft)'
+        splitHead.style.fontSize = '12px'
+        splitHead.style.color = 'var(--text-secondary)'
+
+        const oldHeadNo = document.createElement('div')
+        oldHeadNo.style.padding = '6px 8px'
+        oldHeadNo.textContent = this.i18n.oldLine
+        const oldHead = document.createElement('div')
+        oldHead.style.padding = '6px 8px'
+        oldHead.textContent = diff.baseSnapshot?.label || this.i18n.oldVersion
+        const newHeadNo = document.createElement('div')
+        newHeadNo.style.padding = '6px 8px'
+        newHeadNo.textContent = this.i18n.newLine
+        const newHead = document.createElement('div')
+        newHead.style.padding = '6px 8px'
+        newHead.textContent = diff.currentSnapshot.label
+
+        splitHead.appendChild(oldHeadNo)
+        splitHead.appendChild(oldHead)
+        splitHead.appendChild(newHeadNo)
+        splitHead.appendChild(newHead)
+        body.appendChild(splitHead)
+
+        diff.lines.forEach((line) => {
+          const row = document.createElement('div')
+          row.style.display = 'grid'
+          row.style.gridTemplateColumns = '44px 1fr 44px 1fr'
+          row.style.fontSize = '12px'
+          row.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+          row.style.borderBottom =
+            '1px solid color-mix(in srgb, var(--border-color) 70%, transparent)'
+
+          const oldNo = document.createElement('div')
+          oldNo.style.padding = '3px 8px'
+          oldNo.style.color = 'var(--text-muted)'
+          oldNo.textContent = line.oldLineNumber === null ? '' : String(line.oldLineNumber)
+
+          const oldText = document.createElement('div')
+          oldText.style.padding = '3px 8px'
+          oldText.style.whiteSpace = 'pre-wrap'
+          oldText.style.wordBreak = 'break-word'
+          oldText.style.color = 'var(--text-color)'
+          oldText.style.borderRight = '1px solid var(--border-color)'
+          oldText.textContent = line.type === 'added' ? '' : line.oldText
+
+          const newNo = document.createElement('div')
+          newNo.style.padding = '3px 8px'
+          newNo.style.color = 'var(--text-muted)'
+          newNo.textContent = line.newLineNumber === null ? '' : String(line.newLineNumber)
+
+          const newText = document.createElement('div')
+          newText.style.padding = '3px 8px'
+          newText.style.whiteSpace = 'pre-wrap'
+          newText.style.wordBreak = 'break-word'
+          newText.style.color = 'var(--text-color)'
+          newText.textContent = line.type === 'deleted' ? '' : line.newText
+
+          if (line.type === 'deleted') {
+            oldNo.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
+            oldText.style.background =
+              'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
+          } else if (line.type === 'added') {
+            newNo.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
+            newText.style.background =
+              'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
+          } else if (line.type === 'context') {
+            oldNo.style.background = 'var(--paper-bg)'
+            oldText.style.background = 'var(--paper-bg)'
+            newNo.style.background = 'var(--paper-bg)'
+            newText.style.background = 'var(--paper-bg)'
+          } else {
+            oldNo.style.background = 'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
+            oldText.style.background =
+              'color-mix(in srgb, var(--danger-color) 20%, var(--paper-bg))'
+            newNo.style.background = 'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
+            newText.style.background =
+              'color-mix(in srgb, var(--success-color) 24%, var(--paper-bg))'
+          }
+
+          row.appendChild(oldNo)
+          row.appendChild(oldText)
+          row.appendChild(newNo)
+          row.appendChild(newText)
+          body.appendChild(row)
+        })
+      }
+    } else {
+      const blame = this.editorCore.versionHistory.getSnapshotBlame(snapshotId)
+      if (blame.length === 0) {
+        const empty = document.createElement('div')
+        empty.style.padding = '10px'
+        empty.style.color = 'var(--text-muted)'
+        empty.textContent = this.i18n.noBlameLines
+        body.appendChild(empty)
+      } else {
+        blame.forEach((line) => {
+          const row = document.createElement('div')
+          row.style.display = 'grid'
+          row.style.gridTemplateColumns = '48px 170px 1fr'
+          row.style.gap = '8px'
+          row.style.padding = '4px 8px'
+          row.style.borderBottom =
+            '1px solid color-mix(in srgb, var(--border-color) 70%, transparent)'
+          row.style.alignItems = 'start'
+
+          const no = document.createElement('span')
+          no.style.color = 'var(--text-muted)'
+          no.textContent = String(line.lineNumber)
+
+          const meta = document.createElement('span')
+          meta.style.color = 'var(--text-muted)'
+          meta.style.fontSize = '11px'
+          meta.textContent = `${line.authorName} · ${formatTime(line.updatedAt, this.locale)}`
+
+          const text = document.createElement('div')
+          text.style.whiteSpace = 'pre-wrap'
+          text.style.wordBreak = 'break-word'
+          text.style.color = 'var(--text-color)'
+          text.textContent = line.text || ' '
+
+          row.appendChild(no)
+          row.appendChild(meta)
+          row.appendChild(text)
+          body.appendChild(row)
+        })
+      }
+    }
+
+    root.appendChild(body)
+    return root
   }
 
   public show() {

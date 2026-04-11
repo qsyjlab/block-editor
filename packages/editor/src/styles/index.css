@@ -1202,13 +1202,13 @@ ul[data-type='taskList'] li > div {
 .toolbar-dropdown-menu {
   background: var(--paper-bg);
   color: var(--text-color);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow:
     0 4px 6px -1px color-mix(in srgb, var(--text-color) 12%, transparent),
     0 10px 24px -4px color-mix(in srgb, var(--text-color) 18%, transparent);
   border: 1px solid var(--border-color);
-  padding: 4px;
-  min-width: 120px;
+  padding: 6px;
+  min-width: 160px;
   max-height: min(360px, calc(100vh - 24px));
   overflow-y: auto;
   display: none; /* toggled by JS */
@@ -1247,19 +1247,60 @@ ul[data-type='taskList'] li > div {
 .dropdown-item {
   display: flex;
   align-items: center;
-  min-height: 34px;
-  padding: 7px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
   font-size: 13px;
   color: var(--text-color);
   cursor: pointer;
   border-radius: 6px;
   transition:
-    background 0.1s,
-    color 0.1s;
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
   font-weight: 500;
   outline: none;
   /* smooth touch tap */
   -webkit-tap-highlight-color: transparent;
+}
+
+.dropdown-item__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.dropdown-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.dropdown-item__text {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dropdown-item__label {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.dropdown-item__description {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .dropdown-item svg {
@@ -1279,6 +1320,8 @@ ul[data-type='taskList'] li > div {
 .dropdown-item:hover {
   background: var(--btn-hover-bg);
   color: var(--text-color);
+  transform: translateX(1px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 14%, transparent);
 }
 
 /* Keyboard-focus highlight (set via JS) */
@@ -1286,6 +1329,7 @@ ul[data-type='taskList'] li > div {
   background: var(--btn-hover-bg);
   color: var(--text-color);
   box-shadow: inset 0 0 0 1.5px var(--primary-color);
+  transform: translateX(1px);
 }
 
 .dropdown-item.active {
@@ -1374,6 +1418,51 @@ ul[data-type='taskList'] li > div {
   background: var(--border-color);
 }
 
+.be-block-handle {
+  width: auto !important;
+  min-width: 46px;
+  height: 28px !important;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  background: color-mix(in srgb, var(--paper-bg) 96%, var(--surface-soft));
+  box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--text-color) 42%, transparent);
+  gap: 4px;
+}
+
+.be-block-handle-pill {
+  display: inline-flex;
+  align-items: center;
+}
+
+.be-block-handle-type,
+.be-block-handle-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 70%, var(--paper-bg));
+  color: var(--text-muted);
+}
+
+.be-block-handle-type {
+  color: var(--text-secondary);
+}
+
+.be-block-handle-type-text {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.be-block-handle-grip svg {
+  width: 13px;
+  height: 13px;
+}
+
 .be-block-handle.is-dragging {
   cursor: grabbing;
   background: color-mix(in srgb, var(--primary-color) 20%, var(--surface-soft));
@@ -1415,6 +1504,28 @@ ul[data-type='taskList'] li > div {
 
 .be-block-drop-target.is-after::after {
   bottom: -1px;
+}
+
+.be-slash-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 280px;
+  max-height: min(70vh, 420px);
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.be-slash-menu .be-slash-menu-item {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 0;
+}
+
+.be-slash-menu-item:hover,
+.be-slash-menu-item--selected {
+  background: var(--brand-soft-bg);
+  box-shadow: inset 0 0 0 1px var(--brand-soft-border);
 }
 
 .color-picker-wrapper {
@@ -1612,6 +1723,13 @@ ul[data-type='taskList'] li > div {
   color: var(--text-color);
 }
 
+html[data-be-marquee-selecting='1'],
+html[data-be-marquee-selecting='1'] body,
+html[data-be-marquee-selecting='1'] .ProseMirror {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 .be-multiselect-bar__btn.danger:hover {
   background: var(--danger-soft-bg);
   color: var(--danger-color);
@@ -1696,7 +1814,32 @@ ul[data-type='taskList'] li > div {
   border-radius: 4px;
 }
 
+.ProseMirror li.ProseMirror-selectednode,
+.ProseMirror > ul.ProseMirror-selectednode,
+.ProseMirror > ol.ProseMirror-selectednode {
+  position: relative;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--primary-color) 60%, transparent);
+  outline-offset: -1px;
+  border-radius: 6px;
+}
+
+.ProseMirror li.ProseMirror-selectednode {
+  padding-right: 4px;
+}
+
 .ProseMirror > .ProseMirror-selectednode::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 2px;
+  bottom: 2px;
+  width: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 76%, transparent);
+}
+
+.ProseMirror li.ProseMirror-selectednode::before {
   content: '';
   position: absolute;
   left: -10px;

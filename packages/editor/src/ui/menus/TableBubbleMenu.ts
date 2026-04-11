@@ -6,6 +6,7 @@ import { ToolbarColorPicker } from '../toolbar/ToolbarColorPicker'
 import { getTableMenuButtons } from './tableMenuItems'
 import { ToolbarItemType } from '../toolbar/ToolbarRegistry'
 import { applyShortcutHintsToItems } from '../toolbar/shortcut-hints'
+import { resolveUILayerHost } from '../layer-root'
 
 export class TableBubbleMenu {
   private element: HTMLElement
@@ -43,7 +44,7 @@ export class TableBubbleMenu {
     const container =
       (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return container || document.body
+    return container || resolveUILayerHost('dropdown', editorRoot)
   }
 
   private render(): HTMLElement {

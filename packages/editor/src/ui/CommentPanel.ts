@@ -51,6 +51,7 @@ function formatTime(ts: number, locale: string): string {
 }
 
 export class CommentPanel {
+  private container: HTMLElement
   private listEl: HTMLElement
   private editorCore: EditorCore
   private i18n: CommentPanelI18n
@@ -67,6 +68,7 @@ export class CommentPanel {
   private readonly focusCommentThreadHandler: (commentId: string) => void
 
   constructor(editorCore: EditorCore, container: HTMLElement, i18n?: Partial<CommentPanelI18n>) {
+    this.container = container
     this.editorCore = editorCore
     this.i18n = {
       ...DEFAULT_COMMENT_PANEL_I18N,
@@ -156,7 +158,7 @@ export class CommentPanel {
     editorCore.editor.on('update', () => this.render())
     editorCore.editor.on('selectionUpdate', () => this.handleSelectionUpdate())
     this.openCommentPanelHandler = () => this.handleOpenCommentPanel()
-    this.focusCommentThreadHandler = (commentId: string) => this.focusCommentThread(commentId)
+    this.focusCommentThreadHandler = (commentId: string) => this.focusThread(commentId)
     this.editorCore.events.on('openCommentPanel', this.openCommentPanelHandler)
     this.editorCore.events.on('focusCommentThread', this.focusCommentThreadHandler)
 
@@ -226,7 +228,7 @@ export class CommentPanel {
     return btn
   }
 
-  private focusCommentThread(commentId: string) {
+  public focusThread(commentId: string) {
     this.filter = 'all'
     this.render()
 
@@ -238,6 +240,10 @@ export class CommentPanel {
     setTimeout(() => {
       item.style.boxShadow = ''
     }, 1400)
+  }
+
+  public setVisible(visible: boolean) {
+    this.container.style.display = visible ? 'block' : 'none'
   }
 
   private renderPendingSelectionQuote() {

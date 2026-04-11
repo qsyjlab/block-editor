@@ -6,10 +6,13 @@ import { TableBubbleMenu } from './menus/TableBubbleMenu'
 import { BlockMultiSelectBar } from './menus/block-multi-select-bar'
 import { FindReplacePanel } from './menus/find-replace-panel'
 import { CommentPanel } from './CommentPanel'
+import { commentStore, type CommentThread } from '../extensions/Comment'
 import { resolveEditorI18n } from '../i18n'
 import type { EditorI18n } from '../i18n'
 import type { EditorUIConfig } from './config/operation-bars'
 import type {
+  CommentPanelModuleInstance,
+  EditorUIPlugins,
   EditorUILayoutSchema,
   EditorUIModuleDefinition,
   EditorUIModuleId,
@@ -35,6 +38,21 @@ export interface EditorUILayoutBuilderParams {
   toolbarMode: ToolbarMode
 }
 
+export type EditorUILayoutPreset =
+  | 'default'
+  | 'minimal'
+  | 'editor-outline'
+  | 'editor-comment'
+  | 'editor-outline-comment'
+
+export interface EditorUILayoutDefinition {
+  preset?: EditorUILayoutPreset
+  builder?: (params: EditorUILayoutBuilderParams) => EditorUILayoutSlots
+  regions?: EditorUILayoutSchema['regions']
+  modules?: EditorUILayoutSchema['modules']
+  plugins?: EditorUIPlugins
+}
+
 export interface EditorUIRendererOptions {
   toolbarMode?: ToolbarMode
   commentPanelDefaultVisible?: boolean
@@ -45,6 +63,140 @@ export interface EditorUIRendererOptions {
   layoutBuilder?: (params: EditorUILayoutBuilderParams) => EditorUILayoutSlots
   layoutSchema?: EditorUILayoutSchema
   modules?: Partial<Record<EditorUIModuleId, EditorUIModuleDefinition>>
+  plugins?: EditorUIPlugins
+  layout?: EditorUILayoutDefinition
+}
+
+export interface OutlineDataItem {
+  level: number
+  text: string
+  pos: number
+  blockId?: string
+}
+
+export interface CommentPanelController {
+  open: () => void
+  close: () => void
+  toggle: () => void
+  setVisible: (visible: boolean) => void
+  focusThread: (commentId: string) => void
+  createFromSelection: () => boolean
+}
+
+function createPresetLayoutBuilder(
+  preset: EditorUILayoutPreset,
+): (params: EditorUILayoutBuilderParams) => EditorUILayoutSlots {
+  return ({ container }) => {
+    container.innerHTML = ''
+    container.style.display = 'flex'
+    container.style.flexDirection = 'column'
+    container.style.width = '100%'
+    container.style.height = '100%'
+    container.style.minWidth = '0'
+    container.style.minHeight = '0'
+
+    const toolbarContainer = document.createElement('div')
+    container.appendChild(toolbarContainer)
+
+    const workspace = document.createElement('div')
+    workspace.style.display = 'flex'
+    workspace.style.flex = '1'
+    workspace.style.width = '100%'
+    workspace.style.overflow = 'hidden'
+    workspace.style.minWidth = '0'
+    workspace.style.minHeight = '0'
+    container.appendChild(workspace)
+
+    const mainContent = document.createElement('div')
+    mainContent.className = 'main-content'
+    mainContent.style.minWidth = '0'
+    mainContent.style.minHeight = '0'
+    workspace.appendChild(mainContent)
+
+    const scrollArea = document.createElement('div')
+    scrollArea.className = 'editor-scroll-area'
+    scrollArea.style.minWidth = '0'
+    scrollArea.style.minHeight = '0'
+    mainContent.appendChild(scrollArea)
+
+    const editorPaper = document.createElement('div')
+    editorPaper.className = 'editor-container'
+    scrollArea.appendChild(editorPaper)
+
+    const outline = document.createElement('div')
+    outline.className = 'outline-sidebar'
+    outline.style.width = '260px'
+    outline.style.padding = '16px 14px'
+    outline.style.borderLeft = '1px solid var(--border-color)'
+    outline.style.backgroundColor = 'var(--paper-bg)'
+
+    const comment = document.createElement('div')
+    comment.style.width = '320px'
+    comment.style.borderLeft = '1px solid var(--border-color)'
+
+    if (preset === 'editor-outline' || preset === 'editor-outline-comment') {
+      workspace.appendChild(outline)
+    }
+
+    if (preset === 'editor-comment' || preset === 'editor-outline-comment') {
+      workspace.appendChild(comment)
+    }
+
+    if (preset === 'minimal') {
+      toolbarContainer.style.display = 'none'
+      outline.style.display = 'none'
+      comment.style.display = 'none'
+    }
+
+    return {
+      toolbarContainer,
+      editorContainer: editorPaper,
+      scrollContainer: scrollArea,
+      overlayContainer: container,
+      outlineContainer:
+        preset === 'editor-outline' || preset === 'editor-outline-comment' ? outline : null,
+      commentContainer:
+        preset === 'editor-comment' || preset === 'editor-outline-comment' ? comment : null,
+    }
+  }
+}
+
+function normalizeRendererOptions(options: EditorUIRendererOptions): EditorUIRendererOptions {
+  const layout = options.layout
+  if (!layout) return options
+
+  const next: EditorUIRendererOptions = { ...options }
+
+  if (layout.builder) {
+    next.layoutBuilder = layout.builder
+  } else if (layout.preset) {
+    next.layoutBuilder = createPresetLayoutBuilder(layout.preset)
+  }
+
+  const layoutRegions = layout.regions || {}
+  const layoutModules = layout.modules || {}
+  if (Object.keys(layoutRegions).length || Object.keys(layoutModules).length) {
+    next.layoutSchema = {
+      ...(next.layoutSchema || {}),
+      regions: {
+        ...(next.layoutSchema?.regions || {}),
+        ...layoutRegions,
+      },
+      modules: {
+        ...(next.layoutSchema?.modules || {}),
+        ...layoutModules,
+      },
+    }
+  }
+
+  if (layout.plugins) {
+    next.plugins = {
+      ...(next.plugins || {}),
+      ...layout.plugins,
+    }
+  }
+
+  return next
 }
 
 export class EditorUIRenderer {
@@ -64,27 +216,53 @@ export class EditorUIRenderer {
   private commentPanelHost: HTMLElement | null = null
   private commentPanelRegion: EditorUIRegion = 'comment'
   private commentPanelFloating = false
+  private commentPanelInstance: CommentPanelModuleInstance | null = null
+  private readonly focusCommentThreadHandler: (commentId: string) => void
+  private readonly commentPanelController: CommentPanelController
 
   constructor(
     editorCore: EditorCore,
     container: HTMLElement,
     options: EditorUIRendererOptions = {},
   ) {
+    const normalizedOptions = normalizeRendererOptions(options)
     this.editorCore = editorCore
     this.container = container
     this.options = {
-      toolbarMode: options.toolbarMode || 'top',
-      commentPanelDefaultVisible: options.commentPanelDefaultVisible ?? false,
-      theme: options.theme || 'auto',
-      i18n: options.i18n,
-      outlineI18n: options.outlineI18n,
-      uiConfig: options.uiConfig,
-      layoutBuilder: options.layoutBuilder,
-      layoutSchema: options.layoutSchema,
-      modules: options.modules,
+      toolbarMode: normalizedOptions.toolbarMode || 'top',
+      commentPanelDefaultVisible: normalizedOptions.commentPanelDefaultVisible ?? false,
+      theme: normalizedOptions.theme || 'auto',
+      i18n: normalizedOptions.i18n,
+      outlineI18n: normalizedOptions.outlineI18n,
+      uiConfig: normalizedOptions.uiConfig,
+      layoutBuilder: normalizedOptions.layoutBuilder,
+      layoutSchema: normalizedOptions.layoutSchema,
+      modules: normalizedOptions.modules,
+      plugins: normalizedOptions.plugins,
+      layout: normalizedOptions.layout,
     }
 
     this.i18n = resolveEditorI18n(this.options.i18n || this.editorCore.i18n)
+    this.commentPanelController = {
+      open: () => this.openCommentPanel(),
+      close: () => this.closeCommentPanel(),
+      toggle: () => this.toggleCommentPanel(),
+      setVisible: (visible: boolean) => {
+        this.commentPanelVisible = visible
+        this.applyCommentPanelVisibility()
+      },
+      focusThread: (commentId: string) => {
+        this.openCommentPanel()
+        if (this.options.plugins?.commentPanel) {
+          this.commentPanelInstance?.focusThread?.(commentId)
+          return
+        }
+        this.editorCore.events.emit('focusCommentThread', commentId)
+      },
+      createFromSelection: () => {
+        return Boolean((this.editorCore.editor.commands as any).addComment?.())
+      },
+    }
 
     this.slots =
       this.options.layoutBuilder?.({
@@ -101,6 +279,11 @@ export class EditorUIRenderer {
 
     this.editorCore.events.on('toggleCommentPanel', () => this.toggleCommentPanel())
     this.editorCore.events.on('openCommentPanel', () => this.openCommentPanel())
+    this.focusCommentThreadHandler = (commentId: string) => {
+      if (!this.options.plugins?.commentPanel) return
+      this.commentPanelInstance?.focusThread?.(commentId)
+    }
+    this.editorCore.events.on('focusCommentThread', this.focusCommentThreadHandler)
 
     this.tiptapElement = this.editorCore.editor.options.element as HTMLElement
     this.tiptapElement.dataset.beToolbarMode = this.options.toolbarMode || 'top'
@@ -129,13 +312,59 @@ export class EditorUIRenderer {
     this.applyCommentPanelVisibility()
   }
 
+  public closeCommentPanel() {
+    if (!this.commentPanelHost) return
+    this.commentPanelVisible = false
+    this.applyCommentPanelVisibility()
+  }
+
   private applyCommentPanelVisibility() {
     if (!this.commentPanelHost) return
     if (this.options.layoutSchema?.regions?.[this.commentPanelRegion]?.visible === false) {
       this.commentPanelHost.style.display = 'none'
+      this.commentPanelInstance?.setVisible?.(false)
+      this.editorCore.events.emit('commentPanelVisibilityChange', false)
       return
     }
     this.commentPanelHost.style.display = this.commentPanelVisible ? 'block' : 'none'
+    this.commentPanelInstance?.setVisible?.(this.commentPanelVisible)
+    this.editorCore.events.emit('commentPanelVisibilityChange', this.commentPanelVisible)
+  }
+
+  public getCommentPanelController(): CommentPanelController {
+    return this.commentPanelController
+  }
+
+  public getOutlineData(): OutlineDataItem[] {
+    const headings: OutlineDataItem[] = []
+    this.editorCore.editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'heading') return true
+      headings.push({
+        level: Number(node.attrs?.level || 1),
+        text: node.textContent || this.i18n.outline.untitled,
+        pos,
+        blockId: typeof node.attrs?.blockId === 'string' ? node.attrs.blockId : undefined,
+      })
+      return true
+    })
+    return headings
+  }
+
+  public onOutlineDataChange(listener: (headings: OutlineDataItem[]) => void): () => void {
+    const emit = () => listener(this.getOutlineData())
+    this.editorCore.events.on('update', emit)
+    return () => this.editorCore.events.off('update', emit)
+  }
+
+  public getCommentThreads(): CommentThread[] {
+    return commentStore.getAll().map((thread) => ({
+      ...thread,
+      replies: thread.replies.map((reply) => ({ ...reply })),
+    }))
+  }
+
+  public onCommentDataChange(listener: (threads: CommentThread[]) => void): () => void {
+    return commentStore.on(() => listener(this.getCommentThreads()))
   }
 
   private configureFloatingCommentHost(host: HTMLElement) {
@@ -481,7 +710,11 @@ export class EditorUIRenderer {
       outline: {
         id: 'outline',
         defaultRegion: 'outline',
-        mount: ({ regionContainer }) => {
+        mount: (ctx) => {
+          if (this.options.plugins?.outline) {
+            return this.options.plugins.outline.mount(ctx)
+          }
+          const { regionContainer } = ctx
           if (!regionContainer) return
           this.renderOutline(regionContainer)
         },
@@ -489,7 +722,8 @@ export class EditorUIRenderer {
       commentPanel: {
         id: 'commentPanel',
         defaultRegion: 'comment',
-        mount: ({ regionContainer, region }) => {
+        mount: (ctx) => {
+          const { regionContainer, region } = ctx
           if (!regionContainer) return
           this.commentPanelRegion = region
           const hasDedicatedCommentSlot = Boolean(
@@ -510,8 +744,18 @@ export class EditorUIRenderer {
             regionContainer.style.pointerEvents = ''
           }
           this.commentPanelHost = regionContainer
-          this.renderCommentPanel(regionContainer)
+          if (this.options.plugins?.commentPanel) {
+            this.commentPanelInstance = this.options.plugins.commentPanel.mount(ctx) || null
+          } else {
+            this.commentPanelInstance = this.renderCommentPanel(regionContainer)
+          }
           this.applyCommentPanelVisibility()
+          return {
+            unmount: () => {
+              this.commentPanelInstance?.unmount?.()
+              this.commentPanelInstance = null
+            },
+          }
         },
       },
       blockHandle: {
@@ -625,7 +869,18 @@ export class EditorUIRenderer {
     })
   }
 
-  private renderCommentPanel(commentContainer: HTMLElement): CommentPanel {
-    return new CommentPanel(this.editorCore, commentContainer, this.i18n.commentPanel)
+  private renderCommentPanel(commentContainer: HTMLElement): CommentPanelModuleInstance {
+    const panel = new CommentPanel(this.editorCore, commentContainer, this.i18n.commentPanel)
+    return {
+      setVisible: (visible: boolean) => panel.setVisible(visible),
+      focusThread: (commentId: string) => panel.focusThread(commentId),
+      unmount: () => panel.destroy(),
+    }
+  }
+
+  public destroy() {
+    this.editorCore.events.off('focusCommentThread', this.focusCommentThreadHandler)
+    Object.values(this.mountedModules).forEach((module) => module?.unmount?.())
+    this.commentPanelInstance = null
   }
 }

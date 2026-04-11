@@ -2,6 +2,7 @@ import type { EditorCore } from '../../core/EditorCore'
 import type { EditorI18n } from '../../i18n'
 import type { FindMatchRange, FindReplaceStorage } from '../../extensions/FindReplace'
 import { icons } from '../toolbar/icons'
+import { resolveUILayerHost } from '../layer-root'
 
 function collectMatches(doc: any, query: string): FindMatchRange[] {
   if (!query) return []
@@ -145,7 +146,7 @@ export class FindReplacePanel {
     const container =
       (editorRoot.closest('[data-be-editor-container="true"]') as HTMLElement | null) ||
       (editorRoot.closest('.editor-container') as HTMLElement | null)
-    return container || mountContainer || document.body
+    return container || mountContainer || resolveUILayerHost('overlay', editorRoot)
   }
 
   private resolveScrollViewport() {

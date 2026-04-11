@@ -435,6 +435,7 @@ class BlockMultiSelectOverlayView {
       bottom: '0',
       width: '100%',
       height: '100%',
+      overflow: 'hidden',
       pointerEvents: 'none',
       zIndex: '80',
     })
@@ -606,6 +607,7 @@ class BlockMultiSelectOverlayView {
       event.clientY <= bounds.proseRect.bottom
     if (!inMarqueeArea) return
 
+    event.preventDefault()
     this.marqueePending = true
     this.pendingStartX = event.clientX
     this.pendingStartY = event.clientY
@@ -630,11 +632,13 @@ class BlockMultiSelectOverlayView {
       this.marqueeCurrentLocalX = currentLocal.x
       this.marqueeCurrentLocalY = currentLocal.y
       this.setMarqueeSelectingState(true)
+      this.clearNativeSelection()
       this.captureBlockSnapshot()
       this.updateMarqueeBox()
       this.clearSelectedOverlays()
     }
 
+    event.preventDefault()
     this.marqueeCurrentX = event.clientX
     this.marqueeCurrentY = event.clientY
     const currentLocal = this.clientToLocal(event.clientX, event.clientY)
@@ -649,6 +653,7 @@ class BlockMultiSelectOverlayView {
       return
     }
     if (!this.marqueeActive) return
+    event.preventDefault()
     this.marqueeCurrentX = event.clientX
     this.marqueeCurrentY = event.clientY
     const currentLocal = this.clientToLocal(event.clientX, event.clientY)
@@ -706,6 +711,12 @@ class BlockMultiSelectOverlayView {
     }
   }
 
+  private clearNativeSelection() {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    selection.removeAllRanges()
+  }
+
   private scheduleMarqueeFrame() {
     if (this.marqueeRafId !== null) return
     this.marqueeRafId = window.requestAnimationFrame(() => {
@@ -748,14 +759,22 @@ class BlockMultiSelectOverlayView {
   }
 
   private updateMarqueeBox() {
-    const left = Math.min(this.marqueeStartLocalX, this.marqueeCurrentLocalX)
-    const top = Math.min(this.marqueeStartLocalY, this.marqueeCurrentLocalY)
-    const width = Math.abs(this.marqueeCurrentLocalX - this.marqueeStartLocalX)
-    const height = Math.abs(this.marqueeCurrentLocalY - this.marqueeStartLocalY)
+    const bounds = this.getCanvasBounds()
+    const canvasWidth = bounds?.containerRect.width ?? 0
+    const canvasHeight = bounds?.containerRect.height ?? 0
+    const startX = Math.min(canvasWidth, Math.max(0, this.marqueeStartLocalX))
+    const currentX = Math.min(canvasWidth, Math.max(0, this.marqueeCurrentLocalX))
+    const startY = Math.min(canvasHeight, Math.max(0, this.marqueeStartLocalY))
+    const currentY = Math.min(canvasHeight, Math.max(0, this.marqueeCurrentLocalY))
+
+    const left = Math.min(startX, currentX)
+    const top = Math.min(startY, currentY)
+    const width = Math.max(0, Math.abs(currentX - startX))
+    const height = Math.max(0, Math.abs(currentY - startY))
     Object.assign(this.marqueeBox.style, {
       display: 'block',
-      left: `${Math.max(0, left)}px`,
-      top: `${Math.max(0, top)}px`,
+      left: `${left}px`,
+      top: `${top}px`,
       width: `${width}px`,
       height: `${height}px`,
     })
@@ -790,9 +809,11 @@ class BlockMultiSelectOverlayView {
   private clientToLocal(clientX: number, clientY: number) {
     const bounds = this.getCanvasBounds()
     if (!bounds) return { x: 0, y: 0 }
+    const localX = clientX - bounds.containerRect.left
+    const localY = clientY - bounds.containerRect.top
     return {
-      x: clientX - bounds.containerRect.left,
-      y: clientY - bounds.containerRect.top,
+      x: Math.min(bounds.containerRect.width, Math.max(0, localX)),
+      y: Math.min(bounds.containerRect.height, Math.max(0, localY)),
     }
   }
 

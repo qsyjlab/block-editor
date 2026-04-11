@@ -1,6 +1,7 @@
 import { Node as TiptapNode, mergeAttributes } from '@tiptap/core'
 import { resolveEditorI18n } from '../i18n'
 import type { CalloutI18n } from '../i18n/types'
+import { resolveUILayerHost } from '../ui/layer-root'
 
 export type CalloutType = 'info' | 'success' | 'warning' | 'danger'
 
@@ -102,7 +103,7 @@ function attachTypeSwitcher(
     const host =
       (iconEl.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (iconEl.closest('[data-be-ui-root="true"]') as HTMLElement | null) ||
-      document.body
+      resolveUILayerHost('dropdown', iconEl)
     host.appendChild(popup)
 
     // Position below the icon

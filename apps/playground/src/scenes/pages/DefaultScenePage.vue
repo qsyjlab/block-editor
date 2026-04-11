@@ -31,8 +31,10 @@ useSceneEditor('default', editorContainer, (container, context) => {
   new EditorUIRenderer(core, container, {
     i18n: context.editorLocale,
     theme: context.theme,
-    toolbarMode: 'top',
     commentPanelDefaultVisible: true,
+    layout: {
+      preset: 'editor-outline-comment',
+    },
   } as any)
 
   return core

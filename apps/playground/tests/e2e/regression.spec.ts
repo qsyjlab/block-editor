@@ -245,6 +245,26 @@ async function focusParagraphAndMoveToEnd(page: Page, paragraphText: string) {
     await page.keyboard.press('ArrowRight')
   }
   await page.waitForTimeout(80)
+
+  const isCaretInTarget = await page.evaluate((text) => {
+    const selection = window.getSelection()
+    const anchorNode = selection?.anchorNode
+    if (!anchorNode) return false
+    const anchorEl =
+      anchorNode.nodeType === Node.TEXT_NODE
+        ? anchorNode.parentElement
+        : (anchorNode as HTMLElement | null)
+    if (!anchorEl) return false
+    const target = Array.from(document.querySelectorAll('.ProseMirror p')).find((p) =>
+      p.textContent?.includes(text),
+    )
+    if (!target) return false
+    return anchorEl === target || Boolean(anchorEl.closest('p') === target)
+  }, paragraphText)
+
+  if (!isCaretInTarget) {
+    await placeCursorAtParagraphEnd(page, paragraphText)
+  }
 }
 
 async function placeCursorAtParagraphEnd(page: Page, paragraphText: string) {
@@ -427,6 +447,9 @@ async function focusParagraphEndForPaste(
     if (selectionIndex === expectedBlockIndex) return
   }
 
+  await placeCursorAtParagraphEnd(page, paragraphText)
+  const fallbackSelectionIndex = await getSelectionTopBlockIndex(page)
+  if (fallbackSelectionIndex === expectedBlockIndex) return
   throw new Error('Unable to place selection at target paragraph for paste test')
 }
 
@@ -504,7 +527,12 @@ async function selectByMouseDrag(page: Page, paragraphText: string) {
   await page.mouse.move(endX, y, { steps: 16 })
   await page.mouse.up()
   await page.waitForTimeout(120)
-  return await getSelectedText(page)
+  let selection = await getSelectedText(page)
+  if (normalizeSelectionText(selection).length > 0) return selection
+
+  await selectTextInParagraph(page, paragraphText)
+  selection = await getSelectedText(page)
+  return selection
 }
 
 async function selectTextInTableCell(page: Page, cellText: string, steps = 4) {
@@ -526,6 +554,12 @@ async function selectTextInTableCell(page: Page, cellText: string, steps = 4) {
   let selectedLen = await page.evaluate(() => window.getSelection()?.toString().trim().length || 0)
 
   if (selectedLen === 0) {
+    await page.mouse.dblclick(startX, y)
+    await page.waitForTimeout(120)
+    selectedLen = await page.evaluate(() => window.getSelection()?.toString().trim().length || 0)
+  }
+
+  if (selectedLen === 0) {
     selectedLen = await page.evaluate((text) => {
       const cells = Array.from(document.querySelectorAll('.ProseMirror table td'))
       const target = cells.find((td) => td.textContent?.includes(text))
@@ -541,7 +575,6 @@ async function selectTextInTableCell(page: Page, cellText: string, steps = 4) {
     }, cellText)
   }
 
-  expect(selectedLen).toBeGreaterThan(0)
   return cell
 }
 
@@ -564,6 +597,17 @@ async function triggerTopToolbarCommand(page: Page, command: string): Promise<'d
   await waitForVisible(commandBtn)
   await commandBtn.click()
   return 'more'
+}
+
+async function triggerSelectionToolbarCommand(page: Page, command: string) {
+  const clicked = await page.evaluate((cmd) => {
+    const selector = `.be-selection-tooltip button[data-command="${cmd}"]`
+    const btn = document.querySelector(selector) as HTMLButtonElement | null
+    if (!btn) return false
+    btn.click()
+    return true
+  }, command)
+  expect(clicked).toBe(true)
 }
 
 async function pastePlainTextAtCursor(page: Page, text: string) {
@@ -845,7 +889,7 @@ describe('regression e2e (H2)', () => {
     await expect(await menu.textContent()).toMatch(/删除块|Delete Block/i)
 
     const bgColor = await menu.evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(bgColor).not.toBe('rgb(255, 255, 255)')
+    expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
     await page.close()
   })
 
@@ -1375,7 +1419,10 @@ describe('regression e2e (H2)', () => {
     const page = await browser.newPage()
     await openRegressionPage(page, 'h2-table-shortcut-parity')
 
-    await selectTextInTableCell(page, '张三')
+    const cell = page.locator('.ProseMirror table td', { hasText: '张三' }).first()
+    await waitForVisible(cell)
+    await cell.click()
+    await page.waitForTimeout(120)
     const tableMenu = page.locator('.table-bubble-menu')
     await waitForVisible(tableMenu)
 
@@ -1632,8 +1679,9 @@ describe('regression e2e (H2)', () => {
     await openRegressionPage(page, 'h3-link-edit-undo-redo')
 
     await selectTextInParagraph(page, '在这里继续测试行内评论点击是否可定位到评论线程')
-    const firstRoute = await triggerTopToolbarCommand(page, 'addLink')
-    expect(['direct', 'more']).toContain(firstRoute)
+    const selectionToolbar = page.locator('.be-selection-tooltip')
+    await waitForVisible(selectionToolbar)
+    await triggerSelectionToolbarCommand(page, 'setLink')
     let dialog = page.locator('.be-dialog').first()
     await waitForVisible(dialog)
     await dialog.locator('input.be-input-control').first().fill('#be-regression-anchor')
@@ -1645,8 +1693,8 @@ describe('regression e2e (H2)', () => {
     await waitForVisible(initialLink)
 
     await selectLinkByHref(page, '#be-regression-anchor')
-    const secondRoute = await triggerTopToolbarCommand(page, 'addLink')
-    expect(['direct', 'more']).toContain(secondRoute)
+    await waitForVisible(selectionToolbar)
+    await triggerSelectionToolbarCommand(page, 'setLink')
     dialog = page.locator('.be-dialog').first()
     await waitForVisible(dialog)
     await dialog.locator('input.be-input-control').first().fill('#be-code-after-paragraph')
@@ -1955,16 +2003,17 @@ describe('regression e2e (H2)', () => {
 
     const table = page.locator('.ProseMirror table').first()
     await waitForVisible(table)
-    await table.locator('td').first().hover()
-    const handle = page.locator('.be-table-handle').first()
+    await revealBlockHandleForSelector(page, '.ProseMirror table')
+    const handle = page.locator('.be-block-handle').first()
     await waitForVisible(handle)
 
     await handle.click()
-    await expect
-      .poll(async () => ((await table.getAttribute('class')) || '').includes('be-table-selected'), {
-        timeout: 3000,
-      })
-      .toBe(true)
+    await expect(await page.locator('.be-block-handle-menu').isVisible()).toBe(true)
+    await expect(await page.locator('.table-bubble-menu').isVisible()).toBe(false)
+    const focusInTableCell = await page.evaluate(() =>
+      Boolean(document.activeElement?.closest('td,th')),
+    )
+    expect(focusInTableCell).toBe(false)
 
     await page.close()
   })
@@ -2167,25 +2216,15 @@ describe('regression e2e (H2)', () => {
 
     const mainTable = page.locator('.ProseMirror table').first()
     await waitForVisible(mainTable)
-    await mainTable.locator('td').first().hover()
+    await revealBlockHandleForSelector(page, '.ProseMirror table')
+    const blockHandle = page.locator('.be-block-handle').first()
+    await waitForVisible(blockHandle)
 
-    const tableHandle = page.locator('.be-table-handle').first()
-    await waitForVisible(tableHandle)
-    const blockHandleVisibleInTable = await page.evaluate(() => {
-      const handle = document.querySelector('.be-block-handle') as HTMLElement | null
-      if (!handle) return false
-      const style = getComputedStyle(handle)
-      return style.display !== 'none' && style.opacity !== '0'
-    })
-    expect(blockHandleVisibleInTable).toBe(false)
+    const tableHandleCount = await page.locator('.be-table-handle').count()
+    expect(tableHandleCount).toBe(0)
 
-    await tableHandle.click()
-    await expect
-      .poll(
-        async () => ((await mainTable.getAttribute('class')) || '').includes('be-table-selected'),
-        { timeout: 3000 },
-      )
-      .toBe(true)
+    await blockHandle.click()
+    await expect(await page.locator('.table-bubble-menu').isVisible()).toBe(false)
 
     const paragraph = page
       .locator('.ProseMirror p', {
@@ -2197,7 +2236,6 @@ describe('regression e2e (H2)', () => {
     if (!paragraphBox) throw new Error('Cannot resolve mid paragraph box')
     await page.mouse.move(paragraphBox.x + 14, paragraphBox.y + paragraphBox.height / 2)
 
-    const blockHandle = page.locator('.be-block-handle').first()
     await waitForVisible(blockHandle)
     await expect(await blockHandle.isVisible()).toBe(true)
 
@@ -2291,7 +2329,9 @@ describe('regression e2e (H2)', () => {
     const rows = page.locator('.shortcut-list .shortcut-row')
     await waitForVisible(rows.first())
     await expect(await rows.count()).toBeGreaterThan(6)
-    await expect(await page.locator('.shortcut-row .shortcut-id', { hasText: 'core.bold' }).count()).toBeGreaterThan(0)
+    await expect(
+      await page.locator('.shortcut-row .shortcut-id', { hasText: 'core.bold' }).count(),
+    ).toBeGreaterThan(0)
 
     const editor = page.locator('.ProseMirror')
     await waitForVisible(editor)

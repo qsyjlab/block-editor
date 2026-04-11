@@ -17,23 +17,47 @@
 - `toolbarMode`: `"top" | "inline"`
 - `theme`: `"light" | "dark" | "auto"`
 - `commentPanelDefaultVisible`: `boolean`
+- `layout`: 推荐单入口（`preset / builder / regions / modules / plugins`）
 - `layoutBuilder`: 自定义布局构造函数
 - `layoutSchema`: 模块区域与可见性配置
+- `plugins`: 可插拔模块（当前支持 `outline` / `commentPanel`）
 
 示例：
 
 ```ts
 new EditorUIRenderer(core, container, {
-  toolbarMode: 'top',
+  toolbarMode: 'top', // 旧字段依然兼容
   theme: 'dark',
   commentPanelDefaultVisible: true,
+  layout: {
+    preset: 'editor-outline-comment',
+    regions: {
+      outline: { width: 240 },
+      comment: { width: 320 },
+    },
+  },
 })
 ```
+
+如果你要把评论/大纲外置到业务 UI，请看：
+
+- `/usage/pluginized-modules`
+
+常用外部 API（`EditorUIRenderer` 实例）：
+
+- `getCommentPanelController()`：`open/close/toggle/setVisible/focusThread/createFromSelection`
+- `getOutlineData()` / `onOutlineDataChange()`
+- `getCommentThreads()` / `onCommentDataChange()`
 
 ## 主题建议
 
 推荐所有业务样式只使用主题 token，不直接硬编码颜色。  
 如果你新增弹层，优先挂到 `overlayContainer`，避免暗黑模式变量失效。
+
+## 弹层挂载约定（Overlay 分组）
+
+编辑器内部已统一提供 `ui-layer-root` 分组容器（`tooltip/dropdown/modal/overlay`）。  
+业务侧如果新增自定义弹层，建议同样复用 `resolveUILayerHost`，避免直接散落挂到 `body`。
 
 ## i18n fallback 约定
 

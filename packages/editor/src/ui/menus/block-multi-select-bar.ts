@@ -5,6 +5,7 @@
 import { EditorCore } from '../../core/EditorCore'
 import { BlockMultiSelectStorage } from '../../extensions/BlockMultiSelect'
 import { icons } from '../toolbar/icons'
+import { resolveUILayerHost } from '../layer-root'
 
 export class BlockMultiSelectBar {
   private bar: HTMLElement
@@ -195,7 +196,7 @@ export class BlockMultiSelectBar {
     const container =
       (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return container || document.body
+    return container || resolveUILayerHost('overlay', editorRoot)
   }
 
   private positionBar() {

@@ -8,6 +8,7 @@ import { createToolbarItemElement, flattenToolbarGroups } from './toolbar/item-f
 import { applyShortcutHintsToGroups } from './toolbar/shortcut-hints'
 import { resolveEditorI18n } from '../i18n'
 import type { EditorI18n } from '../i18n'
+import { resolveUILayerHost } from './layer-root'
 
 export class Toolbar {
   private static instanceCount = 0
@@ -54,7 +55,10 @@ export class Toolbar {
     this.moreMenuOwnerId = `be-more-${++Toolbar.instanceCount}`
     this.overlayHost = this.resolveOverlayHost()
 
-    this.groups = applyShortcutHintsToGroups(resolveToolbarGroups(this.i18n, config), this.editorCore)
+    this.groups = applyShortcutHintsToGroups(
+      resolveToolbarGroups(this.i18n, config),
+      this.editorCore,
+    )
 
     this.render()
   }
@@ -63,7 +67,7 @@ export class Toolbar {
     const host =
       (this.container.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (this.container.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return host || document.body
+    return host || resolveUILayerHost('dropdown', this.container)
   }
 
   private render() {

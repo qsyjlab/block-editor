@@ -1,4 +1,5 @@
 import { icons } from '../toolbar/icons'
+import { resolveUILayerHost } from '../layer-root'
 
 export interface DialogOptions {
   title: string
@@ -31,7 +32,8 @@ function resolveOverlayHost(source?: HTMLElement | null): HTMLElement {
     (document.querySelector('[data-be-overlay-container="true"]') as HTMLElement | null) ||
     (document.querySelector('[data-be-ui-root="true"]') as HTMLElement | null)
 
-  return globalHost || document.body
+  if (globalHost) return globalHost
+  return resolveUILayerHost('modal', source || active || null)
 }
 
 export class Dialog {

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { EditorCore, EditorUIRenderer } from '@block-editor/editor'
 import SceneFrame from '../SceneFrame.vue'
-import { SELECTION_COMPACT_ITEMS, buildMinimalLayout, buildSceneIntroContent } from '../shared'
+import { SELECTION_COMPACT_ITEMS, buildSceneIntroContent } from '../shared'
 import { useSceneEditor } from '../useSceneEditor'
 
 const editorContainer = ref<HTMLElement | null>(null)
@@ -31,8 +31,10 @@ useSceneEditor('minimal', editorContainer, (container, context) => {
     i18n: context.editorLocale,
     theme: context.theme,
     toolbarMode: 'inline',
-    layoutBuilder: buildMinimalLayout,
     commentPanelDefaultVisible: false,
+    layout: {
+      preset: 'minimal',
+    },
   } as any)
 
   return core

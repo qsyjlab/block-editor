@@ -22,6 +22,7 @@ export default defineConfig({
           { text: '操作栏配置', link: '/usage/operation-bars' },
           { text: '快捷键总览', link: '/usage/shortcuts' },
           { text: '布局与模块', link: '/usage/layout-modules' },
+          { text: '可插拔评论与大纲', link: '/usage/pluginized-modules' },
           { text: '迁移指南', link: '/usage/migration' },
           { text: '行为基准', link: '/usage/behavior-benchmark' },
           { text: '行为评分卡', link: '/usage/behavior-scorecard' },

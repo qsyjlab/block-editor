@@ -14,6 +14,7 @@ import type { EditorUIRegion } from '../ui/modules/contracts'
 import type { EditorCore } from '../core/EditorCore'
 import { resolveEditorI18n } from '../i18n'
 import type { EditorI18n } from '../i18n'
+import { resolveUILayerHost } from '../ui/layer-root'
 
 type ToolbarMode = 'top' | 'inline'
 
@@ -176,7 +177,7 @@ function resolveSelectionToolbarRegion(editor: Editor): EditorUIRegion {
 
 function resolveSelectionToolbarAppendTarget(editor: Editor): HTMLElement {
   const editorRoot = editor.options.element as HTMLElement | null
-  if (!editorRoot) return document.body
+  if (!editorRoot) return resolveUILayerHost('overlay')
 
   const uiRoot = editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null
   const region = resolveSelectionToolbarRegion(editor)
@@ -187,7 +188,7 @@ function resolveSelectionToolbarAppendTarget(editor: Editor): HTMLElement {
 
   const overlayHost =
     (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) || uiRoot
-  return overlayHost || document.body
+  return overlayHost || resolveUILayerHost('overlay', editorRoot)
 }
 
 function getMockCore(editor: Editor): EditorCore {

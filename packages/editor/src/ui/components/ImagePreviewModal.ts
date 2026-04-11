@@ -1,4 +1,5 @@
 import type { ImageEnhancedI18n } from '../../i18n/types'
+import { resolveUILayerHost } from '../layer-root'
 
 interface PreviewItem {
   src: string
@@ -40,6 +41,7 @@ class ImagePreviewModal {
   private i18n: ImageEnhancedI18n
   private previousOverflow = ''
   private isMounted = false
+  private mountHost: HTMLElement | null = null
 
   constructor(i18n: ImageEnhancedI18n) {
     this.i18n = i18n
@@ -148,6 +150,7 @@ class ImagePreviewModal {
     this.rotation = 0
     this.offsetX = 0
     this.offsetY = 0
+    this.mountHost = resolveUILayerHost('modal', sourceImage)
     this.mount()
     this.renderCurrent()
   }
@@ -184,7 +187,7 @@ class ImagePreviewModal {
 
   private mount() {
     if (!this.isMounted) {
-      document.body.appendChild(this.overlay)
+      ;(this.mountHost || resolveUILayerHost('modal')).appendChild(this.overlay)
       this.isMounted = true
     }
 

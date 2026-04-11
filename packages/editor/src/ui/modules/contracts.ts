@@ -58,3 +58,21 @@ export interface EditorUIModuleDefinition {
   defaultRegion: EditorUIRegion
   mount: (ctx: EditorUIModuleMountContext) => EditorUIModuleInstance | void
 }
+
+export interface CommentPanelModuleInstance extends EditorUIModuleInstance {
+  setVisible?: (visible: boolean) => void
+  focusThread?: (commentId: string) => void
+}
+
+export interface OutlineModulePlugin {
+  mount: (ctx: EditorUIModuleMountContext) => EditorUIModuleInstance | void
+}
+
+export interface CommentPanelModulePlugin {
+  mount: (ctx: EditorUIModuleMountContext) => CommentPanelModuleInstance | void
+}
+
+export interface EditorUIPlugins {
+  outline?: OutlineModulePlugin
+  commentPanel?: CommentPanelModulePlugin
+}

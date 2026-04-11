@@ -3,6 +3,8 @@ import { Plugin, PluginKey } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { resolveEditorI18n } from '../i18n'
 import type { SlashCommandI18n } from '../i18n/types'
+import { createDropdownItem } from '../ui/components/DropdownMenu'
+import { resolveUILayerHost } from '../ui/layer-root'
 
 // ── 命令定义 ──────────────────────────────────────────────────────────────────
 
@@ -129,18 +131,12 @@ class SlashMenuView {
     this.editor = editor
     this.i18n = i18n
     this.commands = createDefaultCommands(i18n)
-    const root = this.view.dom as HTMLElement
-    this.overlayHost =
-      (root.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
-      (root.closest('[data-be-ui-root="true"]') as HTMLElement | null) ||
-      document.body
+    this.overlayHost = resolveUILayerHost('dropdown', this.view.dom as HTMLElement)
 
     this.container = document.createElement('div')
-    this.container.className = 'be-slash-menu'
+    this.container.className = 'toolbar-dropdown-menu be-slash-menu'
     this.container.setAttribute('role', 'listbox')
     this.container.setAttribute('aria-label', this.i18n.menuAriaLabel)
-    this.container.style.cssText =
-      'display:none;position:fixed;z-index:9999;background:var(--paper-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:var(--shadow-elevated);padding:4px;min-width:240px;max-height:320px;overflow-y:auto;'
 
     this.overlayHost.appendChild(this.container)
   }
@@ -160,9 +156,22 @@ class SlashMenuView {
   }
 
   hide() {
+    if (this.container.style.display === 'none') {
+      this.visible = false
+      this.slashPos = null
+      return
+    }
     this.visible = false
     this.slashPos = null
-    this.container.style.display = 'none'
+    this.container.style.transition = 'opacity 0.12s ease, transform 0.12s ease'
+    this.container.style.opacity = '0'
+    this.container.style.transform = 'translateY(-4px) scale(0.98)'
+    window.setTimeout(() => {
+      this.container.style.display = 'none'
+      this.container.style.transition = ''
+      this.container.style.opacity = ''
+      this.container.style.transform = ''
+    }, 120)
   }
 
   isVisible() {
@@ -190,38 +199,41 @@ class SlashMenuView {
 
     this.container.innerHTML = ''
     this.items.forEach((item, idx) => {
-      const btn = document.createElement('button')
-      btn.className = `be-slash-menu-item${idx === this.selectedIndex ? ' be-slash-menu-item--selected' : ''}`
-      btn.setAttribute('role', 'option')
-      btn.setAttribute('aria-selected', idx === this.selectedIndex ? 'true' : 'false')
-      btn.setAttribute('aria-label', `${item.title}：${item.description}`)
-      btn.style.cssText = `
-        display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;
-        border:none;border-radius:5px;background:${idx === this.selectedIndex ? 'var(--surface-soft)' : 'transparent'};
-        cursor:pointer;text-align:left;transition:background 0.15s;
-      `
-      btn.innerHTML = `
-        <span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--surface-soft);border:1px solid var(--border-color);border-radius:5px;flex-shrink:0;color:var(--text-secondary);">${item.icon}</span>
-        <span style="display:flex;flex-direction:column;gap:1px;">
-          <span style="font-size:13px;font-weight:500;color:var(--text-color);">${item.title}</span>
-          <span style="font-size:12px;color:var(--text-muted);">${item.description}</span>
-        </span>
-      `
-      btn.onmouseenter = () => {
+      const menuItem = createDropdownItem({
+        label: item.title,
+        description: item.description,
+        iconHtml: item.icon,
+        role: 'option',
+        className: `be-slash-menu-item${idx === this.selectedIndex ? ' active be-slash-menu-item--selected' : ''}`,
+        active: idx === this.selectedIndex,
+        onSelect: (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          this.executeAtIndex(idx)
+        },
+      })
+      menuItem.dataset.index = String(idx)
+      menuItem.setAttribute('aria-selected', idx === this.selectedIndex ? 'true' : 'false')
+      menuItem.setAttribute('aria-label', `${item.title}：${item.description}`)
+      menuItem.addEventListener('mouseenter', () => {
         this.selectedIndex = idx
-        this.render()
-      }
-      btn.onclick = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        this.executeSelected()
-      }
-      this.container.appendChild(btn)
+        this.syncSelectedState()
+      })
+      this.container.appendChild(menuItem)
     })
 
-    // Position near cursor
-    this.positionMenu()
     this.container.style.display = 'block'
+    this.container.style.visibility = 'hidden'
+    // Position near cursor with viewport collision handling
+    this.positionMenu()
+    this.container.style.visibility = ''
+    this.container.style.opacity = '0'
+    this.container.style.transform = 'translateY(-6px) scale(0.98)'
+    requestAnimationFrame(() => {
+      this.container.style.transition = 'opacity 0.15s ease, transform 0.15s ease'
+      this.container.style.opacity = '1'
+      this.container.style.transform = 'translateY(0) scale(1)'
+    })
   }
 
   private positionMenu() {
@@ -229,26 +241,40 @@ class SlashMenuView {
     const coords = this.view.coordsAtPos(this.slashPos)
     if (!coords) return
 
-    const menuHeight = Math.min(this.items.length * 46 + 8, 320)
+    const rect = this.container.getBoundingClientRect()
+    const viewportPadding = 8
     const spaceBelow = window.innerHeight - coords.bottom
-    const top = spaceBelow >= menuHeight ? coords.bottom + 4 : coords.top - menuHeight - 4
+    const preferTop =
+      spaceBelow >= rect.height + viewportPadding ? coords.bottom + 6 : coords.top - rect.height - 6
+    const top = Math.max(
+      viewportPadding,
+      Math.min(preferTop, window.innerHeight - rect.height - viewportPadding),
+    )
+    const left = Math.max(
+      viewportPadding,
+      Math.min(coords.left, window.innerWidth - rect.width - viewportPadding),
+    )
 
     this.container.style.top = `${top}px`
-    this.container.style.left = `${Math.min(coords.left, window.innerWidth - 256)}px`
+    this.container.style.left = `${left}px`
   }
 
   selectNext() {
     this.selectedIndex = (this.selectedIndex + 1) % this.items.length
-    this.render()
+    this.syncSelectedState()
   }
 
   selectPrev() {
     this.selectedIndex = (this.selectedIndex - 1 + this.items.length) % this.items.length
-    this.render()
+    this.syncSelectedState()
   }
 
   executeSelected() {
-    const item = this.items[this.selectedIndex]
+    this.executeAtIndex(this.selectedIndex)
+  }
+
+  private executeAtIndex(index: number) {
+    const item = this.items[index]
     if (!item) return
 
     // Delete the "/" + query text
@@ -263,6 +289,16 @@ class SlashMenuView {
     this.hide()
     // Run after the delete so node types resolve correctly
     setTimeout(() => item.command(this.editor), 0)
+  }
+
+  private syncSelectedState() {
+    const options = this.container.querySelectorAll<HTMLElement>('.be-slash-menu-item')
+    options.forEach((node, idx) => {
+      const active = idx === this.selectedIndex
+      node.classList.toggle('active', active)
+      node.classList.toggle('be-slash-menu-item--selected', active)
+      node.setAttribute('aria-selected', active ? 'true' : 'false')
+    })
   }
 
   destroy() {

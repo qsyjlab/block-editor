@@ -42,9 +42,9 @@ useSceneEditor('modular-layout', editorContainer, (container, context) => {
   new EditorUIRenderer(core, container, {
     i18n: context.editorLocale,
     theme: context.theme,
-    toolbarMode: 'top',
     commentPanelDefaultVisible: true,
-    layoutSchema: {
+    layout: {
+      preset: 'editor-outline-comment',
       regions: {
         toolbar: { visible: true },
         outline: { width: 240 },

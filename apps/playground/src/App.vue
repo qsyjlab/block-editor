@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { SCENE_NAV_ITEMS } from './router'
+import { SCENE_NAV_GROUPS } from './router'
 
 const route = useRoute()
 const theme = computed(() => {
@@ -9,12 +9,16 @@ const theme = computed(() => {
   return raw === 'dark' || raw === 'auto' ? raw : 'light'
 })
 
-const links = computed(() => {
+const linkGroups = computed(() => {
   const query = route.query
-  return SCENE_NAV_ITEMS.map((item) => ({
-    key: item.key,
-    title: item.title,
-    to: { path: item.path, query },
+  return SCENE_NAV_GROUPS.map((group) => ({
+    key: group.key,
+    title: group.title,
+    items: group.items.map((item) => ({
+      key: item.key,
+      title: item.title,
+      to: { path: item.path, query },
+    })),
   }))
 })
 
@@ -57,15 +61,18 @@ const themeLinks = computed(() => {
         </RouterLink>
       </div>
       <nav>
-        <RouterLink
-          v-for="item in links"
-          :key="item.key"
-          :to="item.to"
-          class="scene-link"
-          active-class="scene-link--active"
-        >
-          {{ item.title }}
-        </RouterLink>
+        <section v-for="group in linkGroups" :key="group.key" class="scene-nav-group">
+          <h2>{{ group.title }}</h2>
+          <RouterLink
+            v-for="item in group.items"
+            :key="item.key"
+            :to="item.to"
+            class="scene-link"
+            active-class="scene-link--active"
+          >
+            {{ item.title }}
+          </RouterLink>
+        </section>
       </nav>
     </aside>
     <main class="scene-main">
@@ -160,7 +167,21 @@ body,
 .scene-nav nav {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.scene-nav-group {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.scene-nav-group h2 {
+  margin: 0;
+  padding-left: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pg-text-muted);
 }
 
 .scene-link {

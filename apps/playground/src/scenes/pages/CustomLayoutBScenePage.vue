@@ -32,7 +32,7 @@ useSceneEditor('custom-layout-b', editorContainer, (container, context) => {
       },
       selectionToolbar: { items: SELECTION_COMPACT_ITEMS },
     },
-  } as any)
+  })
 
   new EditorUIRenderer(core, container, {
     i18n: context.editorLocale,
@@ -40,7 +40,7 @@ useSceneEditor('custom-layout-b', editorContainer, (container, context) => {
     toolbarMode: 'top',
     layoutBuilder: buildLayoutB,
     commentPanelDefaultVisible: true,
-  } as any)
+  })
 
   return core
 })

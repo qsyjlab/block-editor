@@ -8,6 +8,7 @@ import {
   focusDropdownItem,
   getFocusableDropdownItems,
 } from '../components/DropdownMenu'
+import { resolveUILayerHost } from '../layer-root'
 
 export type ToolbarDropdownProps = ToolbarDropdownConfig
 
@@ -88,7 +89,7 @@ export class ToolbarDropdown {
     const host =
       (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return host || document.body
+    return host || resolveUILayerHost('dropdown', editorRoot)
   }
 
   public getElement(): HTMLElement {

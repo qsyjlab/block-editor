@@ -1,9 +1,11 @@
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
+import { NodeSelection, Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom'
 import { resolveEditorI18n } from '../i18n'
 import type { BlockHandleI18n } from '../i18n/types'
 import { createDropdownItem } from '../ui/components/DropdownMenu'
+import { resolveUILayerHost } from '../ui/layer-root'
 
 /** Simple throttle: fire at most once per `ms` milliseconds */
 function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
@@ -78,6 +80,7 @@ class BlockHandleView {
   private editor: any // Tiptap editor instance
   private hideTimer: any = null
   private menuHideTimer: number | null = null
+  private cleanupMenuAutoUpdate: (() => void) | null = null
   private scrollTarget: HTMLElement | Document = document
   private i18n: BlockHandleI18n
   private draggingBlockPos: number | null = null
@@ -106,7 +109,7 @@ class BlockHandleView {
     this.element.setAttribute('aria-haspopup', 'menu')
     this.element.setAttribute('tabindex', '0')
     this.element.setAttribute('draggable', 'true')
-    this.element.style.position = 'absolute'
+    this.element.style.position = 'fixed'
     this.element.style.display = 'none'
     this.element.style.alignItems = 'center'
     this.element.style.justifyContent = 'center'
@@ -116,8 +119,11 @@ class BlockHandleView {
     this.element.style.borderRadius = '4px'
     this.element.style.backgroundColor = 'transparent'
     this.element.style.color = 'var(--text-muted)'
-    this.element.style.transition = 'opacity 0.2s, background-color 0.2s'
+    this.element.style.transition =
+      'opacity 0.14s ease, background-color 0.18s ease, top 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.12s ease'
+    this.element.style.willChange = 'top, left, transform, opacity'
     this.element.style.zIndex = '50'
+    this.element.classList.add('be-block-handle-pill')
 
     // Hover effect
     this.element.addEventListener('mouseenter', () => {
@@ -129,12 +135,15 @@ class BlockHandleView {
       this.scheduleHide()
     })
 
-    // Drag Handle Icon (6 dots)
+    // Handle visual: block type icon + grip dots
     this.element.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none; color: currentColor;">
-        <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>
-        <circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
-      </svg>
+      <span class="be-block-handle-type" aria-hidden="true"></span>
+      <span class="be-block-handle-grip" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>
+          <circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
+        </svg>
+      </span>
     `
 
     // Create Menu Element
@@ -176,6 +185,7 @@ class BlockHandleView {
       e.stopPropagation()
       if (e.shiftKey) return
       if (Date.now() < this.ignoreMenuClickUntil) return
+      this.selectCurrentTableNode()
       this.toggleMenu()
     })
     this.element.addEventListener('dragstart', this.handleDragStart)
@@ -207,16 +217,8 @@ class BlockHandleView {
     )
   }
 
-  private getOverlayContainer(): HTMLElement {
-    const dom = this.editorView.dom as HTMLElement
-    const container =
-      (dom.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
-      (dom.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return container || document.body
-  }
-
   private ensureMenuHost() {
-    const host = this.getOverlayContainer()
+    const host = resolveUILayerHost('dropdown', this.editorView.dom as HTMLElement)
     if (this.menu.parentElement !== host) {
       host.appendChild(this.menu)
     }
@@ -399,7 +401,7 @@ class BlockHandleView {
         active,
         danger: item.danger,
       })
-      const icon = btn.querySelector('span')
+      const icon = btn.querySelector('.dropdown-item__icon')
       if (icon) {
         icon.classList.add('be-block-handle-menu-icon')
       }
@@ -431,6 +433,16 @@ class BlockHandleView {
 
       chain[name](attrs).run()
     }
+  }
+
+  private selectCurrentTableNode() {
+    if (this.currentBlockPos === null) return
+    const { state } = this.editorView
+    const node = state.doc.nodeAt(this.currentBlockPos)
+    if (!node || node.type.name !== 'table') return
+    const selection = NodeSelection.create(state.doc, this.currentBlockPos)
+    this.editorView.dispatch(state.tr.setSelection(selection))
+    this.editor.commands.setInteractionMode('block-selection')
   }
 
   moveBlock(direction: 1 | -1) {
@@ -782,7 +794,7 @@ class BlockHandleView {
     // throttled at 16ms (~60fps)
     this.update()
 
-    if (this.menu.style.display === 'flex') return
+    if (this.menu.style.display !== 'none') return
 
     const parent = this.editorView.dom.parentNode as HTMLElement
     if (!parent) return
@@ -809,7 +821,7 @@ class BlockHandleView {
     }
 
     const target = event.target as HTMLElement | null
-    if (target?.closest('.be-table-handle') || target?.closest('table')) {
+    if (target?.closest('.be-table-handle')) {
       this.hideHandleImmediately()
       return
     }
@@ -840,21 +852,78 @@ class BlockHandleView {
     const nodeDom = this.editorView.nodeDOM(pos) as HTMLElement | null
 
     let top = 0
-    const left = editorRect.left - containerRect.left - 28
+    const handleWidth = this.element.offsetWidth || 42
+    const spacing = 14
 
     if (nodeDom) {
       const blockRect = nodeDom.getBoundingClientRect()
-      top = blockRect.top - containerRect.top + 1
+      top = blockRect.top + 1
     } else {
       const isEmpty = node.content.size === 0
       const alignPos = isEmpty ? pos : pos + 1
       const coords = this.editorView.coordsAtPos(alignPos)
-      top = coords.top - containerRect.top + 1
+      top = coords.top + 1
     }
+
+    let left = editorRect.left - handleWidth - spacing
+    const minLeft = containerRect.left + 6
+    if (left < minLeft) left = minLeft
 
     this.element.style.top = `${top}px`
     this.element.style.left = `${left}px`
+    this.updateHandleTypeVisual(node)
     this.element.style.display = 'flex'
+  }
+
+  private getCurrentBlockTypeKey(node: any) {
+    const name = node?.type?.name
+    if (name === 'paragraph') return 'paragraph'
+    if (name === 'heading') return `h${node?.attrs?.level ?? 1}`
+    if (name === 'blockquote') return 'blockquote'
+    if (name === 'codeBlock') return 'code'
+    if (name === 'taskList' || name === 'taskItem') return 'task'
+    if (name === 'bulletList') return 'bullet'
+    if (name === 'orderedList') return 'ordered'
+    if (name === 'listItem' && this.currentBlockPos !== null) {
+      const resolved = this.editorView.state.doc.resolve(this.currentBlockPos)
+      for (let depth = resolved.depth; depth >= 0; depth -= 1) {
+        const ancestorName = resolved.node(depth).type.name
+        if (ancestorName === 'bulletList') return 'bullet'
+        if (ancestorName === 'orderedList') return 'ordered'
+        if (ancestorName === 'taskList') return 'task'
+      }
+    }
+    if (name === 'table') return 'table'
+    if (name === 'image') return 'image'
+    return 'paragraph'
+  }
+
+  private updateHandleTypeVisual(node: any) {
+    const holder = this.element.querySelector('.be-block-handle-type') as HTMLElement | null
+    if (!holder) return
+
+    const type = this.getCurrentBlockTypeKey(node)
+    const map: Record<string, string> = {
+      paragraph:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>',
+      h1: '<span class="be-block-handle-type-text">H1</span>',
+      h2: '<span class="be-block-handle-type-text">H2</span>',
+      h3: '<span class="be-block-handle-type-text">H3</span>',
+      blockquote:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5"/><path d="M15 21c3 0 7-1 7-8V5"/></svg>',
+      code: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+      bullet:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>',
+      ordered:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/></svg>',
+      task: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8M13 12h8"/></svg>',
+      table:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>',
+      image:
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
+    }
+
+    holder.innerHTML = map[type] ?? map.paragraph
   }
 
   toggleMenu() {
@@ -863,14 +932,11 @@ class BlockHandleView {
     if (this.menu.style.display === 'none') {
       this.ensureMenuHost()
       this.renderMenu()
-      const rect = this.element.getBoundingClientRect()
       if (this.menuHideTimer) {
         window.clearTimeout(this.menuHideTimer)
         this.menuHideTimer = null
       }
       this.menu.style.display = 'block'
-      this.menu.style.top = `${rect.bottom + 4}px`
-      this.menu.style.left = `${rect.left}px`
       this.menu.style.opacity = '0'
       this.menu.style.transform = 'translateY(-6px) scale(0.98)'
       requestAnimationFrame(() => {
@@ -878,6 +944,7 @@ class BlockHandleView {
         this.menu.style.opacity = '1'
         this.menu.style.transform = 'translateY(0) scale(1)'
       })
+      this.startMenuAutoUpdate()
       this.editor.commands.setBlockMenuOpen(true)
       this.editor.commands.setInteractionMode('block-selection')
     } else {
@@ -902,6 +969,10 @@ class BlockHandleView {
       this.menu.style.transform = ''
       this.menuHideTimer = null
     }, 120)
+    if (this.cleanupMenuAutoUpdate) {
+      this.cleanupMenuAutoUpdate()
+      this.cleanupMenuAutoUpdate = null
+    }
     this.editor.commands.setBlockMenuOpen(false)
 
     if (this.editor.isActive('table')) {
@@ -911,6 +982,27 @@ class BlockHandleView {
 
     const mode = this.editor.state.selection.empty ? 'idle' : 'text-selection'
     this.editor.commands.setInteractionMode(mode)
+  }
+
+  private startMenuAutoUpdate() {
+    if (this.cleanupMenuAutoUpdate) {
+      this.cleanupMenuAutoUpdate()
+      this.cleanupMenuAutoUpdate = null
+    }
+    this.cleanupMenuAutoUpdate = autoUpdate(this.element, this.menu, () => {
+      computePosition(this.element, this.menu, {
+        placement: 'bottom-start',
+        strategy: 'fixed',
+        middleware: [offset(6), flip({ padding: 8 }), shift({ padding: 8 })],
+      }).then(({ x, y }) => {
+        Object.assign(this.menu.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+          position: 'fixed',
+          zIndex: '10000',
+        })
+      })
+    })
   }
 
   private finishDrag() {
@@ -1041,5 +1133,9 @@ class BlockHandleView {
     }
     if (this.hideTimer) clearTimeout(this.hideTimer)
     if (this.menuHideTimer) window.clearTimeout(this.menuHideTimer)
+    if (this.cleanupMenuAutoUpdate) {
+      this.cleanupMenuAutoUpdate()
+      this.cleanupMenuAutoUpdate = null
+    }
   }
 }

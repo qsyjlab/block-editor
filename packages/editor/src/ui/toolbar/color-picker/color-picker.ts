@@ -4,6 +4,7 @@ import type { ColorPickerI18n } from '../../../i18n/types'
 import { icons } from '../icons'
 import { STANDARD_COLORS } from './color-palette'
 import { ColorSpectrum } from './color-spectrum'
+import { resolveUILayerHost } from '../../layer-root'
 
 export class ColorPicker {
   private element: HTMLElement
@@ -39,7 +40,7 @@ export class ColorPicker {
     const host =
       (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
       (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return host || document.body
+    return host || resolveUILayerHost('dropdown', editorRoot)
   }
 
   getElement() {

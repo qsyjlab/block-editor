@@ -1,4 +1,5 @@
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom'
+import { resolveUILayerHost } from '../layer-root'
 
 export class GlobalTooltip {
   private tooltip: HTMLElement
@@ -27,7 +28,7 @@ export class GlobalTooltip {
   }
 
   private ensureHost(target?: HTMLElement) {
-    const nextHost = document.body
+    const nextHost = resolveUILayerHost('tooltip', target)
     this.syncTheme(target)
 
     if (this.host === nextHost && this.tooltip.parentElement === nextHost) return

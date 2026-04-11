@@ -22,6 +22,8 @@ pnpm --filter block-editor-playground dev
 - `/scenes/block-showcase`
 - `/scenes/drag-showcase`
 - `/scenes/table-showcase`
+- `/scenes/pluginized-modules`
+- `/scenes/custom-comment-panel`
 - `/scenes/regression`
 
 常用 query：
