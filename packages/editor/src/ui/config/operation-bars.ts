@@ -41,7 +41,7 @@ export interface EditorUIConfig {
 
 function buildBasicToolbarItems(i18nInput?: string | Partial<EditorI18n> | null) {
   const groups = buildDefaultToolbarItems(i18nInput)
-  return groups.slice(0, 5)
+  return groups.slice(0, 6)
 }
 
 function buildMinimalToolbarItems(i18nInput?: string | Partial<EditorI18n> | null) {

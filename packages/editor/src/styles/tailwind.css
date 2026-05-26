@@ -5,27 +5,43 @@
 
 /* Custom styles for Block Handle */
 .be-block-handle {
-  @apply be-absolute be-flex be-items-center be-justify-center be-cursor-pointer be-transition-colors;
-  width: 1.5rem;
-  height: 1.5rem;
+  @apply be-absolute be-flex be-items-center be-justify-center be-cursor-pointer;
+  width: auto !important;
+  min-width: 48px;
+  height: 28px !important;
+  padding: 0 7px;
   /* left is set by JS */
-  border-radius: 0.25rem;
+  gap: 6px;
+  border-radius: 9px;
   z-index: 50;
-  color: var(--text-muted);
-  background: var(--paper-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--text-color) 16%, transparent);
+  color: #9ca3af;
+  background: color-mix(in srgb, var(--paper-bg) 98%, white);
+  border: 1px solid color-mix(in srgb, var(--border-color) 90%, #cfd6df);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--text-color) 7%, transparent),
+    0 8px 18px -15px color-mix(in srgb, var(--text-color) 38%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .be-block-handle:hover {
-  background: var(--surface-soft);
-  color: var(--text-secondary);
+  background: var(--paper-bg);
+  border-color: color-mix(in srgb, var(--primary-color) 34%, var(--border-color));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--primary-color) 9%, transparent),
+    0 10px 22px -17px color-mix(in srgb, var(--text-color) 46%, transparent);
 }
 
 /* Current Line Highlight */
 .be-active-block {
   background: color-mix(in srgb, var(--primary-color) 14%, transparent);
   border-radius: 4px;
+}
+
+.be-active-block:has(.be-image-figure),
+.be-active-block:has(img[data-be-image-preview='true']),
+.be-active-block:has(+ .be-image-figure.be-image-controls-active),
+.be-active-block:has(+ .be-image-figure.ProseMirror-selectednode) {
+  background: transparent;
 }
 
 @supports not (color: color-mix(in srgb, white 50%, black)) {

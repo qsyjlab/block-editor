@@ -307,12 +307,11 @@ export class Toolbar {
     if (overflowIndex !== -1) {
       let startIndex = overflowIndex
       while (
-        startIndex < this.items.length &&
-        this.items[startIndex].classList.contains('divider')
+        startIndex > 0 &&
+        this.items[startIndex - 1].classList.contains('divider')
       ) {
-        startIndex += 1
+        startIndex -= 1
       }
-
       if (startIndex >= this.items.length) {
         if (this.isMoreMenuOpen) this.closeMoreMenu()
         this.moreBtn.style.display = 'none'

@@ -29,8 +29,15 @@ function createEditorMock(entries: Array<{ offset: number; node: NodeLike }>) {
 
   const tr: any = {
     doc,
-    delete: vi.fn(() => tr),
-    replaceWith: vi.fn(() => tr),
+    docChanged: false,
+    delete: vi.fn(() => {
+      tr.docChanged = true
+      return tr
+    }),
+    replaceWith: vi.fn(() => {
+      tr.docChanged = true
+      return tr
+    }),
     setMeta: vi.fn(() => tr),
   }
 

@@ -6,7 +6,8 @@
  * 3. Word / 网页复制 → 移除 <script> / <style> / <meta> 等噪声标签
  */
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
+import { markdownToEditorHtml } from '../import/MarkdownImporter'
 
 const URL_REGEX = /^(https?:\/\/)[^\s/$.?#].[^\s]*$/i
 const IMAGE_URL_REGEX =
@@ -53,6 +54,26 @@ type SmartPasteEditorLike = {
     insertContent: (content: unknown) => void
     setLink?: (attrs: { href: string; target?: string }) => boolean
     setImage?: (attrs: { src: string; alt?: string; title?: string }) => boolean
+  }
+  view?: {
+    state: {
+      doc: {
+        content: {
+          size: number
+        }
+        resolve: (pos: number) => Parameters<typeof TextSelection.near>[0]
+      }
+      selection: {
+        to: number
+      }
+      tr: {
+        setSelection: (selection: TextSelection) => {
+          scrollIntoView: () => unknown
+        }
+      }
+    }
+    dispatch: (transaction: unknown) => void
+    focus: () => void
   }
 }
 
@@ -114,6 +135,49 @@ function selectionHasText(editor: SmartPasteEditorLike): boolean {
   return editor.state.selection.empty === false
 }
 
+function looksLikeMarkdownDocument(text: string): boolean {
+  if (!text || text.length < 8) return false
+  const lines = text.split(/\r?\n/)
+  let score = 0
+
+  for (const line of lines) {
+    if (/^#{1,6}\s+\S/.test(line)) score += 2
+    else if (/^>\s+\[!\w+\]/.test(line)) score += 2
+    else if (/^\s*[-*+]\s+\[[ xX]\]\s+\S/.test(line)) score += 2
+    else if (/^\s*[-*+]\s+\S/.test(line)) score += 1
+    else if (/^\s*\d+\.\s+\S/.test(line)) score += 1
+    else if (/^```|^~~~/.test(line)) score += 2
+    else if (/^\|.+\|$/.test(line)) score += 1
+    else if (/^---+$/.test(line.trim())) score += 1
+  }
+
+  if (/\*\*[^*\n]+\*\*|~~[^~\n]+~~|`[^`\n]+`|\[[^\]\n]+\]\([^)]+\)/.test(text)) {
+    score += 1
+  }
+
+  return score >= 3
+}
+
+function collapseSelectionAfterInsert(editor: SmartPasteEditorLike): void {
+  if (!editor.view) return
+
+  queueMicrotask(() => {
+    const view = editor.view
+    if (!view) return
+
+    try {
+      const { state } = view
+      const pos = Math.max(1, Math.min(state.selection.to, state.doc.content.size))
+      const selection = TextSelection.near(state.doc.resolve(pos), 1)
+      view.dispatch(state.tr.setSelection(selection).scrollIntoView())
+      view.focus()
+    } catch {
+      // Best-effort cleanup only. If the document changed again before the
+      // microtask runs, keep the paste result rather than risking another error.
+    }
+  })
+}
+
 export function handleSmartPaste(
   editor: SmartPasteEditorLike,
   event: SmartPasteEventLike,
@@ -132,6 +196,17 @@ export function handleSmartPaste(
 
   const plainText = clipboardData.getData('text/plain').trim()
   const htmlText = clipboardData.getData('text/html')
+
+  // ── Case 0: Plain Markdown document paste ─────────────────────
+  // Clipboard sources such as local .md files often provide only text/plain.
+  // Parse those immediately so copied docs become selectable blocks instead of
+  // raw Markdown source text.
+  if (!htmlText && looksLikeMarkdownDocument(plainText)) {
+    event.preventDefault()
+    editor.commands.insertContent(markdownToEditorHtml(plainText))
+    collapseSelectionAfterInsert(editor)
+    return true
+  }
 
   // ── Case 1: Plain URL paste ────────────────────────────────────
   if (!htmlText && URL_REGEX.test(plainText)) {
@@ -174,6 +249,7 @@ export function handleSmartPaste(
     if (cleaned !== htmlText) {
       event.preventDefault()
       editor.commands.insertContent(cleaned)
+      collapseSelectionAfterInsert(editor)
       return true
     }
   }

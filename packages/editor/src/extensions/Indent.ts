@@ -43,7 +43,7 @@ export const Indent = Extension.create({
               if (!indent) return {}
               return {
                 'data-indent': String(indent),
-                style: `margin-left: ${indent * 2}em;`,
+                style: `padding-left: ${indent * 2}em;`,
               }
             },
           },
@@ -54,6 +54,16 @@ export const Indent = Extension.create({
 
   addKeyboardShortcuts() {
     return {
+      Enter: () => {
+        if (this.editor.isActive('listItem')) return false
+
+        const activeType = this.editor.isActive('heading') ? 'heading' : 'paragraph'
+        const attrs = this.editor.getAttributes(activeType)
+        const currentIndent = Number(attrs.indent || 0)
+        if (currentIndent <= 0) return false
+
+        return this.editor.chain().splitBlock().updateAttributes('paragraph', { indent: 0 }).run()
+      },
       Tab: () => this.editor.commands.indent(),
       'Shift-Tab': () => this.editor.commands.outdent(),
       'Mod-]': () => this.editor.commands.indent(),

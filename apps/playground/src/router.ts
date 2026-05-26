@@ -14,6 +14,7 @@ import TableShowcaseScenePage from './scenes/pages/TableShowcaseScenePage.vue'
 import ShortcutScenePage from './scenes/pages/ShortcutScenePage.vue'
 import PluginizedModulesScenePage from './scenes/pages/PluginizedModulesScenePage.vue'
 import CustomCommentPanelScenePage from './scenes/pages/CustomCommentPanelScenePage.vue'
+import CustomDrawerModulesScenePage from './scenes/pages/CustomDrawerModulesScenePage.vue'
 
 export const SCENE_KEYS = [
   'default',
@@ -28,6 +29,7 @@ export const SCENE_KEYS = [
   'shortcuts',
   'pluginized-modules',
   'custom-comment-panel',
+  'custom-drawer-modules',
   'behavior-benchmark',
   'regression',
 ] as const
@@ -134,6 +136,13 @@ const sceneRoutes: SceneRouteRecord[] = [
     title: '自定义评论区（完整功能）',
     path: '/scenes/custom-comment-panel',
     component: CustomCommentPanelScenePage,
+    group: 'layout-custom',
+  },
+  {
+    key: 'custom-drawer-modules',
+    title: '自定义抽屉布局（评论+大纲）',
+    path: '/scenes/custom-drawer-modules',
+    component: CustomDrawerModulesScenePage,
     group: 'layout-custom',
   },
   {

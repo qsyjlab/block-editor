@@ -115,7 +115,30 @@ function normalizeMarkdownHtml(html: string): string {
     ul.replaceWith(taskList)
   })
 
+  // Markdown 表格允许空单元格，但 Tiptap tableCell 需要至少包含一个 block。
+  doc.querySelectorAll<HTMLTableCellElement>('td,th').forEach((cell) => {
+    if (cell.childNodes.length > 0 && (cell.textContent || '').trim()) return
+    if (cell.querySelector('p,ul,ol,blockquote,pre,div')) return
+
+    cell.innerHTML = ''
+    cell.appendChild(doc.createElement('p'))
+  })
+
+  // Keep the caret out of the last table after Markdown paste/import.
+  // Without a trailing block, ProseMirror can leave an active cell selection,
+  // which makes the inline toolbar appear immediately after paste.
+  doc.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+    if (table.nextElementSibling) return
+    table.after(doc.createElement('p'))
+  })
+
   return doc.body.innerHTML
+}
+
+export function markdownToEditorHtml(markdown: string): string {
+  const withCalloutHtml = convertCalloutMarkdownToHtml(markdown)
+  const html = marked.parse(withCalloutHtml, { gfm: true, breaks: true }) as string
+  return normalizeMarkdownHtml(html)
 }
 
 export class MarkdownImporter {
@@ -149,10 +172,7 @@ export class MarkdownImporter {
 
   public importText(markdown: string) {
     try {
-      const withCalloutHtml = convertCalloutMarkdownToHtml(markdown)
-      const html = marked.parse(withCalloutHtml, { gfm: true, breaks: true }) as string
-      const normalizedHtml = normalizeMarkdownHtml(html)
-      this.editor.commands.setContent(normalizedHtml, true)
+      this.editor.commands.setContent(markdownToEditorHtml(markdown), true)
     } catch (error) {
       console.error('Markdown import failed:', error)
       alert('导入 Markdown 失败，请检查内容格式。')

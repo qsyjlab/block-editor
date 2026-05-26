@@ -191,15 +191,19 @@ new EditorUIRenderer(core, root, {
 
 ## 7. 推荐复用方式：插件工厂
 
-当评论区逻辑较复杂时，建议把 `mount` 逻辑提炼为工厂函数，场景页只保留装配代码。
+当评论区/大纲逻辑较复杂时，建议把 `mount` 逻辑提炼为工厂函数，场景页只保留装配代码。
 
 ```ts
 import { createCustomCommentPanelPlugin } from '../plugins/createCustomCommentPanelPlugin'
+import { createCustomOutlinePlugin } from '../plugins/createCustomOutlinePlugin'
 
 new EditorUIRenderer(core, container, {
   layout: {
     preset: 'editor-outline-comment',
     plugins: {
+      outline: createCustomOutlinePlugin({
+        title: '业务大纲',
+      }),
       commentPanel: createCustomCommentPanelPlugin({
         title: '业务评论区',
         description: '可复用评论插件工厂',
@@ -212,4 +216,31 @@ new EditorUIRenderer(core, container, {
 参考实现：
 
 - `apps/playground/src/scenes/plugins/createCustomCommentPanelPlugin.ts`
+- `apps/playground/src/scenes/plugins/createCustomOutlinePlugin.ts`
 - `apps/playground/src/scenes/pages/CustomCommentPanelScenePage.vue`
+- `apps/playground/src/scenes/pages/PluginizedModulesScenePage.vue`
+
+## 8. 外部抽屉布局（完整装配示例）
+
+如果你希望评论区放在业务抽屉中，而不是默认右侧栏，可以直接用 `layout.builder` 组装：
+
+```ts
+new EditorUIRenderer(core, container, {
+  layout: {
+    builder: ({ container, editorCore }) => {
+      // 1) 自己创建 toolbar/editor/drawer 容器
+      // 2) 返回 slots: toolbarContainer/editorContainer/scrollContainer/outlineContainer/commentContainer
+      // 3) 在 drawer 顶部自定义按钮，通过 editorCore.events.emit('toggleCommentPanel') 控制评论开关
+      return slots
+    },
+    plugins: {
+      outline: createCustomOutlinePlugin(),
+      commentPanel: createCustomCommentPanelPlugin(),
+    },
+  },
+})
+```
+
+完整可运行场景：
+
+- `/scenes/custom-drawer-modules`

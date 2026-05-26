@@ -109,7 +109,7 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           if (storage.selectedPositions.size === 0) return false
 
           const positions = Array.from(storage.selectedPositions).sort((a, b) => b - a)
-          const { state } = editor
+          const state = editor.view?.state || editor.state
           let tr: Transaction = state.tr
 
           for (const pos of positions) {
@@ -122,8 +122,12 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
             }
           }
 
-          editor.view.dispatch(tr)
+          if (!tr.docChanged) return false
+          if (editor.view?.state && tr.before !== editor.view.state.doc) {
+            return false
+          }
           storage.selectedPositions.clear()
+          editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))
           return true
         },
 
@@ -133,12 +137,23 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           const storage = editor.storage.blockMultiSelect as BlockMultiSelectStorage
           if (storage.selectedPositions.size === 0) return false
 
-          const schema = editor.state.schema
+          const state = editor.view?.state || editor.state
+          const schema = state.schema
           const paragraphType = schema.nodes.paragraph
           if (!paragraphType) return false
 
           const selected = new Set(storage.selectedPositions)
           const rebuilt: ProseMirrorNode[] = []
+          const newSelected = new Set<number>()
+          let rebuiltOffset = 0
+
+          const pushNode = (node: ProseMirrorNode, selectedAfterConvert: boolean) => {
+            if (selectedAfterConvert) {
+              newSelected.add(rebuiltOffset)
+            }
+            rebuilt.push(node)
+            rebuiltOffset += node.nodeSize
+          }
 
           const toParagraph = (node: ProseMirrorNode): ProseMirrorNode => {
             if (node.type === paragraphType) return node
@@ -184,31 +199,37 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
             return wrapperType.create(attrs || null, paragraph)
           }
 
-          editor.state.doc.forEach((node, offset) => {
+          const topLevel: Array<{ node: ProseMirrorNode; offset: number }> = []
+          state.doc.forEach((node, offset) => {
+            topLevel.push({ node, offset })
+          })
+
+          for (let index = 0; index < topLevel.length; index += 1) {
+            const { node, offset } = topLevel[index]
             if (!selected.has(offset)) {
-              rebuilt.push(node)
-              return
+              pushNode(node, false)
+              continue
             }
 
             if (nodeType === 'paragraph') {
-              rebuilt.push(toParagraph(node))
-              return
+              pushNode(toParagraph(node), true)
+              continue
             }
 
             if (nodeType === 'heading') {
               const headingType = schema.nodes.heading
               if (!headingType) {
-                rebuilt.push(node)
-                return
+                pushNode(node, true)
+                continue
               }
-              rebuilt.push(headingType.create({ level: 1, ...attrs }, toParagraph(node).content))
-              return
+              pushNode(headingType.create({ level: 1, ...attrs }, toParagraph(node).content), true)
+              continue
             }
 
             if (nodeType === 'blockquote' || nodeType === 'callout') {
               const wrapped = wrapAsQuoteOrCallout(node, nodeType)
-              rebuilt.push(wrapped ?? node)
-              return
+              pushNode(wrapped ?? node, true)
+              continue
             }
 
             if (
@@ -216,30 +237,53 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
               nodeType === 'orderedList' ||
               nodeType === 'taskList'
             ) {
-              const wrapped = wrapAsList(node, nodeType)
-              rebuilt.push(wrapped ?? node)
-              return
+              const listType = schema.nodes[nodeType]
+              const listItemType =
+                nodeType === 'taskList' ? schema.nodes.taskItem : schema.nodes.listItem
+              if (!listType || !listItemType) {
+                pushNode(node, true)
+                continue
+              }
+
+              const listItems: ProseMirrorNode[] = []
+              let cursor = index
+              while (cursor < topLevel.length && selected.has(topLevel[cursor].offset)) {
+                const paragraph = toParagraph(topLevel[cursor].node)
+                const itemAttrs = nodeType === 'taskList' ? { checked: false } : null
+                listItems.push(listItemType.create(itemAttrs, paragraph))
+                cursor += 1
+              }
+
+              if (listItems.length === 0) {
+                const wrapped = wrapAsList(node, nodeType)
+                pushNode(wrapped ?? node, true)
+              } else {
+                pushNode(listType.create(null, Fragment.fromArray(listItems)), true)
+                index = cursor - 1
+              }
+              continue
             }
 
             const targetType = schema.nodes[nodeType]
             if (!targetType) {
-              rebuilt.push(node)
-              return
+              pushNode(node, true)
+              continue
             }
 
             try {
-              rebuilt.push(targetType.create({ ...node.attrs, ...attrs }, node.content, node.marks))
+              pushNode(targetType.create({ ...node.attrs, ...attrs }, node.content, node.marks), true)
             } catch {
-              rebuilt.push(node)
+              pushNode(node, true)
             }
-          })
+          }
 
-          const tr = editor.state.tr.replaceWith(
+          const tr = state.tr.replaceWith(
             0,
-            editor.state.doc.content.size,
+            state.doc.content.size,
             Fragment.fromArray(rebuilt),
           )
 
+          storage.selectedPositions = newSelected
           editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))
           return true
         },
@@ -252,7 +296,8 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
 
           const nodes: ProseMirrorNode[] = []
           const offsets: number[] = []
-          editor.state.doc.forEach((node, offset) => {
+          const state = editor.view?.state || editor.state
+          state.doc.forEach((node, offset) => {
             nodes.push(node)
             offsets.push(offset)
           })
@@ -300,9 +345,9 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
 
           storage.selectedPositions = newSelected
 
-          const tr = editor.state.tr.replaceWith(
+          const tr = state.tr.replaceWith(
             0,
-            editor.state.doc.content.size,
+            state.doc.content.size,
             Fragment.fromArray(reorderedNodes),
           )
           editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))
@@ -317,7 +362,8 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
 
           const nodes: ProseMirrorNode[] = []
           const offsets: number[] = []
-          editor.state.doc.forEach((node, offset) => {
+          const state = editor.view?.state || editor.state
+          state.doc.forEach((node, offset) => {
             nodes.push(node)
             offsets.push(offset)
           })
@@ -365,9 +411,9 @@ export const BlockMultiSelect = Extension.create<{}, BlockMultiSelectStorage>({
           }
           storage.selectedPositions = newSelected
 
-          const tr = editor.state.tr.replaceWith(
+          const tr = state.tr.replaceWith(
             0,
-            editor.state.doc.content.size,
+            state.doc.content.size,
             Fragment.fromArray(reorderedNodes),
           )
           editor.view.dispatch(tr.setMeta('blockMultiSelectUpdate', true))

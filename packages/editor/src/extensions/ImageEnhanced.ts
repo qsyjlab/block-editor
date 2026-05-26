@@ -263,49 +263,63 @@ export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
         alignBar.style.display = visible ? 'flex' : 'none'
         figure.classList.toggle('be-image-controls-active', visible)
         wrapper.classList.toggle('be-image-controls-active', visible)
+        editor.view.dom.toggleAttribute('data-be-image-active', visible)
       }
       setControlsVisible(false)
 
       const selectCurrentImageNode = () => {
         const { state, dispatch } = editor.view
-        let basePos: number | null = null
+        const candidatePositions = new Set<number>()
 
         if (typeof getPos === 'function') {
           try {
-            basePos = getPos()
+            const pos = getPos()
+            candidatePositions.add(pos)
+            candidatePositions.add(pos + 1)
+            candidatePositions.add(Math.max(0, pos - 1))
           } catch {
-            basePos = null
+            // Fall back to DOM position lookup below.
           }
         }
 
-        if (typeof basePos !== 'number') {
+        ;[figure, wrapper, img].forEach((dom) => {
           try {
-            basePos = editor.view.posAtDOM(img, 0)
+            const pos = editor.view.posAtDOM(dom, 0)
+            for (let offset = -3; offset <= 3; offset += 1) {
+              candidatePositions.add(Math.max(0, pos + offset))
+            }
           } catch {
-            basePos = null
+            // Ignore DOM nodes that ProseMirror cannot map directly.
           }
-        }
+        })
 
-        if (typeof basePos !== 'number') return
-
-        const candidates = [basePos, basePos + 1, Math.max(0, basePos - 1)]
-        const nodePos = candidates.find((pos) => {
+        const nodePos = Array.from(candidatePositions).find((pos) => {
           const nodeAtPos = state.doc.nodeAt(pos)
           return nodeAtPos?.type.name === 'image'
         })
-        if (typeof nodePos !== 'number') return
-        dispatch(state.tr.setSelection(NodeSelection.create(state.doc, nodePos)))
+        if (typeof nodePos !== 'number') return false
+        dispatch(state.tr.setSelection(NodeSelection.create(state.doc, nodePos)).scrollIntoView())
+        editor.commands.setInteractionMode?.('block-selection')
         editor.view.focus()
+        document.getSelection()?.removeAllRanges()
+        return true
       }
 
-      img.addEventListener('click', (e) => {
+      const activateImageControls = (e: MouseEvent) => {
+        e.preventDefault()
         e.stopPropagation()
         const controlsVisible = alignBar.style.display !== 'none'
-        selectCurrentImageNode()
-        setControlsVisible(true)
+        const selected = selectCurrentImageNode()
+        setControlsVisible(selected)
         if (controlsVisible) {
           openImagePreviewFromImage(img, this.options.i18n)
         }
+      }
+
+      figure.addEventListener('mousedown', activateImageControls)
+      img.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
       })
       img.addEventListener('dblclick', (e) => {
         e.preventDefault()
@@ -396,6 +410,7 @@ export const ImageEnhanced = Image.extend<ImageEnhancedOptions>({
           return false
         },
         destroy() {
+          editor.view.dom.removeAttribute('data-be-image-active')
           document.removeEventListener('click', onDocumentClick)
           document.removeEventListener('mousemove', onMove)
           document.removeEventListener('mouseup', onUp)

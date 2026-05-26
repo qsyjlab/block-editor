@@ -139,6 +139,7 @@ export class EditorCore {
     const extensions: any[] = [
       StarterKit.configure({
         codeBlock: false,
+        dropcursor: false,
         history: collaborationEnabled ? false : undefined,
       }),
       ...(collaborationEnabled && this.ydoc

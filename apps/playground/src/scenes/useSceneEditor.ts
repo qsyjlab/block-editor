@@ -35,7 +35,7 @@ function resolveRuntimeContext(
   const rawTheme = queryValue(query.theme, 'light').toLowerCase()
   const theme: 'light' | 'dark' | 'auto' =
     rawTheme === 'dark' || rawTheme === 'auto' ? rawTheme : 'light'
-  const defaultCollab = options.defaultCollaborationEnabled ?? true
+  const defaultCollab = options.defaultCollaborationEnabled ?? false
   const collaborationEnabled = queryValue(query.collab, defaultCollab ? '1' : '0') !== '0'
 
   return {

@@ -186,7 +186,9 @@ export interface BlockHandleI18n {
   menuAriaLabel: string
   moveUp: string
   moveDown: string
+  comment: string
   duplicateBlock: string
+  cutBlock: string
   copyBlockLink: string
   deleteBlock: string
   toParagraph: string
@@ -196,7 +198,14 @@ export interface BlockHandleI18n {
   toBulletList: string
   toOrderedList: string
   toTaskList: string
+  toCodeBlock: string
   toBlockquote: string
+  toHorizontalRule: string
+  insertImage: string
+  insertTable: string
+  insertCallout: string
+  insertButton: string
+  insertParagraphBelow: string
   addToMultiSelect: string
   copyLinkPromptTitle: string
 }
@@ -207,6 +216,7 @@ export interface BlockMultiSelectBarI18n {
   moveDown: string
   deleteSelected: string
   toParagraph: string
+  toHeading1: string
   toBlockquote: string
   toTaskList: string
   toBulletList: string

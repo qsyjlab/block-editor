@@ -5,6 +5,11 @@ import { InsertLinkDialog } from './dialogs/insert-link-dialog'
 import { VersionHistoryDialog } from './dialogs/version-history-dialog'
 import { resolveEditorI18n } from '../../i18n'
 import type { EditorI18n } from '../../i18n'
+import {
+  createBlockTypeDropdown,
+  featureToToolbarButton,
+  getBlockFeaturesByIds,
+} from '../features/block-features'
 
 const FONT_FAMILIES = [
   { label: 'Default', value: '' },
@@ -61,46 +66,7 @@ export function buildDefaultToolbarItems(
       },
     ],
     [
-      {
-        type: 'dropdown',
-        label: t.heading,
-        icon: 'paragraph',
-        width: '80px',
-        layout: 'list',
-        options: [
-          {
-            label: t.normal,
-            icon: 'paragraph',
-            value: 'paragraph',
-            command: 'setParagraph',
-            isActive: (editor) => editor.isActive('paragraph'),
-          },
-          {
-            label: t.heading1,
-            icon: 'h1',
-            value: 'h1',
-            command: 'toggleHeading',
-            args: { level: 1 },
-            isActive: (editor) => editor.isActive('heading', { level: 1 }),
-          },
-          {
-            label: t.heading2,
-            icon: 'h2',
-            value: 'h2',
-            command: 'toggleHeading',
-            args: { level: 2 },
-            isActive: (editor) => editor.isActive('heading', { level: 2 }),
-          },
-          {
-            label: t.heading3,
-            icon: 'h3',
-            value: 'h3',
-            command: 'toggleHeading',
-            args: { level: 3 },
-            isActive: (editor) => editor.isActive('heading', { level: 3 }),
-          },
-        ],
-      },
+      createBlockTypeDropdown(i18n),
       {
         type: 'dropdown',
         label: t.font,
@@ -255,47 +221,12 @@ export function buildDefaultToolbarItems(
       },
       { type: 'button', label: t.indent, icon: 'indent', command: 'indent', shortcut: '⌘]' },
       { type: 'button', label: t.outdent, icon: 'outdent', command: 'outdent', shortcut: '⌘[' },
-      {
-        type: 'button',
-        label: t.bulletList,
-        icon: 'list',
-        command: 'toggleBulletList',
-        activeName: 'bulletList',
-        shortcut: '⇧⌘8',
-      },
-      {
-        type: 'button',
-        label: t.orderedList,
-        icon: 'listOrdered',
-        command: 'toggleOrderedList',
-        activeName: 'orderedList',
-        shortcut: '⇧⌘7',
-      },
-      {
-        type: 'button',
-        label: t.taskList,
-        icon: 'task',
-        command: 'toggleTaskList',
-        activeName: 'taskList',
-        shortcut: '⇧⌘9',
-      },
-      {
-        type: 'button',
-        label: t.blockquote,
-        icon: 'quote',
-        command: 'toggleBlockquote',
-        activeName: 'blockquote',
-        shortcut: '⇧⌘B',
-      },
+      ...getBlockFeaturesByIds(['bulletList', 'orderedList', 'taskList', 'blockquote'], i18n).map(
+        featureToToolbarButton,
+      ),
     ],
     [
-      {
-        type: 'button',
-        label: t.insertTable,
-        icon: 'table',
-        command: 'insertTable',
-        args: { rows: 3, cols: 3, withHeaderRow: false },
-      },
+      featureToToolbarButton(getBlockFeaturesByIds(['table'], i18n)[0]),
       {
         type: 'button',
         label: t.insertImage,
@@ -348,20 +279,7 @@ export function buildDefaultToolbarItems(
           ).show()
         },
       },
-      {
-        type: 'button',
-        label: t.horizontalRule,
-        icon: 'minus',
-        command: 'setHorizontalRule',
-      },
-      {
-        type: 'button',
-        label: t.callout,
-        icon: 'info',
-        onExecute: (core: EditorCore) => {
-          core.editor.commands.insertCallout('info')
-        },
-      },
+      ...getBlockFeaturesByIds(['horizontalRule', 'callout'], i18n).map(featureToToolbarButton),
     ],
     [
       {

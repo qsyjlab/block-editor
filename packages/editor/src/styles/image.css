@@ -9,10 +9,18 @@
   width: fit-content;
   max-width: 100%;
   outline: none;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .be-image-figure.ProseMirror-selectednode {
-  outline: none;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.be-image-figure.ProseMirror-selectednode::before {
+  display: none !important;
 }
 
 .be-image-figure[data-align='left'] {
@@ -51,13 +59,20 @@
 }
 
 .be-image-wrapper img:hover {
-  box-shadow: 0 0 0 2px var(--primary-color);
+  box-shadow: none;
 }
 
 .be-image-figure.ProseMirror-selectednode > .be-image-wrapper,
 .be-image-wrapper.be-image-controls-active {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 42%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--primary-color) 86%, transparent),
+    0 10px 24px -22px color-mix(in srgb, var(--primary-color) 46%, transparent);
   border-radius: 8px;
+}
+
+.be-image-wrapper.be-image-controls-active img:hover,
+.be-image-figure.ProseMirror-selectednode img:hover {
+  box-shadow: none;
 }
 
 .be-resize-handle {
@@ -141,6 +156,7 @@
   align-items: center;
   justify-content: center;
   transition: opacity 0.16s ease;
+  pointer-events: auto;
 }
 
 .be-image-viewer-overlay.open {
@@ -155,6 +171,7 @@
   max-height: none;
   display: block;
   z-index: 1;
+  pointer-events: auto;
 }
 
 .be-image-viewer-center {
@@ -166,6 +183,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .be-image-viewer-image {
@@ -223,7 +241,7 @@
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 40;
+  z-index: 60;
   width: 44px;
   height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -234,6 +252,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  pointer-events: auto;
   transition: all 0.14s ease;
 }
 
@@ -252,7 +271,7 @@
   left: 50%;
   bottom: 20px;
   transform: translateX(-50%);
-  z-index: 30;
+  z-index: 60;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -261,6 +280,9 @@
   padding: 8px 12px;
   background: rgba(8, 11, 17, 0.86);
   color: rgba(255, 255, 255, 0.9);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .be-image-viewer-tool-btn,
@@ -276,6 +298,14 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.14s ease;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.be-image-viewer-tool-btn *,
+.be-image-viewer-scale * {
+  pointer-events: none;
 }
 
 .be-image-viewer-scale {

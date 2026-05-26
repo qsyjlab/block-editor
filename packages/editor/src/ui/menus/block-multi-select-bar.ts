@@ -59,7 +59,6 @@ export class BlockMultiSelectBar {
 
     const applyConvert = (nodeType: string, attrs?: Record<string, any>) => {
       editorCore.editor.commands.convertSelectedBlocks(nodeType, attrs)
-      editorCore.editor.commands.clearBlockSelection()
     }
 
     const btnToParagraph = this.createBtn(
@@ -67,6 +66,12 @@ export class BlockMultiSelectBar {
       this.editorCore.i18n.blockMultiSelectBar.toParagraph,
     )
     btnToParagraph.addEventListener('click', () => applyConvert('paragraph'))
+
+    const btnToHeading1 = this.createBtn(
+      '<span style="font-size:12px;font-weight:800;line-height:1">H1</span>',
+      this.editorCore.i18n.blockMultiSelectBar.toHeading1,
+    )
+    btnToHeading1.addEventListener('click', () => applyConvert('heading', { level: 1 }))
 
     const btnToQuote = this.createBtn(
       icons.quote,
@@ -115,6 +120,7 @@ export class BlockMultiSelectBar {
     this.bar.appendChild(btnDelete)
     this.bar.appendChild(divider.cloneNode())
     this.bar.appendChild(btnToParagraph)
+    this.bar.appendChild(btnToHeading1)
     this.bar.appendChild(btnToQuote)
     this.bar.appendChild(btnToTask)
     this.bar.appendChild(btnToBullet)

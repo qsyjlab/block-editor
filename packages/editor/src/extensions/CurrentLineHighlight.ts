@@ -18,6 +18,9 @@ export const CurrentLineHighlight = Extension.create({
             if (selection instanceof NodeSelection) {
               return DecorationSet.empty
             }
+            if (this.editor.isActive('image')) {
+              return DecorationSet.empty
+            }
 
             const decorations: Decoration[] = []
             const { $anchor } = selection

@@ -1,6 +1,6 @@
 # 当前代办清单（唯一执行入口）
 
-最后更新：2026-04-03  
+最后更新：2026-04-24  
 状态：进行中  
 维护规则：后续所有代办更新统一写在本页面。
 
@@ -107,6 +107,8 @@
   - [x] P1-8.3 使用文档补齐（插件接入、外部抽屉评论、大纲订阅、控制器示例代码）。
   - [x] P1-8.4 新增“自定义评论区（完整功能）”场景（创建/筛选/回复/解决/重开/删除/定位）。
   - [x] P1-8.5 自定义评论区提炼为可复用插件工厂（场景页仅做装配，便于业务二次封装）。
+  - [x] P1-8.6 自定义大纲提炼为可复用插件工厂（订阅数据、当前位置高亮、跳转）。
+  - [x] P1-8.7 新增“外部抽屉布局（评论+大纲）”完整场景（`layout.builder` + `plugins` 组合）。
 
 ## 执行顺序
 
@@ -464,3 +466,13 @@
 - 验证结果：通过。
 - 文档更新：`docs/usage/pluginized-modules.md`、`docs/todo/current.md`
 - 风险与待办：后续可继续抽象为 NPM 可复用 UI 包（主题 token 与动作注入点分离）。
+
+### 2026-04-24 11:40
+
+- 任务ID：P1-8.6 / P1-8.7 插件化模块继续收口
+- 状态变更：doing -> done
+- 代码改动：新增 `createCustomOutlinePlugin` 工厂并接入“可插拔模块示例”场景；新增“自定义抽屉布局（评论+大纲）”场景，演示 `layout.builder` 外部组装抽屉，并通过按钮控制评论/大纲显示。
+- 验证命令：`pnpm exec prettier apps/playground/src/scenes/plugins/createCustomOutlinePlugin.ts apps/playground/src/scenes/pages/PluginizedModulesScenePage.vue apps/playground/src/scenes/pages/CustomDrawerModulesScenePage.vue apps/playground/src/router.ts docs/usage/pluginized-modules.md docs/todo/current.md --write`、`pnpm --filter block-editor-playground build`、`pnpm --dir docs docs:build`
+- 验证结果：通过。
+- 文档更新：`docs/usage/pluginized-modules.md`、`docs/todo/current.md`
+- 风险与待办：下一轮可推进 `P1-3` 版本历史对比重构（你当前最关注的问题点）。

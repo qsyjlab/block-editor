@@ -135,6 +135,8 @@ export const Callout = TiptapNode.create<CalloutOptions>({
 
   defining: true,
 
+  isolating: true,
+
   addAttributes() {
     return {
       calloutType: {

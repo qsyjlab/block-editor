@@ -159,14 +159,38 @@ class ImagePreviewModal {
     this.overlay.addEventListener('click', (event) => {
       if (event.target === this.overlay) this.close()
     })
-    this.closeBtn.addEventListener('click', () => this.close())
-    this.prevBtn.addEventListener('click', () => this.goPrev())
-    this.nextBtn.addEventListener('click', () => this.goNext())
-    this.zoomOutBtn.addEventListener('click', () => this.zoomOut())
-    this.zoomInBtn.addEventListener('click', () => this.zoomIn())
-    this.scaleEl.addEventListener('click', () => this.resetScale())
-    this.rotateBtn.addEventListener('click', () => this.rotate())
-    this.downloadBtn.addEventListener('click', () => this.downloadCurrent())
+    this.closeBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.close()
+    })
+    this.prevBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.goPrev()
+    })
+    this.nextBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.goNext()
+    })
+    this.zoomOutBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.zoomOut()
+    })
+    this.zoomInBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.zoomIn()
+    })
+    this.scaleEl.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.resetScale()
+    })
+    this.rotateBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.rotate()
+    })
+    this.downloadBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.downloadCurrent()
+    })
     this.imageEl.addEventListener('pointerdown', this.handleImagePointerDown)
     this.imageEl.addEventListener('dragstart', (event) => {
       event.preventDefault()
