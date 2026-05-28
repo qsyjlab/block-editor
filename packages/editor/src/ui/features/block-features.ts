@@ -84,6 +84,10 @@ function createTableJson(rows = 3, cols = 3) {
   }
 }
 
+function createTableWithTrailingParagraphJson(rows = 3, cols = 3) {
+  return [createTableJson(rows, cols), { type: 'paragraph' }]
+}
+
 export function createBlockFeatures(
   i18nInput?: string | Partial<EditorI18n> | null,
 ): EditorFeature[] {
@@ -222,9 +226,15 @@ export function createBlockFeatures(
       description: slash.tableDescription,
       icon: icons.table,
       toolbarIcon: 'table',
-      command: 'insertTable',
       args: { rows: 3, cols: 3, withHeaderRow: false },
       keywords: ['table', slash.tableTitle],
+      run: ({ editor }) => {
+        editor
+          .chain()
+          .focus()
+          .insertContent(createTableWithTrailingParagraphJson())
+          .run()
+      },
     },
     {
       id: 'callout',
@@ -341,7 +351,7 @@ export function createBlockHandleFeatureItems(
     if (feature.id === 'horizontalRule') {
       action = () => ctx.replaceCurrentBlockWith({ type: 'horizontalRule' })
     } else if (feature.id === 'table') {
-      action = () => ctx.replaceCurrentBlockWith(createTableJson())
+      action = () => ctx.replaceCurrentBlockWith(createTableWithTrailingParagraphJson())
     } else if (feature.id === 'callout') {
       action = () =>
         ctx.replaceCurrentBlockWith({

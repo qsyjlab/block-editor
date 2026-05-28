@@ -207,6 +207,15 @@ export interface BlockHandleI18n {
   insertButton: string
   insertParagraphBelow: string
   addToMultiSelect: string
+  tableSyncBlock: string
+  tableIndent: string
+  tableShare: string
+  tableSaveAsTemplate: string
+  tableHeaderRow: string
+  tableHeaderColumn: string
+  tableDistributeColumns: string
+  tableInsertRow: string
+  tableInsertColumn: string
   copyLinkPromptTitle: string
 }
 

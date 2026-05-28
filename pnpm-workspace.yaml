@@ -1,8 +1,9 @@
 packages:
   - packages/*
   - apps/*
+  - docs
 
 onlyBuiltDependencies:
+  - core-js
   - esbuild
-
-storeDir: /Users/qsyj/Library/pnpm/store/v10
+  - leveldown

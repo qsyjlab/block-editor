@@ -4,6 +4,7 @@ import { ToolbarItem } from '../toolbar/ToolbarItem'
 import { ToolbarDropdown } from '../toolbar/ToolbarDropdown'
 import { ToolbarColorPicker } from '../toolbar/ToolbarColorPicker'
 import { getTableMenuButtons } from './tableMenuItems'
+import { isCellSelection } from './table-selection'
 import { ToolbarItemType } from '../toolbar/ToolbarRegistry'
 import { applyShortcutHintsToItems } from '../toolbar/shortcut-hints'
 import { resolveUILayerHost } from '../layer-root'
@@ -16,6 +17,7 @@ export class TableBubbleMenu {
   private cleanupFloating: (() => void) | null = null
   private currentTable: HTMLElement | null = null
   private rafId: number | null = null
+  private suppressHideUntil = 0
 
   constructor(editorCore: EditorCore, overlayContainer?: HTMLElement) {
     this.editorCore = editorCore
@@ -23,6 +25,11 @@ export class TableBubbleMenu {
     this.element = this.render()
 
     this.getOverlayContainer().appendChild(this.element)
+
+    this.element.addEventListener('mousedown', (event) => {
+      this.suppressHideUntil = Date.now() + 400
+      event.stopPropagation()
+    })
 
     const scheduleUpdate = () => {
       if (this.rafId !== null) return
@@ -36,7 +43,23 @@ export class TableBubbleMenu {
     this.editorCore.events.on('transaction', scheduleUpdate)
     this.editorCore.events.on('update', scheduleUpdate)
     this.editorCore.events.on('modeChange', scheduleUpdate)
+
+    this.handleDocumentMouseDown = (event: MouseEvent) => {
+      if (!this.isOpen) return
+      const target = event.target as Node | null
+      if (!target) return
+      if (
+        this.element.contains(target) ||
+        (target instanceof Element &&
+          target.closest('.toolbar-dropdown-menu, .color-picker-dropdown'))
+      ) {
+        this.suppressHideUntil = Date.now() + 600
+      }
+    }
+    document.addEventListener('mousedown', this.handleDocumentMouseDown, true)
   }
+
+  private handleDocumentMouseDown: (event: MouseEvent) => void
 
   private getOverlayContainer(): HTMLElement {
     if (this.overlayContainer) return this.overlayContainer
@@ -85,6 +108,33 @@ export class TableBubbleMenu {
     })
   }
 
+  private isToolbarInteracting(): boolean {
+    if (Date.now() < this.suppressHideUntil) return true
+    if (this.element.contains(document.activeElement)) return true
+    if (this.element.querySelector('.toolbar-dropdown-wrapper.open')) return true
+    if (this.element.querySelector('.color-picker-dropdown')) return true
+
+    const overlay = this.getOverlayContainer()
+    const openMenu = overlay.querySelector(
+      '.toolbar-dropdown-menu[data-owner-in-more="false"], .color-picker-dropdown',
+    ) as HTMLElement | null
+    if (openMenu && openMenu.style.display !== 'none') {
+      return this.element.contains(openMenu.closest('.table-bubble-menu') || this.element)
+    }
+
+    return false
+  }
+
+  private shouldShowToolbar(): boolean {
+    const editor = this.editorCore.editor
+    const selection = editor.state.selection
+
+    if (isCellSelection(selection)) return true
+    if (!selection.empty) return true
+    if (this.isToolbarInteracting()) return true
+    return false
+  }
+
   private setTableMode() {
     const state = this.editorCore.editor.storage.interactionState as { mode?: string } | undefined
     if (state?.mode !== 'block-selection' && state?.mode !== 'table-editing') {
@@ -115,6 +165,11 @@ export class TableBubbleMenu {
     }
 
     if (!editor.isActive('table')) {
+      this.hide()
+      return
+    }
+
+    if (!this.shouldShowToolbar()) {
       this.hide()
       return
     }
@@ -150,7 +205,7 @@ export class TableBubbleMenu {
     this.cleanupFloating = autoUpdate(tableEl, this.element, () => {
       computePosition(tableEl, this.element, {
         placement: 'top',
-        middleware: [offset(10), flip(), shift({ padding: 5 })],
+        middleware: [offset({ mainAxis: 30 }), flip(), shift({ padding: 8 })],
       }).then(({ x, y }) => {
         Object.assign(this.element.style, {
           left: `${x}px`,
@@ -162,6 +217,7 @@ export class TableBubbleMenu {
 
   private hide() {
     if (!this.isOpen) return
+    if (this.isToolbarInteracting()) return
 
     this.isOpen = false
     this.element.style.display = 'none'
@@ -175,6 +231,7 @@ export class TableBubbleMenu {
   }
 
   public destroy() {
+    document.removeEventListener('mousedown', this.handleDocumentMouseDown, true)
     this.hide()
     this.element.remove()
   }

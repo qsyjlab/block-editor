@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { NodeSelection, Plugin, PluginKey } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
+import { isCellSelection } from '../ui/menus/table-selection'
 
 export const CurrentLineHighlight = Extension.create({
   name: 'currentLineHighlight',
@@ -15,7 +16,7 @@ export const CurrentLineHighlight = Extension.create({
             if (!isEditable || !isFocused) {
               return DecorationSet.empty
             }
-            if (selection instanceof NodeSelection) {
+            if (selection instanceof NodeSelection || isCellSelection(selection)) {
               return DecorationSet.empty
             }
             if (this.editor.isActive('image')) {

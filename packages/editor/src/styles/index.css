@@ -784,7 +784,7 @@ ul[data-type='taskList'] li > div {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
-  margin: 1rem 0;
+  margin: 0;
   display: block;
 }
 
@@ -802,7 +802,7 @@ ul[data-type='taskList'] li > div {
   border-collapse: collapse;
   table-layout: fixed;
   width: 100%;
-  margin: 0;
+  margin: 10px 0 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
 }
@@ -843,9 +843,54 @@ ul[data-type='taskList'] li > div {
   right: 0;
   top: 0;
   bottom: 0;
-  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
   pointer-events: none;
-  border: 1px solid var(--primary-color);
+  border: none;
+}
+
+/* 热区选中整列/整行（飞书：列头蓝条 + 整列淡蓝蒙层，无单格 caret） */
+.ProseMirror table[data-be-axis-selection^='column'] td.be-table-column-region-selected,
+.ProseMirror table[data-be-axis-selection^='column'] th.be-table-column-region-selected,
+.ProseMirror table[data-be-axis-selection^='row'] td.be-table-row-region-selected,
+.ProseMirror table[data-be-axis-selection^='row'] th.be-table-row-region-selected {
+  background: color-mix(in srgb, var(--primary-color) 20%, var(--paper-bg)) !important;
+}
+
+.ProseMirror td.be-table-column-region-selected::after,
+.ProseMirror th.be-table-column-region-selected::after,
+.ProseMirror td.be-table-row-region-selected::after,
+.ProseMirror th.be-table-row-region-selected::after {
+  background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+  border: none;
+}
+
+.ProseMirror td.be-table-column-region-selected,
+.ProseMirror th.be-table-column-region-selected,
+.ProseMirror td.be-table-row-region-selected,
+.ProseMirror th.be-table-row-region-selected {
+  caret-color: transparent !important;
+}
+
+.ProseMirror.ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+
+.be-table-column-selection-bar {
+  position: fixed;
+  z-index: 240041;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 35%, transparent);
+  pointer-events: none;
+}
+
+.be-table-row-selection-bar {
+  position: fixed;
+  z-index: 240041;
+  border-radius: 3px 0 0 3px;
+  background: var(--primary-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 35%, transparent);
+  pointer-events: none;
 }
 
 /* 列宽调整手柄 */
@@ -860,7 +905,7 @@ ul[data-type='taskList'] li > div {
 }
 
 .be-table-handle {
-  position: absolute;
+  position: fixed;
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -870,8 +915,8 @@ ul[data-type='taskList'] li > div {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  z-index: 65;
+  cursor: grab;
+  z-index: 240046;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--text-color) 18%, transparent);
   transition: all 0.16s ease;
 }
@@ -880,6 +925,158 @@ ul[data-type='taskList'] li > div {
   color: var(--primary-color);
   border-color: color-mix(in srgb, var(--primary-color) 42%, var(--border-color));
   background: color-mix(in srgb, var(--primary-color) 12%, var(--paper-bg));
+}
+
+.be-table-insert-control {
+  position: fixed;
+  z-index: 240092;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: var(--primary-color);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary-color) 16%, transparent),
+    0 12px 24px -12px color-mix(in srgb, var(--primary-color) 65%, transparent);
+  cursor: pointer;
+}
+
+.be-table-insert-control:hover {
+  transform: scale(1.04);
+}
+
+.be-table-insert-control svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ProseMirror td.be-table-insert-active-cell,
+.ProseMirror th.be-table-insert-active-cell {
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--paper-bg)) !important;
+}
+
+.ProseMirror td.be-table-axis-active-cell,
+.ProseMirror th.be-table-axis-active-cell {
+  background: color-mix(in srgb, var(--primary-color) 13%, var(--paper-bg)) !important;
+}
+
+.ProseMirror td.be-table-axis-active-cell::after,
+.ProseMirror th.be-table-axis-active-cell::after {
+  z-index: 2;
+  position: absolute;
+  content: '';
+  inset: 0;
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  border: none;
+  pointer-events: none;
+}
+
+.be-table-trigger-layer {
+  position: fixed;
+  z-index: 240033;
+  pointer-events: none;
+}
+
+/* 热区/插入点必须在表级 handle(240091) 之上，否则点击无响应 */
+.be-table-trigger-layer.is-table-chrome-active,
+.be-table-trigger-layer.is-insert-chrome-priority {
+  z-index: 240100;
+  pointer-events: auto;
+}
+
+/* 列/行热区条：选中整列/整行（无中心圆点，避免与插入点混淆） */
+.be-table-axis-zone {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.be-table-axis-zone--column {
+  top: 0;
+  height: 14px;
+  border-radius: 4px 4px 0 0;
+}
+
+.be-table-axis-zone--row {
+  left: 0;
+  width: 14px;
+  border-radius: 4px 0 0 4px;
+}
+
+.is-table-chrome-active .be-table-axis-zone {
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+.be-table-axis-zone:hover,
+.be-table-axis-zone.is-axis-active {
+  background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+}
+
+/* 边界圆点：插入行/列（飞书：6px 灰点贴在表格网格线上） */
+.be-table-insert-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 56%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--paper-bg) 96%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.be-table-insert-dot:hover {
+  background: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
+}
+
+.be-table-insert-dot--column {
+  top: 1px;
+  transform: translate(-50%, 0);
+}
+
+.be-table-insert-dot--row {
+  left: 1px;
+  transform: translate(0, -50%);
+}
+
+.be-table-insert-indicator {
+  position: fixed;
+  z-index: 240090;
+  border-radius: 999px;
+  background: var(--primary-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 22%, transparent);
+  pointer-events: none;
+}
+
+.be-table-insert-tooltip {
+  position: fixed;
+  z-index: 240094;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 12px 28px -14px rgb(15 23 42 / 70%);
+  pointer-events: none;
+}
+
+.be-table-insert-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: #111827;
+  transform: translateX(-50%) rotate(45deg);
 }
 
 /* Link */
@@ -1544,6 +1741,18 @@ ul[data-type='taskList'] li > div {
   background: var(--border-color);
 }
 
+.be-block-handle[data-be-handle-in-table-cell='true'] {
+  position: fixed;
+  z-index: 240105;
+}
+
+.be-block-handle[data-be-handle-in-table-cell='true']::before {
+  content: '';
+  position: absolute;
+  inset: -12px -10px;
+  pointer-events: auto;
+}
+
 .be-block-handle {
   width: auto !important;
   min-width: 48px;
@@ -1576,6 +1785,19 @@ ul[data-type='taskList'] li > div {
 .be-block-handle-pill {
   display: inline-flex;
   align-items: center;
+}
+
+/* 表级块 handle：高于列/行热区层，扩大点击热区避免右下角点不到 */
+.be-block-handle--table-block {
+  z-index: 240060 !important;
+  pointer-events: auto;
+}
+
+.be-block-handle--table-block::before {
+  content: '';
+  position: absolute;
+  inset: -10px -12px;
+  pointer-events: auto;
 }
 
 .be-block-handle-type,

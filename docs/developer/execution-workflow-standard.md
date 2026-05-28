@@ -1,6 +1,6 @@
 # TODO 维护流程标准（给 AI / 执行者）
 
-最后更新：2026-03-28
+最后更新：2026-05-27
 
 这是一份“任务维护方法文档”，不是功能设计文档。  
 目标是保证任何人接手一个需求时，都能按统一格式拆分、执行、验收、留痕。
@@ -23,6 +23,14 @@
 6. 基准行为项模板（用于录入行为对标项）
 7. 执行日志模板（每次执行后都可追踪）
 
+如果本轮需求需要废弃或替换现有 `docs/todo/current.md`，必须先完成归档，再写入新的当前清单：
+
+1. 先把旧 `docs/todo/current.md` 完整复制到 `docs/todo/history/{主题}-{YYYY-MM-DD}.md`。
+2. 归档文件顶部必须说明归档时间、归档原因、新执行入口。
+3. 新 `docs/todo/current.md` 顶部必须反向链接到归档文件。
+4. `docs/todo/executed.md` 必须登记该归档文件，写明类型、状态、归档原因和后续入口。
+5. 不允许直接删除、清空或覆盖旧清单后只依赖 Git 历史追溯。
+
 ## 2. 标准 TODO 结构（强制模板）
 
 ```md
@@ -31,6 +39,7 @@
 最后更新时间：YYYY-MM-DD
 负责人：xxx
 当前状态：进行中/已完成/阻塞
+历史归档：如本文件替换了旧 current，必须写明旧清单归档路径
 
 ## 0. 目标定义（本轮要达到什么）
 
@@ -147,6 +156,7 @@
 2. 测试通过：相关单测/e2e/build 通过。
 3. 文档完成：`docs/usage/*` + `docs/developer/*` + `docs/developer/call-chains.md` 已更新。
 4. 日志完成：`docs/todo/current.md` 已记录执行日志与剩余风险。
+5. 归档完成：如果本轮替换或废弃过 `docs/todo/current.md`，旧清单已进入 `docs/todo/history/*`，新旧文件具备双向说明，且 `docs/todo/executed.md` 已登记归档目录。
 
 ## 9. 给后续 AI 的执行提示（可直接复制）
 
@@ -157,4 +167,5 @@
 2. 再按优先顺序逐阶段执行，并在每次执行后更新主 TODO 日志。
 3. 每次功能完成必须同步更新 docs/usage、docs/developer、call-chains。
 4. 未完成验证前不得标记 done；遇阻塞改为 blocked 并写出方案 A/B 与推荐方案。
+5. 如需废弃或替换 docs/todo/current.md，必须先归档旧 current 到 docs/todo/history，并在新旧文件中写明互链，同时更新 docs/todo/executed.md 的归档目录。
 ```

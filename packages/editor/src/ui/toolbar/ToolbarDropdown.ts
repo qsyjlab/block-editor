@@ -222,12 +222,18 @@ export class ToolbarDropdown {
         this.close()
         return
       }
+      const inTableBubble = Boolean(this.trigger.closest('.table-bubble-menu'))
       computePosition(this.trigger, this.menu, {
         placement: 'bottom-start',
         strategy: 'fixed',
-        middleware: [offset(4), flip(), shift({ padding: 5 }), hide()],
+        middleware: [
+          offset(4),
+          flip(),
+          shift({ padding: 5 }),
+          ...(inTableBubble ? [] : [hide()]),
+        ],
       }).then(({ x, y, middlewareData }) => {
-        if (middlewareData.hide?.referenceHidden) {
+        if (!inTableBubble && middlewareData.hide?.referenceHidden) {
           this.close()
           return
         }
