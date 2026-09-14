@@ -1065,6 +1065,9 @@ class BlockHandleView {
   scheduleHide() {
     this.hideTimer = setTimeout(() => {
       if (this.menu.style.display === 'none') {
+        // visibility:hidden 让空闲手柄彻底退出命中测试（pointerEvents:none 仍会被
+        // 自动化工具的 hit-target 检查视为遮挡），同时isVisible 语义更准确。
+        this.element.style.visibility = 'hidden'
         this.element.style.opacity = '0'
         this.element.style.pointerEvents = 'none'
       }
@@ -1076,6 +1079,7 @@ class BlockHandleView {
       clearTimeout(this.hideTimer)
       this.hideTimer = null
     }
+    this.element.style.visibility = 'visible'
     this.element.style.opacity = '1'
     this.element.style.pointerEvents = 'auto'
   }
@@ -1241,6 +1245,7 @@ class BlockHandleView {
   private hideHandleImmediately() {
     this.cancelHide()
     this.element.style.display = 'none'
+    this.element.style.visibility = 'hidden'
     this.element.style.opacity = '0'
     this.element.style.pointerEvents = 'none'
   }
@@ -1248,6 +1253,7 @@ class BlockHandleView {
   private hideTableBlockHandle() {
     this.tableBlockHandlePos = null
     this.tableBlockHandleEl.style.display = 'none'
+    this.tableBlockHandleEl.style.visibility = 'hidden'
     this.tableBlockHandleEl.style.opacity = '0'
     this.tableBlockHandleEl.style.pointerEvents = 'none'
   }
@@ -2016,6 +2022,7 @@ class BlockHandleView {
     }
     this.updateHandleTypeVisual(node, this.tableBlockHandleEl)
     this.tableBlockHandleEl.style.display = 'flex'
+    this.tableBlockHandleEl.style.visibility = 'visible'
     this.tableBlockHandleEl.style.opacity = '1'
     this.tableBlockHandleEl.style.pointerEvents = 'auto'
     this.tableBlockHandleEl.style.transform = 'none'
@@ -3719,6 +3726,7 @@ class BlockHandleView {
     const nodeDom = this.getNodeDom(pos)
     this.updateHandleTypeVisual(node)
     this.element.style.display = 'flex'
+    this.element.style.visibility = 'visible'
     this.element.style.transform = 'none'
 
     const measured = this.element.getBoundingClientRect()

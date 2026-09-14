@@ -182,15 +182,31 @@ async function waitForVisible(locator: ReturnType<Page['locator']>, timeoutMs = 
 
 async function isBlockHandleVisible(page: Page) {
   return await page.evaluate(() => {
-    const handle = document.querySelector('.be-block-handle') as HTMLElement | null
-    if (!handle) return false
-    const style = getComputedStyle(handle)
-    return style.display !== 'none' && style.opacity !== '0'
+    const handles = Array.from(
+      document.querySelectorAll<HTMLElement>('.be-block-handle'),
+    )
+    return handles.some((handle) => {
+      const style = getComputedStyle(handle)
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0'
+    })
   })
 }
 
+// 手柄分层：this.element（段落/单元格通用）与 tableBlockHandleEl（--table-block 修饰）。
+// 空闲手柄为 visibility:hidden，选择器必须按用途区分，否则 .first() 会命中错误元素。
+const BLOCK_HANDLE_SELECTOR = '.be-block-handle:not(.be-block-handle--table-block)'
+const TABLE_HANDLE_SELECTOR = '.be-block-handle--table-block'
+
+function blockHandleLocatorFor(page: Page, targetSelector?: string) {
+  return page.locator(
+    targetSelector && targetSelector.toLowerCase().includes('table')
+      ? TABLE_HANDLE_SELECTOR
+      : BLOCK_HANDLE_SELECTOR,
+  )
+}
+
 async function revealBlockHandleForSelector(page: Page, selector: string, timeoutMs = 5000) {
-  const handle = page.locator('.be-block-handle').first()
+  const handle = blockHandleLocatorFor(page, selector)
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const rect = await page.evaluate((input) => {
@@ -301,7 +317,7 @@ async function openBlockHandleMenuForParagraph(page: Page, paragraphText: string
   }
 
   await page.mouse.move(box.x + 14, box.y + box.height / 2)
-  const handle = page.locator('.be-block-handle')
+  const handle = page.locator(BLOCK_HANDLE_SELECTOR)
   await waitForVisible(handle)
   await handle.click()
   const menu = page.locator('.be-block-handle-menu')
@@ -332,7 +348,17 @@ async function dragCurrentBlockHandleToTargetParagraph(
 ) {
   return await page.evaluate(
     ({ id, targetPlacement }) => {
-      const handleEl = document.querySelector('.be-block-handle') as HTMLElement | null
+      const handles = Array.from(document.querySelectorAll<HTMLElement>('.be-block-handle'))
+      const handleEl =
+        handles.find((h) => {
+          const cs = getComputedStyle(h)
+          return (
+            !h.classList.contains('be-block-handle--table-block') &&
+            cs.display !== 'none' &&
+            cs.visibility !== 'hidden' &&
+            cs.opacity !== '0'
+          )
+        }) || null
       const target = document.getElementById(id) as HTMLElement | null
       if (!handleEl || !target) return { feedback: false, dropped: false }
 
@@ -894,7 +920,7 @@ describe('regression e2e (H2)', () => {
     if (!box) throw new Error('Cannot get paragraph box for block handle test')
     await page.mouse.move(box.x + 14, box.y + box.height / 2)
 
-    const handle = page.locator('.be-block-handle')
+    const handle = page.locator(BLOCK_HANDLE_SELECTOR)
     await waitForVisible(handle)
     await handle.click()
 
@@ -1813,7 +1839,7 @@ describe('regression e2e (H2)', () => {
     if (!sourceBox) throw new Error('Cannot resolve source paragraph box')
     await page.mouse.move(sourceBox.x + 14, sourceBox.y + sourceBox.height / 2)
 
-    const handle = page.locator('.be-block-handle')
+    const handle = page.locator(BLOCK_HANDLE_SELECTOR)
     await waitForVisible(handle)
     await expect(await handle.getAttribute('draggable')).toBe('true')
 
@@ -2019,7 +2045,7 @@ describe('regression e2e (H2)', () => {
     const table = page.locator('.ProseMirror table').first()
     await waitForVisible(table)
     await revealBlockHandleForSelector(page, '.ProseMirror table')
-    const handle = page.locator('.be-block-handle').first()
+    const handle = page.locator(TABLE_HANDLE_SELECTOR)
     await waitForVisible(handle)
 
     await handle.click()
@@ -2106,7 +2132,7 @@ describe('regression e2e (H2)', () => {
     const quoteBox = await quoteSource.boundingBox()
     if (!quoteBox) throw new Error('Cannot resolve quote source box')
     await page.mouse.move(quoteBox.x + 14, quoteBox.y + quoteBox.height / 2)
-    await waitForVisible(page.locator('.be-block-handle'))
+    await waitForVisible(page.locator(BLOCK_HANDLE_SELECTOR))
     const quoteDrag = await dragCurrentBlockHandleToTargetParagraph(
       page,
       'drag-target-anchor',
@@ -2121,7 +2147,7 @@ describe('regression e2e (H2)', () => {
     const codeBox = await codeSource.boundingBox()
     if (!codeBox) throw new Error('Cannot resolve code source box')
     await page.mouse.move(codeBox.x + 14, codeBox.y + codeBox.height / 2)
-    await waitForVisible(page.locator('.be-block-handle'))
+    await waitForVisible(page.locator(BLOCK_HANDLE_SELECTOR))
     const codeDrag = await dragCurrentBlockHandleToTargetParagraph(
       page,
       'drag-target-anchor',
@@ -2187,7 +2213,7 @@ describe('regression e2e (H2)', () => {
     const headingBox = await heading.boundingBox()
     if (!headingBox) throw new Error('Cannot resolve heading source box')
     await page.mouse.move(headingBox.x + 12, headingBox.y + headingBox.height / 2)
-    await waitForVisible(page.locator('.be-block-handle'))
+    await waitForVisible(page.locator(BLOCK_HANDLE_SELECTOR))
 
     const dragResult = await dragCurrentBlockHandleToTargetParagraph(
       page,
@@ -2232,7 +2258,7 @@ describe('regression e2e (H2)', () => {
     const mainTable = page.locator('.ProseMirror table').first()
     await waitForVisible(mainTable)
     await revealBlockHandleForSelector(page, '.ProseMirror table')
-    const blockHandle = page.locator('.be-block-handle').first()
+    const blockHandle = page.locator(TABLE_HANDLE_SELECTOR)
     await waitForVisible(blockHandle)
 
     const tableHandleCount = await page.locator('.be-table-handle').count()
@@ -2251,8 +2277,9 @@ describe('regression e2e (H2)', () => {
     if (!paragraphBox) throw new Error('Cannot resolve mid paragraph box')
     await page.mouse.move(paragraphBox.x + 14, paragraphBox.y + paragraphBox.height / 2)
 
-    await waitForVisible(blockHandle)
-    await expect(await blockHandle.isVisible()).toBe(true)
+    const genericHandle = page.locator(BLOCK_HANDLE_SELECTOR)
+    await waitForVisible(genericHandle)
+    await expect(await genericHandle.isVisible()).toBe(true)
 
     await page.close()
   })

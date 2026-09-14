@@ -1787,9 +1787,11 @@ ul[data-type='taskList'] li > div {
   align-items: center;
 }
 
-/* 表级块 handle：高于列/行热区层，扩大点击热区避免右下角点不到 */
+/* 表级块 handle：高于列/行热区层，扩大点击热区避免右下角点不到。
+   注意必须高于激活态热区层的 240100（.is-table-chrome-active），
+   否则手柄锚点角落会被透明热区层覆盖，无法点击。 */
 .be-block-handle--table-block {
-  z-index: 240060 !important;
+  z-index: 240110 !important;
   pointer-events: auto;
 }
 
