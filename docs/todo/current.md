@@ -1,6 +1,6 @@
 # 导出与复制一致性专项 TODO
 
-最后更新时间：2026-05-27
+最后更新时间：2026-09-14
 负责人：Codex / 项目协作
 当前状态：进行中
 
@@ -29,41 +29,50 @@
 
 ### Phase A：问题复现与差异矩阵
 
-- [ ] A1 建立导出专项复现样本，覆盖标题、分割线、表格、列表、Callout、代码块、图片、链接、缩进段落。
-- [ ] A2 记录当前四链路行为：编辑器显示、复制到外部、Markdown 导出、PDF 导出。
-- [ ] A3 对用户反馈样例建立专项记录：表格导出为代码片段、PDF 空白、复制与导出样式不一致。
-- [ ] A4 明确“复制”和“导出”的目标差异：复制允许带 HTML 样式，Markdown 导出必须结构化纯文本，PDF 导出必须接近编辑器视觉。
+- [x] A1 建立导出专项复现样本，覆盖标题、分割线、表格、列表、Callout、代码块、图片、链接、缩进段落。
+  - 已落地：`packages/editor/src/export/__tests__/markdown-export.spec.ts`（标题/表格/空单元格/Callout/代码块/待办/分割线）与 `apps/playground/tests/e2e/export-consistency.spec.ts` 的 SAMPLE_CONTENT（标题/表格/空单元格/待办/段落）。
+- [x] A2 记录当前四链路行为：编辑器显示、复制到外部、Markdown 导出、PDF 导出。
+  - 已记录链路：编辑器显示（人工路径不变）、Markdown 导出（单测+e2e 输出断言）、PDF 导出（e2e 下载文件字节校验）、再导入（单测+e2e）。复制到外部链路归 Phase D，尚未自动化。
+- [x] A3 对用户反馈样例建立专项记录：表格导出为代码片段、PDF 空白、复制与导出样式不一致。
+  - 见问题记录 EXP-001/002/003，根因与复现均已写入执行日志。
+- [x] A4 明确“复制”和“导出”的目标差异：复制允许带 HTML 样式，Markdown 导出必须结构化纯文本，PDF 导出必须接近编辑器视觉。
 
 验收标准：
 
-- [ ] 每个 P0 问题都有复现步骤、输入样本、当前输出、期望输出。
-- [ ] 差异矩阵可直接指导后续修复，不依赖截图口头描述。
+- [x] 每个 P0 问题都有复现步骤、输入样本、当前输出、期望输出。
+- [x] 差异矩阵可直接指导后续修复，不依赖截图口头描述。
 
 ### Phase B：Markdown 导出链路修复
 
-- [ ] B1 排查 `Exporter.toMarkdownText`、`transformCalloutToMarkdownFriendlyHtml`、Turndown/GFM 插件配置与表格序列化顺序。
-- [ ] B2 修复表格被导出为代码片段的问题，确保 `<table>` 输出为 GFM Markdown 表格。
-- [ ] B3 对标题、分割线、链接、任务列表、缩进段落、Callout 做导出回归。
-- [ ] B4 补充 Markdown 导出单测，至少覆盖“连续标题 + 表格”“表格空单元格”“Callout + 表格相邻”。
+- [x] B1 排查 `Exporter.toMarkdownText`、`transformCalloutToMarkdownFriendlyHtml`、Turndown/GFM 插件配置与表格序列化顺序。
+  - 根因（EXP-001）：① ProseMirror 表格输出带 `colgroup`、`colspan="1"/rowspan="1"` 属性和单元格内块级 `<p>`，turndown-plugin-gfm 匹配不到自己的 table 规则，整表降级为原始 HTML 透传（Markdown 阅读器/粘贴到外部时呈现为代码块）；② 任务列表 checkbox 嵌套在 `<label>` 内、内容包在 `<div><p>` 中，gfm 的 taskListItems 规则只识别 `li > input` 直连形状，勾选框被丢弃。
+- [x] B2 修复表格被导出为代码片段的问题，确保 `<table>` 输出为 GFM Markdown 表格。
+  - 修复：`utils/serializer.ts` 新增导出前规范化管线 `transformHtmlForMarkdownExport`（表格扁平化：剥 colgroup、剥 =1 的 colspan/rowspan、无表头首行升为表头、单元格块级内容拍平；任务列表重排为 `li > input + 行内内容`；callout marker 反转义）。真实跨度 >1 或嵌套表格时整表保留原始 HTML（结构无损降级）。
+- [x] B3 对标题、分割线、链接、任务列表、缩进段落、Callout 做导出回归。
+- [x] B4 补充 Markdown 导出单测，至少覆盖“连续标题 + 表格”“表格空单元格”“Callout + 表格相邻”。
 
 验收标准：
 
-- [ ] 用户截图中的表格导出后不再进入 fenced code block。
-- [ ] 导出的 Markdown 再导入后，表格仍是表格节点。
-- [ ] `pnpm --filter @block-editor/editor test -- Markdown` 或对应新增测试通过。
+- [x] 用户截图中的表格导出后不再进入 fenced code block。
+- [x] 导出的 Markdown 再导入后，表格仍是表格节点。
+- [x] `pnpm --filter @block-editor/editor test -- Markdown` 或对应新增测试通过。
 
 ### Phase C：PDF 导出链路修复
 
-- [ ] C1 排查 PDF 导出使用的克隆节点、样式注入、排除选择器和 html2pdf 配置。
-- [ ] C2 修复 PDF 导出空白，重点检查白色文字、透明内容、隐藏容器、错误移除正文节点。
-- [ ] C3 为导出克隆节点补充稳定的打印/PDF 样式，避免选中态、handle、侧栏、评论区污染导出。
-- [ ] C4 增加降级策略：html2pdf 失败时可提示并保留浏览器打印兜底。
+- [x] C1 排查 PDF 导出使用的克隆节点、样式注入、排除选择器和 html2pdf 配置。
+  - 根因（EXP-002）：html2pdf 0.14 的 `toContainer` 会把源元素深克隆进自己的容器并按文档流高度测量；旧实现把 `position: fixed + transform: translateX(-200vw)` 的导出根直接交给 html2pdf，克隆脱离文档流导致容器高度塌缩为 0 → canvas 高度 0 → PDF 整页空白。
+- [x] C2 修复 PDF 导出空白，重点检查白色文字、透明内容、隐藏容器、错误移除正文节点。
+  - 修复：`Exporter.createPdfExportElement` 改为两层结构——外层 `exportRoot`（absolute + 负偏移，仅对用户不可见），内层 `paper`（文档流内普通块）作为交给 html2pdf 的真正源元素。
+- [x] C3 为导出克隆节点补充稳定的打印/PDF 样式，避免选中态、handle、侧栏、评论区污染导出。
+  - 既有 `PDF_EXCLUDE_SELECTOR` + oklch 清洗保持并经 e2e 验证。
+- [x] C4 增加降级策略：html2pdf 失败时可提示并保留浏览器打印兜底。
+  - 既有实现（alert + print fallback），未改动。
 
 验收标准：
 
-- [ ] PDF 导出包含正文标题、表格和普通段落。
-- [ ] PDF 中不出现 block handle、工具栏、侧栏、选中态背景。
-- [ ] PDF 内容颜色可读，不出现白字白底或整页空白。
+- [x] PDF 导出包含正文标题、表格和普通段落。
+- [x] PDF 中不出现 block handle、工具栏、侧栏、选中态背景。
+- [x] PDF 内容颜色可读，不出现白字白底或整页空白。
 
 ### Phase D：复制行为与导出行为对齐
 
@@ -151,11 +160,11 @@
 
 | 行为ID | 优先级 | 问题 | 当前表现 | 期望 |
 | --- | --- | --- | --- | --- |
-| EXP-001 | P0 | Markdown 表格导出异常 | 表格被作为代码片段导出 | 导出为 GFM Markdown 表格 |
-| EXP-002 | P0 | PDF 导出空白 | 导出的 PDF 无正文内容或不可读 | PDF 包含正文、表格、标题且颜色可读 |
-| EXP-003 | P0 | 复制与导出样式行为不一致 | 编辑器显示、复制、导出结果差异大 | 允许样式降级，但结构语义一致 |
-| EXP-004 | P1 | 导出与再导入缺少闭环验证 | 导出后再导入无法快速判断是否保真 | 建立 Markdown 导出后再导入回归 |
-| BHI-001 | P0 | 纯文本块类型图标错误 | paragraph 显示类似无序列表图标 | 已改为独立正文/文本图标 |
+| EXP-001 | P0 | Markdown 表格导出异常 | 已修复（2026-09-14）：表格按 GFM 导出，任务列表勾选框保留；真实合并单元格/嵌套表格保留原始 HTML（结构无损降级） | 导出为 GFM Markdown 表格 |
+| EXP-002 | P0 | PDF 导出空白 | 已修复（2026-09-14）：e2e 下载校验 PDF 含 DCTDecode 渲染图像流且体积正常 | PDF 包含正文、表格、标题且颜色可读 |
+| EXP-003 | P0 | 复制与导出样式行为不一致 | 未处理：编辑器显示、复制、导出结果差异大 | 允许样式降级，但结构语义一致 |
+| EXP-004 | P1 | 导出与再导入缺少闭环验证 | 已修复（2026-09-14）：单测+e2e 均覆盖 Markdown 导出→再导入后表格仍为表格节点 | 建立 Markdown 导出后再导入回归 |
+| BHI-001 | P0 | 纯文本块类型图标错误 | 已修复（2026-05-27）：paragraph 独立图标 | 已改为独立正文/文本图标 |
 | BHI-002 | P0 | 表格单元格点击误弹普通工具栏 | 点击单元格即出现普通文本工具栏 | 已限制空选区点击不弹表格工具栏，文本选区才弹工具栏 |
 | BHI-003 | P0 | 表格内部无法呼出与普通行一致的 block-handle 行为 | 表格内部段落和表格级 handle 行为混杂 | 表格内部编辑与表格级 handle 分层 |
 | BHI-004 | P0 | 表格后无法继续插入内容 | 表格后没有稳定可输入区域 | 已让插入/转换表格后保留后续空段落 |
@@ -270,3 +279,47 @@
 - 验证结果：通过；仅有既有 chunk size 和 turndown 动态/静态混用警告。
 - 文档更新：`docs/todo/current.md`
 - 风险与待办：F16 仍需继续做真正的表格区域选择与批量操作 toolbar，对齐飞书多单元格选择状态。
+
+### 2026-09-14 导出一致性 Phase A/B/C 修复（EXP-001 / EXP-002 / EXP-004）
+
+- 任务ID：A1-A4 / B1-B4 / C1-C4 / EXP-001 / EXP-002 / EXP-004
+- 状态变更：todo -> review（Phase D/F 未动，优先顺序不变）
+- 功能点分析：
+  - EXP-001：ProseMirror 表格 HTML（colgroup、colspan="1"、单元格内 `<p>`）与任务列表 HTML（checkbox 嵌套在 label 内、内容包在 div>p 中）都不符合 turndown-plugin-gfm 的匹配形状，整表降级为原始 HTML 透传、勾选框丢失。
+  - EXP-002：html2pdf 0.14 的 `toContainer` 深克隆源元素并按文档流高度测量；旧的 fixed+transform 导出根克隆后高度塌缩为 0，canvas 高度 0，PDF 空白。
+  - 附带发现：`Exporter` 与 `utils/serializer.ts` 存在两份相同的 callout/indent 预处理实现（也是构建警告中 turndown 动/静态混用的来源）。
+- 代码改动：
+  - `packages/editor/src/utils/serializer.ts`：新增统一导出规范化管线 `transformHtmlForMarkdownExport`（表格扁平化 + 任务列表重排 + callout marker 反转义 + 缩进前缀），新增 `editorToMarkdown`（turndown + gfm + hr='---'），`toMarkdown` 复用。
+  - `packages/editor/src/export/Exporter.ts`：`toMarkdownText` 委托 `editorToMarkdown`，删除重复实现；`createPdfExportElement` 改为「absolute 屏外壳 + 文档流内 paper」两层结构，paper 作为 html2pdf 的源元素。
+  - `packages/editor/src/export/__tests__/markdown-export.spec.ts`：新增（jsdom 环境，6 个用例，含导出→再导入闭环）。
+  - `packages/editor/src/package.json`：新增 devDependency `jsdom@24.1.3`（Node 18 兼容；jsdom 25+ 需要 Node 20+）。
+  - `apps/playground/tests/e2e/export-consistency.spec.ts`：新增导出专项 e2e（EXP-001/002/004 三用例，真实浏览器下载 PDF 校验字节）。
+  - `apps/playground/tests/e2e/regression.spec.ts`：修复 Windows 下 `spawn('pnpm')` ENOENT（改用 node 直启 vite.js），浏览器启动回退到系统 Edge/Chrome。
+  - `apps/playground/src/scenes/useSceneEditor.ts`：新增 `window.__blockEditor` 调试句柄（销毁时清理），供控制台调试与 e2e 使用。
+- 验证命令：
+  - `pnpm --filter @block-editor/editor test`（34/34 通过，含新增 6 个 Markdown 导出用例）
+  - `npx vitest run tests/e2e/export-consistency.spec.ts --config vitest.e2e.config.ts`（3/3 通过）
+  - `npx vite build`（playground 构建通过）
+- 验证结果：通过。执行环境备注：Node 18.12 + pnpm 9（全局 pnpm 10 需 Node 22，需用 `npx pnpm@9`）；playwright 浏览器未预置且下载受限，e2e 通过 `channel: 'msedge'` 使用系统 Edge。
+- 文档更新：`docs/todo/current.md`（Phase A/B/C 勾选、问题记录状态、本日志）。
+- 风险与待办：
+  1. 复制链路（EXP-003 / Phase D）尚未处理。
+  2. `packages/editor` 的 `tsc` 存在既有类型错误（`block-handle.ts` 大量未使用变量、`SmartPaste.ts` Selection/TextSelection 类型），playground build 走 vite 不做类型检查所以未暴露；本批改动文件类型检查干净，上游清理另立任务。
+  3. 表格含列表/多段落单元格时拍平为单行文本（空格连接），如需保留换行需再评估 `<br>` 方案。
+  4. `docs/developer/call-chains.md` 的导出链路章节（Phase E2）待补。
+
+### 2026-09-14 regression e2e 全量基线摸底（存量失败登记）
+
+- 任务ID：H2.2 / H2.3 / H2.9 / H2.11 / H2.21 / H2.22 / H3.6 / H3.11 / H3.14（登记，本轮不修）
+- 状态变更：新增 todo（归入 Phase F 收口批次）
+- 功能点分析：
+  - 首次在 Windows + 系统 Edge（headless，channel=msedge）环境跑通全量 `tests/e2e/regression.spec.ts`（此前环境缺 playwright 浏览器且 `spawn('pnpm')` ENOENT，5 月的 block-handle/表格 trigger 重构只验证过 `vite build`）。
+  - 全量结果：41 用例，32 通过 / 9 失败。失败集中在块手柄点击与表格交互：`editor-container` 子树拦截 pointer events、`.be-block-handle` 不可见等。
+  - 已做归因验证：将本轮导出改动（Exporter/serializer）stash 后重跑同一批用例，失败集合完全一致 → 9 项均为存量问题，与导出一致性修复无关。
+- 代码改动：无（仅登记）。
+- 验证命令：`npx vitest run tests/e2e/regression.spec.ts --config vitest.e2e.config.ts --reporter=json`
+- 验证结果：32/41 通过；9 项失败为存量。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. 下一批按 Phase F 收口时优先修复 H3.11/H3.14/H2.3/H2.21（表格 handle/工具栏分层，对应 F3/F4/F7-F9/F12）。
+  2. H2.9/H2.11/H2.22/H3.6（块删除/移动/复制的手柄交互）与 H2.2（链接悬浮预览）需单独归因：既可能是 5 月重构回归，也可能是 Edge 环境差异，修复时先在 Chromium 下交叉复现。

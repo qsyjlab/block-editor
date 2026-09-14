@@ -1,60 +1,6 @@
 import { Editor } from '@tiptap/core'
 import { saveAs } from 'file-saver'
-
-function normalizeCalloutLabel(type: string): 'INFO' | 'SUCCESS' | 'WARNING' | 'DANGER' {
-  if (type === 'success') return 'SUCCESS'
-  if (type === 'warning') return 'WARNING'
-  if (type === 'danger') return 'DANGER'
-  return 'INFO'
-}
-
-function transformCalloutToMarkdownFriendlyHtml(sourceHtml: string): string {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(sourceHtml, 'text/html')
-
-  // 缩进属性用文本前缀保留，导入时再还原为 data-indent
-  doc
-    .querySelectorAll<HTMLElement>(
-      'p[data-indent],h1[data-indent],h2[data-indent],h3[data-indent],h4[data-indent],h5[data-indent],h6[data-indent]',
-    )
-    .forEach((el) => {
-      const level = Number(el.getAttribute('data-indent') || 0)
-      if (level <= 0) return
-      const prefix = `[indent:${level}] `
-      if (el.firstChild?.nodeType === Node.TEXT_NODE) {
-        el.firstChild.textContent = `${prefix}${el.firstChild.textContent || ''}`
-      } else {
-        el.insertBefore(doc.createTextNode(prefix), el.firstChild)
-      }
-    })
-
-  // callout 保留为 [!TYPE] 风格
-  doc.querySelectorAll('div[data-callout-type]').forEach((callout) => {
-    const calloutType = normalizeCalloutLabel(callout.getAttribute('data-callout-type') || 'info')
-    const blockquote = doc.createElement('blockquote')
-
-    const marker = doc.createElement('p')
-    marker.textContent = `[!${calloutType}]`
-    blockquote.appendChild(marker)
-
-    const contentEl = callout.querySelector('.be-callout-content') as HTMLElement | null
-    const source = contentEl || callout
-
-    Array.from(source.children).forEach((child) => {
-      blockquote.appendChild(child.cloneNode(true))
-    })
-
-    if (blockquote.children.length === 1) {
-      const empty = doc.createElement('p')
-      empty.textContent = ''
-      blockquote.appendChild(empty)
-    }
-
-    callout.replaceWith(blockquote)
-  })
-
-  return doc.body.innerHTML
-}
+import { editorToMarkdown } from '../utils/serializer'
 
 export class Exporter {
   private static readonly PDF_EXCLUDE_SELECTOR = [
@@ -86,20 +32,31 @@ export class Exporter {
     if (!editorContainer) return null
 
     const proseMirror = this.editor.view.dom as HTMLElement
+    // EXP-002 根因：html2pdf 0.14 会把源元素深克隆进自己的容器，并按「文档流高度」测量。
+    // 源元素若自身是 absolute/fixed（或带 transform），克隆后脱离文档流，
+    // html2pdf 容器高度塌缩为 0 → canvas 高度 0 → 导出整页空白。
+    // 因此结构上分两层：
+    //  - exportRoot：absolute + 负偏移，只负责对用户不可见；
+    //  - paper：文档流内的普通块，是交给 html2pdf 渲染的真正源元素。
     const exportRoot = document.createElement('div')
     exportRoot.className = 'be-pdf-export-root'
     Object.assign(exportRoot.style, {
-      position: 'fixed',
-      left: '0',
+      position: 'absolute',
+      left: '-20000px',
       top: '0',
-      transform: 'translateX(-200vw)',
+      width: '874px',
+      pointerEvents: 'none',
+      zIndex: '0',
+    })
+
+    const paper = document.createElement('div')
+    paper.className = 'be-pdf-export-paper'
+    Object.assign(paper.style, {
       width: '794px',
       padding: '40px',
       boxSizing: 'border-box',
       background: '#fff',
       color: '#111827',
-      pointerEvents: 'none',
-      zIndex: '0',
     })
 
     const titleInput = editorContainer.querySelector('.doc-title-input') as HTMLInputElement | null
@@ -110,7 +67,7 @@ export class Exporter {
       titleEl.style.fontSize = '32px'
       titleEl.style.lineHeight = '1.3'
       titleEl.style.color = '#111827'
-      exportRoot.appendChild(titleEl)
+      paper.appendChild(titleEl)
     }
 
     const contentClone = proseMirror.cloneNode(true) as HTMLElement
@@ -119,11 +76,12 @@ export class Exporter {
     contentClone.style.minHeight = '1px'
     contentClone.style.color = '#111827'
     contentClone.querySelectorAll(Exporter.PDF_EXCLUDE_SELECTOR).forEach((el) => el.remove())
-    exportRoot.appendChild(contentClone)
+    paper.appendChild(contentClone)
+    exportRoot.appendChild(paper)
 
     document.body.appendChild(exportRoot)
     return {
-      element: exportRoot,
+      element: paper,
       cleanup: () => {
         if (exportRoot.parentElement === document.body) {
           document.body.removeChild(exportRoot)
@@ -237,22 +195,8 @@ export class Exporter {
   }
 
   public async toMarkdownText(): Promise<string> {
-    const html = this.editor.getHTML()
-    const normalizedHtml = transformCalloutToMarkdownFriendlyHtml(html)
-
-    const [{ default: TurndownService }, { gfm }] = await Promise.all([
-      import('turndown'),
-      import('turndown-plugin-gfm'),
-    ])
-
-    const turndownService = new TurndownService({
-      headingStyle: 'atx',
-      codeBlockStyle: 'fenced',
-      bulletListMarker: '-',
-    })
-    turndownService.use(gfm)
-
-    return turndownService.turndown(normalizedHtml)
+    // 统一走 utils/serializer 的规范化管线（表格/任务列表/Callout/缩进 → GFM 友好形状）
+    return editorToMarkdown(this.editor)
   }
 
   public async exportToMarkdown(filename: string = 'document.md'): Promise<void> {

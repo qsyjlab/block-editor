@@ -733,11 +733,22 @@ describe('regression e2e (H2)', () => {
     appPort = await findAvailablePort()
     appUrl = `http://${APP_HOST}:${appPort}`
 
-    devServer = spawn('pnpm', ['exec', 'vite', '--host', APP_HOST, '--port', String(appPort)], {
-      cwd: APP_CWD,
-      stdio: 'pipe',
-      env: { ...process.env },
-    })
+    // Windows 下 spawn('pnpm') 会因 cmd 垫片 ENOENT，直接用 node 启动 vite 入口
+    devServer = spawn(
+      process.execPath,
+      [
+        path.join(APP_CWD, 'node_modules', 'vite', 'bin', 'vite.js'),
+        '--host',
+        APP_HOST,
+        '--port',
+        String(appPort),
+      ],
+      {
+        cwd: APP_CWD,
+        stdio: 'pipe',
+        env: { ...process.env },
+      },
+    )
 
     devServer.stdout.on('data', (chunk) => {
       devServerLogs.push(chunk.toString())
@@ -754,7 +765,11 @@ describe('regression e2e (H2)', () => {
     })
 
     await waitForServerReady()
-    browser = await chromium.launch({ headless: true })
+    // 环境限制：未预置 playwright 浏览器时回退到系统 Edge/Chrome
+    browser = await chromium
+      .launch({ headless: true, channel: 'msedge' })
+      .catch(async () => chromium.launch({ headless: true, channel: 'chrome' }))
+      .catch(async () => chromium.launch({ headless: true }))
   })
 
   afterAll(async () => {

@@ -59,6 +59,10 @@ export function useSceneEditor(
 
   const destroyEditor = () => {
     editor?.destroy()
+    const globalHandle = window as unknown as { __blockEditor?: { core: EditorCore | null } }
+    if (globalHandle.__blockEditor?.core === editor) {
+      globalHandle.__blockEditor = undefined
+    }
     editor = null
     if (editorContainer.value) {
       editorContainer.value.innerHTML = ''
@@ -75,6 +79,11 @@ export function useSceneEditor(
       options,
     )
     editor = create(container, context)
+    // 调试与 e2e 用的全局句柄：方便在控制台 / 测试中直接访问当前场景的 EditorCore
+    ;(window as unknown as { __blockEditor?: unknown }).__blockEditor = {
+      scene: sceneKey,
+      core: editor,
+    }
   }
 
   onMounted(createEditor)
