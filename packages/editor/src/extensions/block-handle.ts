@@ -12,7 +12,6 @@ import {
   createImageInsertHandleItem,
   type BlockHandleFeatureItem,
 } from '../ui/features/block-features'
-import { resolveUILayerHost } from '../ui/layer-root'
 
 /** Simple throttle: fire at most once per `ms` milliseconds */
 function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
@@ -137,7 +136,6 @@ class BlockHandleView {
     index: number
   } | null = null
   private axisBarHoverPreview = false
-  private pendingAxisCellSelection: CellSelection | null = null
   private suppressEditorPointerUntil = 0
   private readonly columnRegionClass = 'be-table-column-region-selected'
   private readonly rowRegionClass = 'be-table-row-region-selected'
@@ -515,16 +513,6 @@ class BlockHandleView {
     )
   }
 
-  private isCurrentBlockType(typeName: string) {
-    if (this.currentBlockPos === null) return false
-    const { doc } = this.editorView.state
-    const resolved = doc.resolve(this.currentBlockPos)
-    for (let depth = resolved.depth; depth >= 0; depth -= 1) {
-      if (resolved.node(depth).type.name === typeName) return true
-    }
-    return false
-  }
-
   private isDragActivationReady() {
     const elapsed = Date.now() - this.pointerDownAt
     // Drag should feel immediate once the user moves on the handle.
@@ -537,19 +525,6 @@ class BlockHandleView {
     const types = event.dataTransfer?.types
     if (!types) return false
     return Array.from(types).includes('application/x-be-block-drag')
-  }
-
-  private isCurrentHeading(level: number) {
-    if (this.currentBlockPos === null) return false
-    const { doc } = this.editorView.state
-    const node = doc.nodeAt(this.currentBlockPos)
-    if (node?.type.name === 'heading' && node.attrs?.level === level) return true
-    const resolved = doc.resolve(this.currentBlockPos)
-    for (let depth = resolved.depth; depth >= 0; depth -= 1) {
-      const depthNode = resolved.node(depth)
-      if (depthNode.type.name === 'heading' && depthNode.attrs?.level === level) return true
-    }
-    return false
   }
 
   private isEmptyParagraphNode(node?: any) {
@@ -1001,8 +976,6 @@ class BlockHandleView {
       this.element.style.display = 'none'
       return
     }
-
-    const container = this.getEditorContainer()
 
     if (this.element.parentNode !== document.body) {
       document.body.appendChild(this.element)
@@ -1964,7 +1937,7 @@ class BlockHandleView {
    * 表级 handle：右下角贴近表格左上角（仅 4px 间距，不再外推到 14px gutter 外）。
    */
   private getTableBlockHandleAnchor(
-    tablePos: number,
+    _tablePos: number,
     tableEl: HTMLTableElement,
     handleWidth: number,
     handleHeight: number,
@@ -2008,19 +1981,6 @@ class BlockHandleView {
     const outerMin = tableLeft - this.tableCornerGutter - handleWidth - inset
     const maxLeft = anchorRight - handleWidth - lineGap
     return Math.round(Math.max(outerMin, Math.min(left, maxLeft)))
-  }
-
-  /** 左侧行 gutter 内按 X/Y 命中对应列的单元格。 */
-  private pickTableCellInRowByPointer(
-    row: HTMLTableRowElement,
-    clientX: number,
-    clientY: number,
-  ): HTMLTableCellElement | null {
-    const table = row.closest('table')
-    if (!(table instanceof HTMLTableElement)) return null
-    const picked = this.pickTableCellInTableByPointer(table, clientX, clientY)
-    if (!picked || picked.parentElement !== row) return null
-    return picked
   }
 
   private shouldDeferCellHandleToHover() {
@@ -2220,7 +2180,6 @@ class BlockHandleView {
     }
     this.axisChromeTable = null
     this.activeAxisSelection = null
-    this.pendingAxisCellSelection = null
   }
 
   private syncAxisSelectionChromeFromEditor() {
@@ -2472,7 +2431,11 @@ class BlockHandleView {
     this.clearTableInsertHighlight()
   }
 
-  private highlightTableAxisTarget(table: HTMLTableElement, axis: 'row' | 'column', index: number) {
+  private highlightTableAxisTarget(
+    _table: HTMLTableElement,
+    axis: 'row' | 'column',
+    index: number,
+  ) {
     this.clearAxisHoverHighlight()
     const layer = axis === 'column' ? this.tableColumnTriggerLayer : this.tableRowTriggerLayer
     const zone = layer.querySelector(
@@ -2531,10 +2494,9 @@ class BlockHandleView {
     table: HTMLTableElement,
     axis: 'row' | 'column',
     index: number,
-    selection: CellSelection,
+    _selection: CellSelection,
   ) {
     this.activeAxisSelection = { table, axis, index }
-    this.pendingAxisCellSelection = selection
     this.applyAxisSelectionChrome(table, axis, index)
     this.hideHandleImmediately()
     this.hideMenu()
@@ -2731,12 +2693,12 @@ class BlockHandleView {
 
   private appendColumnInsertDot(
     layer: HTMLElement,
-    table: HTMLTableElement,
+    _table: HTMLTableElement,
     tableRect: DOMRect,
     lineX: number,
     placement: 'before' | 'after',
     index: number,
-    cell: HTMLElement,
+    _cell: HTMLElement,
   ) {
     const dot = document.createElement('span')
     dot.className = 'be-table-insert-dot be-table-insert-dot--column'
@@ -2756,12 +2718,12 @@ class BlockHandleView {
 
   private appendRowInsertDot(
     layer: HTMLElement,
-    table: HTMLTableElement,
+    _table: HTMLTableElement,
     tableRect: DOMRect,
     lineY: number,
     placement: 'before' | 'after',
     index: number,
-    row: HTMLTableRowElement,
+    _row: HTMLTableRowElement,
   ) {
     const dot = document.createElement('span')
     dot.className = 'be-table-insert-dot be-table-insert-dot--row'
@@ -2790,7 +2752,6 @@ class BlockHandleView {
     | null {
     const axis = dot.dataset.axis === 'row' ? 'row' : 'column'
     const placement = dot.dataset.placement === 'after' ? 'after' : 'before'
-    const index = Number(dot.dataset.index || 0)
     const tableRect = table.getBoundingClientRect()
 
     const mapIndex = Number(dot.dataset.index || 0)
@@ -2839,7 +2800,7 @@ class BlockHandleView {
       const zone = document.createElement('span')
       zone.className = 'be-table-axis-zone be-table-axis-zone--column'
       zone.dataset.axis = 'column'
-      zone.dataset.index = String(mapIndex ?? cell.cellIndex)
+      zone.dataset.index = String(mapIndex ?? (cell as HTMLTableCellElement).cellIndex)
       Object.assign(zone.style, {
         left: `${rect.left - tableRect.left}px`,
         width: `${rect.width}px`,
@@ -2871,7 +2832,9 @@ class BlockHandleView {
       const lineX = Math.round(rect.right)
       if (seenBoundaryX.has(lineX)) return
       seenBoundaryX.add(lineX)
-      const mapIndex = this.getMapIndexForDomCell(table, cell as HTMLTableCellElement) ?? cell.cellIndex
+      const mapIndex =
+        this.getMapIndexForDomCell(table, cell as HTMLTableCellElement) ??
+        (cell as HTMLTableCellElement).cellIndex
       this.appendColumnInsertDot(
         this.tableColumnTriggerLayer,
         table,
@@ -3021,15 +2984,6 @@ class BlockHandleView {
       clientY >= rect.top - padTop &&
       clientY <= rect.bottom + padBottom
     )
-  }
-
-  private getTableLayoutRect(tablePos: number, tableEl: HTMLTableElement) {
-    const nodeDom = this.editorView.nodeDOM(tablePos) as HTMLElement | null
-    if (nodeDom instanceof HTMLElement) {
-      const rect = nodeDom.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) return rect
-    }
-    return tableEl.getBoundingClientRect()
   }
 
   private getTableFromPoint(
@@ -3621,7 +3575,7 @@ class BlockHandleView {
 
   private resolveCellBlockAlignElement(
     cell: HTMLTableCellElement,
-    pos: number,
+    _pos: number,
     nodeDom: HTMLElement | null,
   ): HTMLElement | null {
     if (nodeDom instanceof HTMLElement && cell.contains(nodeDom)) {

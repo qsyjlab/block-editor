@@ -169,7 +169,7 @@ function collapseSelectionAfterInsert(editor: SmartPasteEditorLike): void {
       const { state } = view
       const pos = Math.max(1, Math.min(state.selection.to, state.doc.content.size))
       const selection = TextSelection.near(state.doc.resolve(pos), 1)
-      view.dispatch(state.tr.setSelection(selection).scrollIntoView())
+      view.dispatch(state.tr.setSelection(selection as TextSelection).scrollIntoView())
       view.focus()
     } catch {
       // Best-effort cleanup only. If the document changed again before the
