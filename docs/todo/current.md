@@ -350,3 +350,23 @@
   1. H2.2 的 .be-multiselect-bar 残留遮挡仍偶发（多选栏隐藏时机问题），未根因修复，登记为 BHI-010。
   2. 全量 e2e 在长时间会话后受 dev server 性能退化影响（goto networkidle 超时），建议后续在 CI 或重启后跑全量复核。
   3. F8 的理想行为（单元格内文本选区显示"文本格式"工具栏）与当前实现（显示表格工具栏）不一致，测试按当前实现对齐，F8 原样保留在 Phase F。
+
+### 2026-10-24 Phase D 复制链路一致性（EXP-003）
+
+- 任务ID：EXP-003 / D2（text/plain 结构化输出）
+- 状态变更：doing -> review（真实剪贴板实测验证）
+- 功能点分析：
+  - Phase D2 目标是复制输出 text/plain 保留 Markdown 可读结构。此前复制表格/任务列表到外部时是行内文本堆叠，与 Markdown 导出结构冲突。
+  - 实现路径：ProseMirror `clipboardTextSerializer` 只接管 text/plain 分支；text/html 保持默认富视觉输出（D2 的"复制允许带 HTML 样式"约定）。
+- 代码改动：
+  - `packages/editor/src/extensions/ClipboardMarkdown.ts`：新增扩展，选区 Slice → DOMSerializer → 与导出共用的 `editorHtmlFragmentToMarkdown` 规范化管线；序列化异常时回退默认 textContent。
+  - `packages/editor/src/utils/serializer.ts`：抽出 `editorHtmlFragmentToMarkdown`（片段级复用同一管线）。
+  - `packages/editor/src/core/EditorCore.ts`：注册 ClipboardMarkdown；`index.ts` 导出。
+  - `packages/editor/src/extensions/__tests__/ClipboardMarkdown.spec.ts`：新增（表格 GFM / 任务列表勾选框 / 空选区 3 例）。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：37/37 通过（新增 3 例）。
+  - 真实浏览器 Ctrl+A → Ctrl+C → navigator.clipboard.readText()：text/plain 输出标准 GFM 表格（`| 姓名 | 年龄 |` + 分隔行）与任务勾选框（`[x] 已完成事项`），无原始 HTML。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. D1/D3（复制 HTML 样式清洗对齐）与 D4（外部平台手工验收）未动，属后续批次。
+  2. 粘贴到飞书/语雀的行为依赖对方 text/plain 解析，建议按 D4 清单做一次人工验收。

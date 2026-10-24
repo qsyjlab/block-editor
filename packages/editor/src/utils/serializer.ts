@@ -191,11 +191,7 @@ export function transformHtmlForMarkdownExport(sourceHtml: string): string {
   return doc.body.innerHTML
 }
 
-/**
- * 编辑器内容 → Markdown（结构保真优先，样式降级可接受）
- */
-export function editorToMarkdown(editor: Editor): string {
-  const html = transformHtmlForMarkdownExport(editor.getHTML())
+function htmlToMarkdown(sourceHtml: string): string {
   const service = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
@@ -203,7 +199,22 @@ export function editorToMarkdown(editor: Editor): string {
     hr: '---',
   })
   service.use(gfm)
-  return service.turndown(html).replace(CALLOUT_MARKER_ESCAPE_PATTERN, '[!$1]')
+  return service.turndown(sourceHtml).replace(CALLOUT_MARKER_ESCAPE_PATTERN, '[!$1]')
+}
+
+/**
+ * 编辑器内容 → Markdown（结构保真优先，样式降级可接受）
+ */
+export function editorToMarkdown(editor: Editor): string {
+  return htmlToMarkdown(transformHtmlForMarkdownExport(editor.getHTML()))
+}
+
+/**
+ * 任意编辑器 HTML 片段 → Markdown。与整篇导出共用同一条规范化管线，
+ * 保证复制到外部的纯文本与 Markdown 导出结构一致（EXP-003）。
+ */
+export function editorHtmlFragmentToMarkdown(fragmentHtml: string): string {
+  return htmlToMarkdown(transformHtmlForMarkdownExport(fragmentHtml))
 }
 
 /**
