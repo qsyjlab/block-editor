@@ -183,6 +183,12 @@ export class DocxSerializer {
         case 'horizontalRule':
           children.push(this.parseHorizontalRule())
           break
+        case 'columns':
+          // 分栏导出降级：按栏顺序线性化为顺序内容
+          children.push(
+            ...(await this.parseNodes((node.content || []).flatMap((col: any) => col.content || []))),
+          )
+          break
       }
     }
 

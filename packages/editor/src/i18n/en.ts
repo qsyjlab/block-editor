@@ -256,6 +256,8 @@ export const enUS: EditorI18n = {
     calloutDescription: 'Highlighted info block',
     tocTitle: 'Table of Contents',
     tocDescription: 'Auto-collect headings into a TOC',
+    columnsTitle: 'Columns',
+    columnsDescription: 'Split content into multiple columns',
   },
   colorPicker: {
     presetColors: 'Preset Colors',

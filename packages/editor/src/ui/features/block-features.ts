@@ -277,6 +277,18 @@ export function createBlockFeatures(
         editor.chain().focus().insertContent({ type: 'tocBlock' }).run()
       },
     },
+    {
+      id: 'columns',
+      group: 'insert',
+      surfaces: ['slash', 'insert-menu'],
+      label: slash.columnsTitle,
+      description: slash.columnsDescription,
+      icon: icons.table,
+      keywords: ['columns', '分栏', '多栏', 'layout', slash.columnsTitle],
+      run: ({ editor }) => {
+        ;(editor.commands as any).insertColumns({ columnCount: 2 })
+      },
+    },
   ]
 }
 

@@ -265,6 +265,8 @@ export interface SlashCommandI18n {
   calloutDescription: string
   tocTitle: string
   tocDescription: string
+  columnsTitle: string
+  columnsDescription: string
 }
 
 export interface ColorPickerI18n {

@@ -444,3 +444,22 @@
   - 浏览器实测：Ctrl+F 打开查找替换面板（445px 可见）；表格偶数行灰阶与奇数行不同；文档树第二项拖到首项上半部后顺序翻转。
 - 文档更新：`docs/todo/current.md`。
 - 风险与待办：拖拽暂无落点指示线（后续可加插入位置高亮）；斑马纹在单元格设置背景色时会被覆盖（符合预期）。
+
+### 2026-10-24 功能拓展：文档标题区 + 拖拽落点指示线 + 分栏排版块
+
+- 任务ID：功能拓展（对齐飞书文档）
+- 状态变更：doing -> review
+- 代码改动：
+  - `DocumentsScenePage.vue`：编辑器顶部新增标题输入框（双向绑定 activeTitle，input 即 rename 同步文档树）；拖拽增加落点指示线（drop-before/after 内嵌主色线，dragleave/dragend 清理）。
+  - `extensions/ColumnsBlock.ts`：新增 columns（content: column+，columnCount 2-4）与 column（content: block+）节点；insertColumns 命令（默认 2 栏）；flattenColumnsToBlocks/flattenColumnsInDocJson 导出降级辅助。
+  - `DocxSerializer.parseNodes`：columns case 按栏顺序线性化导出。
+  - `block-features.ts`：slash/插入菜单新增「分栏」条目；i18n zh/en 增补 columnsTitle/Description。
+  - 样式：flex 均分、栏间虚线分隔、focus-within 主色描边。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：47/47 通过；tsc 0 错误。
+  - 浏览器实测：insertColumns 双栏插入、两栏各自独立段落可输入；slash 菜单含「分栏」；文档标题输入即时同步文档树。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. 分栏内跨栏删除/Backspace 边界行为未深度打磨（ProseMirror 默认行为）。
+  2. 栏宽拖拽调节、栏数增减按钮未做（后续迭代）。
+  3. Markdown 导出走 HTML→turndown 天然线性化；如需保留分栏语义可扩展 [!columns] 约定。

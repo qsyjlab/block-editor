@@ -256,6 +256,8 @@ export const zhCN: EditorI18n = {
     calloutDescription: '高亮信息块',
     tocTitle: '目录',
     tocDescription: '自动收集文档标题生成目录',
+    columnsTitle: '分栏',
+    columnsDescription: '将内容分为多栏排版',
   },
   colorPicker: {
     presetColors: '预设颜色',

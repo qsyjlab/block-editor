@@ -2740,3 +2740,34 @@ html[data-be-marquee-selecting='1'] .ProseMirror {
   font-size: 13px;
   color: var(--text-muted, #9ca3af);
 }
+
+/* 分栏排版（对齐飞书文档分栏） */
+.ProseMirror div[data-type='columns'] {
+  display: flex;
+  gap: 0;
+  margin: 0.75rem 0;
+}
+
+.ProseMirror div[data-type='column'] {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 14px;
+}
+
+.ProseMirror div[data-type='column']:first-child {
+  padding-left: 0;
+}
+
+.ProseMirror div[data-type='column']:last-child {
+  padding-right: 0;
+}
+
+.ProseMirror div[data-type='column'] + div[data-type='column'] {
+  border-left: 1px dashed var(--border-color);
+}
+
+.ProseMirror div[data-type='columns']:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--primary-color) 45%, transparent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}

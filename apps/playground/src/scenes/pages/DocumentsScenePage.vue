@@ -6,12 +6,15 @@ import SceneFrame from '../SceneFrame.vue'
 const editorContainer = ref<HTMLElement | null>(null)
 const docList = ref<StoredDocument[]>([])
 const activeId = ref<string | null>(null)
+const activeTitle = ref('')
 
 let core: EditorCore | null = null
 let manager: DocumentManager | null = null
 
 function refreshList() {
   docList.value = manager ? manager.list() : []
+  const active = docList.value.find((d) => d.id === activeId.value)
+  activeTitle.value = active?.title ?? ''
 }
 
 function formatDate(ts: number) {
@@ -25,6 +28,17 @@ function openDoc(id: string) {
   manager.flush()
   manager.attachEditor(core.editor, id)
   activeId.value = id
+  const doc = manager.get(id)
+  activeTitle.value = doc?.title ?? ''
+}
+
+function onTitleInput() {
+  if (!manager || !activeId.value) return
+  const title = activeTitle.value.trim()
+  if (!title) return
+  manager.rename(activeId.value, title)
+  const item = docList.value.find((d) => d.id === activeId.value)
+  if (item) item.title = title
 }
 
 function createDoc() {
@@ -59,6 +73,7 @@ function removeDoc(doc: StoredDocument) {
 }
 
 let draggingId: string | null = null
+const dropIndicator = ref<{ id: string; pos: 'before' | 'after' } | null>(null)
 
 function onDragStart(doc: StoredDocument, event: DragEvent) {
   draggingId = doc.id
@@ -68,9 +83,27 @@ function onDragStart(doc: StoredDocument, event: DragEvent) {
   }
 }
 
+function onDragOver(doc: StoredDocument, event: DragEvent) {
+  if (!draggingId || draggingId === doc.id) {
+    dropIndicator.value = null
+    return
+  }
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  dropIndicator.value = {
+    id: doc.id,
+    pos: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after',
+  }
+}
+
+function onDragEnd() {
+  draggingId = null
+  dropIndicator.value = null
+}
+
 function onDrop(doc: StoredDocument, event: DragEvent) {
   const sourceId = draggingId
   draggingId = null
+  dropIndicator.value = null
   if (!manager || !sourceId || sourceId === doc.id) return
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const before = event.clientY < rect.top + rect.height / 2
@@ -138,12 +171,18 @@ onBeforeUnmount(() => {
             v-for="doc in docList"
             :key="doc.id"
             class="docs-item"
-            :class="{ active: doc.id === activeId }"
+            :class="{
+              active: doc.id === activeId,
+              'drop-before': dropIndicator?.id === doc.id && dropIndicator.pos === 'before',
+              'drop-after': dropIndicator?.id === doc.id && dropIndicator.pos === 'after',
+            }"
             draggable="true"
             @click="openDoc(doc.id)"
             @dblclick="renameDoc(doc)"
             @dragstart="onDragStart(doc, $event)"
-            @dragover.prevent
+            @dragover.prevent="onDragOver(doc, $event)"
+            @dragleave="dropIndicator = null"
+            @dragend="onDragEnd"
             @drop="onDrop(doc, $event)"
           >
             <div class="docs-item-main">
@@ -162,7 +201,16 @@ onBeforeUnmount(() => {
         </ul>
         <p class="docs-tip">双击重命名 · 拖拽排序 · 单击切换</p>
       </aside>
-      <div class="docs-editor" ref="editorContainer"></div>
+      <div class="docs-editor-wrap">
+        <input
+          class="docs-title-input"
+          v-model="activeTitle"
+          placeholder="无标题文档"
+          :disabled="!activeId"
+          @input="onTitleInput"
+        />
+        <div class="docs-editor" ref="editorContainer"></div>
+      </div>
     </div>
   </SceneFrame>
 </template>
@@ -280,12 +328,47 @@ onBeforeUnmount(() => {
   background: rgba(255, 77, 79, 0.1);
 }
 
+.docs-item.drop-before {
+  box-shadow: inset 0 2px 0 var(--pg-primary, #00b96b);
+}
+
+.docs-item.drop-after {
+  box-shadow: inset 0 -2px 0 var(--pg-primary, #00b96b);
+}
+
 .docs-tip {
   margin: 0;
   padding: 8px 12px;
   font-size: 11px;
   color: var(--pg-text-muted);
   border-top: 1px solid var(--pg-border);
+}
+
+.docs-editor-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.docs-title-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--pg-text);
+  padding: 14px 24px 6px;
+  min-width: 0;
+}
+
+.docs-title-input::placeholder {
+  color: var(--pg-text-muted);
+}
+
+.docs-title-input:disabled {
+  opacity: 0.5;
 }
 
 .docs-editor {
