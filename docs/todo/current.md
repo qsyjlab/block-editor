@@ -390,3 +390,20 @@
 - 风险与待办：
   1. TOC 的斜杠菜单插入路径已注册，e2e 未覆盖（后续补）。
   2. 导出链路：tocBlock 在 Markdown/DOCX 导出中当前输出为空（目录本质是动态视图），后续可在 serializer 中渲染为纯文本列表。
+
+### 2026-10-24 功能拓展：本地图片粘贴/拖入直传
+
+- 任务ID：功能拓展（对齐飞书文档粘贴截图体验）
+- 状态变更：doing -> review
+- 功能点分析：飞书文档支持截图后直接 Ctrl+V 插入；此前本项目粘贴图片文件无响应，仅支持 URL 插入。
+- 代码改动：
+  - `extensions/ImagePasteUpload.ts`：新增扩展。粘贴/拖入本地图片文件 → base64 内联插入；支持 `upload` 选项接对象存储（先插占位、成功替换 src、失败移除）；`maxFileSizeMb` 体积门槛（默认 20MB），全超限时放行默认行为不吞事件；drop 时按落点坐标移动光标后插入。
+  - `EditorCore` 注册；`index.ts` 导出。
+  - 新增单测 3 例（jsdom stub DataTransferItemList 协议）。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：40/40 通过；tsc 0 错误。
+  - 浏览器实测：模拟截图 File 粘贴 → 图片节点插入且 src 为 base64 PNG。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. base64 内联会让文档体积膨胀，生产接入应传 `upload` 选项走对象存储。
+  2. 拖拽插入与 block-handle 的块拖拽共存（dataTransfer 类型区分），未见冲突；多图片批量拖入后续可补。

@@ -35,6 +35,7 @@ import { Callout } from '../extensions/Callout'
 import { SmartPaste } from '../extensions/SmartPaste'
 import { ClipboardMarkdown } from '../extensions/ClipboardMarkdown'
 import { TocBlock } from '../extensions/TocBlock'
+import { ImagePasteUpload } from '../extensions/ImagePasteUpload'
 import { BlockMultiSelect } from '../extensions/BlockMultiSelect'
 import { BlockAnchor } from '../extensions/BlockAnchor'
 import { VersionHistoryManager } from './VersionHistory'
@@ -209,6 +210,7 @@ export class EditorCore {
       SmartPaste,
       ClipboardMarkdown,
       TocBlock,
+      ImagePasteUpload,
       BlockMultiSelect,
       BlockAnchor,
       BlockHandle.configure({
