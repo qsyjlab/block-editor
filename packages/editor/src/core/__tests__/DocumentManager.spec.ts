@@ -52,6 +52,35 @@ describe('DocumentManager（多文档管理）', () => {
     expect(storage.getItem(`be:doc:${doc.id}`)).toBeNull()
   })
 
+  it('reorder 手动排序：before/after/置顶', () => {
+    const { manager } = createManager()
+    const a = manager.create('A')
+    vi.advanceTimersByTime(5)
+    const b = manager.create('B')
+    vi.advanceTimersByTime(5)
+    const c = manager.create('C')
+    // create 置顶：索引顺序 [C, B, A]
+    expect(manager.list().map((d) => d.id)).toEqual([c.id, b.id, a.id])
+
+    manager.reorder(a.id, c.id, 'before')
+    expect(manager.list().map((d) => d.id)).toEqual([a.id, c.id, b.id])
+
+    manager.reorder(a.id, b.id, 'after')
+    expect(manager.list().map((d) => d.id)).toEqual([c.id, b.id, a.id])
+
+    manager.reorder(b.id, null)
+    expect(manager.list().map((d) => d.id)).toEqual([b.id, c.id, a.id])
+  })
+
+  it('自动保存不改变手动排序', () => {
+    const { manager } = createManager()
+    const a = manager.create('A')
+    const b = manager.create('B')
+    expect(manager.list().map((d) => d.id)).toEqual([b.id, a.id])
+    manager.save(a.id, { title: 'A2' })
+    expect(manager.list().map((d) => d.id)).toEqual([b.id, a.id])
+  })
+
   it('attachEditor 加载内容且防抖自动保存', () => {
     const { manager } = createManager()
     const doc = manager.create(

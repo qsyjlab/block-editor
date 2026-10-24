@@ -49,7 +49,7 @@ export class DocumentManager {
           })
   }
 
-  /** 文档索引（不含内容），按更新时间倒序 */
+  /** 文档索引（手动排序，create 置顶），不按时间重排 */
   list(): StoredDocument[] {
     const ids = this.readIndex()
     const docs: StoredDocument[] = []
@@ -57,8 +57,35 @@ export class DocumentManager {
       const doc = this.readOne(id)
       if (doc) docs.push(doc)
     }
-    docs.sort((a, b) => b.updatedAt - a.updatedAt)
     return docs
+  }
+
+  /**
+   * 手动排序（拖拽）：把 id 移到 targetId 前/后；targetId 为 null 时移到最前。
+   * 自动保存不改变排序，顺序只由本方法与 create 调整。
+   */
+  reorder(id: string, targetId: string | null, position: 'before' | 'after' = 'before'): void {
+    if (id === targetId) return
+    const ids = this.readIndex()
+    const from = ids.indexOf(id)
+    if (from < 0) return
+    ids.splice(from, 1)
+    if (targetId === null || position === 'before') {
+      const to = targetId === null ? 0 : ids.indexOf(targetId)
+      if (to < 0) {
+        ids.push(id)
+      } else {
+        ids.splice(to, 0, id)
+      }
+    } else {
+      const to = ids.indexOf(targetId)
+      if (to < 0) {
+        ids.push(id)
+      } else {
+        ids.splice(to + 1, 0, id)
+      }
+    }
+    this.writeIndex(ids)
   }
 
   create(title = '未命名文档', content?: any): StoredDocument {

@@ -334,6 +334,16 @@ export class EditorCore {
     })
 
     register({
+      id: 'core.findReplace',
+      source: 'EditorCore',
+      scope: 'editor',
+      command: 'openFindReplace',
+      combo: { mac: 'Mod+f', windows: 'Mod+f' },
+      priority: 60,
+      run: () => this.events.emit('openFindReplace', false),
+    })
+
+    register({
       id: 'core.bold',
       source: 'EditorCore',
       scope: 'editor',

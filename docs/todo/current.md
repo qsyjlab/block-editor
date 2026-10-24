@@ -429,3 +429,18 @@
 - 风险与待办：
   1. 文档管理场景与协同（Yjs）互斥（单机 localStorage 场景）；后续可做 storage adapter 抽象接远端。
   2. 文档树 UI 是 playground 演示实现，core 仅提供逻辑层，接入方自建 UI。
+
+### 2026-10-24 功能拓展：Ctrl+F 查找替换 / 表格斑马纹 / 文档树拖拽排序
+
+- 任务ID：功能拓展（对齐飞书文档）
+- 状态变更：doing -> review
+- 代码改动：
+  - `EditorCore.registerDefaultShortcuts`：新增 `core.findReplace`（Mod+F 唤起查找替换面板，与工具栏入口同事件）。
+  - `styles/index.css`：表格偶数行斑马纹（bg 55% 混合）与行悬浮淡主色高亮；置于 th 背景之后、选中态蒙层之前避免覆盖。
+  - `DocumentManager.reorder(id, targetId, position)`：手动排序（before/after/置顶），list() 改为索引手动序（create 置顶），自动保存不再重排序；新增 2 个单测。
+  - `DocumentsScenePage.vue`：文档树 HTML5 拖拽排序（上半 before/下半 after）。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：47/47 通过；tsc 0 错误。
+  - 浏览器实测：Ctrl+F 打开查找替换面板（445px 可见）；表格偶数行灰阶与奇数行不同；文档树第二项拖到首项上半部后顺序翻转。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：拖拽暂无落点指示线（后续可加插入位置高亮）；斑马纹在单元格设置背景色时会被覆盖（符合预期）。

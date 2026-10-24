@@ -853,6 +853,16 @@ ul[data-type='taskList'] li[data-checked='true'] input[type='checkbox'] {
   color: var(--text-color);
 }
 
+/* 表格斑马纹与行悬浮（对齐飞书表格可读性）；
+   需放在 th 通用背景之后、selectedCell/axis-selection 蒙层之前，避免盖住选中态 */
+.ProseMirror table tbody tr:nth-child(even) td {
+  background-color: color-mix(in srgb, var(--bg-color) 55%, transparent);
+}
+
+.ProseMirror table tbody tr:hover td {
+  background-color: color-mix(in srgb, var(--primary-color) 6%, transparent);
+}
+
 /* 选中单元格效果 */
 .ProseMirror .selectedCell:after {
   z-index: 2;

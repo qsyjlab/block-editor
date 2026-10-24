@@ -58,6 +58,26 @@ function removeDoc(doc: StoredDocument) {
   }
 }
 
+let draggingId: string | null = null
+
+function onDragStart(doc: StoredDocument, event: DragEvent) {
+  draggingId = doc.id
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', doc.id)
+  }
+}
+
+function onDrop(doc: StoredDocument, event: DragEvent) {
+  const sourceId = draggingId
+  draggingId = null
+  if (!manager || !sourceId || sourceId === doc.id) return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const before = event.clientY < rect.top + rect.height / 2
+  manager.reorder(sourceId, doc.id, before ? 'before' : 'after')
+  refreshList()
+}
+
 onMounted(() => {
   if (!editorContainer.value) return
   manager = new DocumentManager()
@@ -119,8 +139,12 @@ onBeforeUnmount(() => {
             :key="doc.id"
             class="docs-item"
             :class="{ active: doc.id === activeId }"
+            draggable="true"
             @click="openDoc(doc.id)"
             @dblclick="renameDoc(doc)"
+            @dragstart="onDragStart(doc, $event)"
+            @dragover.prevent
+            @drop="onDrop(doc, $event)"
           >
             <div class="docs-item-main">
               <span class="docs-item-title">{{ doc.title }}</span>
@@ -136,7 +160,7 @@ onBeforeUnmount(() => {
             </button>
           </li>
         </ul>
-        <p class="docs-tip">双击重命名 · 单击切换</p>
+        <p class="docs-tip">双击重命名 · 拖拽排序 · 单击切换</p>
       </aside>
       <div class="docs-editor" ref="editorContainer"></div>
     </div>
