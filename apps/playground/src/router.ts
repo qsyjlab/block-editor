@@ -15,6 +15,7 @@ import ShortcutScenePage from './scenes/pages/ShortcutScenePage.vue'
 import PluginizedModulesScenePage from './scenes/pages/PluginizedModulesScenePage.vue'
 import CustomCommentPanelScenePage from './scenes/pages/CustomCommentPanelScenePage.vue'
 import CustomDrawerModulesScenePage from './scenes/pages/CustomDrawerModulesScenePage.vue'
+import DocumentsScenePage from './scenes/pages/DocumentsScenePage.vue'
 
 export const SCENE_KEYS = [
   'default',
@@ -144,6 +145,13 @@ const sceneRoutes: SceneRouteRecord[] = [
     path: '/scenes/custom-drawer-modules',
     component: CustomDrawerModulesScenePage,
     group: 'layout-custom',
+  },
+  {
+    key: 'documents',
+    title: '多文档管理（本地持久化）',
+    path: '/scenes/documents',
+    component: DocumentsScenePage,
+    group: 'feature',
   },
   {
     key: 'behavior-benchmark',

@@ -407,3 +407,25 @@
 - 风险与待办：
   1. base64 内联会让文档体积膨胀，生产接入应传 `upload` 选项走对象存储。
   2. 拖拽插入与 block-handle 的块拖拽共存（dataTransfer 类型区分），未见冲突；多图片批量拖入后续可补。
+
+### 2026-10-24 功能拓展：图片本地上传插入 + 多文档管理
+
+- 任务ID：功能拓展（对齐飞书文档）
+- 状态变更：doing -> review
+- 功能点分析：
+  1. 图片插入此前只支持 URL 弹窗，且 slash 菜单无图片条目；飞书以本地上传为主。
+  2. 多文档管理缺失：编辑器单实例单文档，无文档列表/持久化/自动保存。
+- 代码改动：
+  - `utils/image.ts`：新增 `pickImageSource`（本地文件选择优先，取消可回退 URL 输入，focus 恢复兜底处理取消场景）。
+  - `block-features.ts`：slash/insert-menu 新增图片条目（本地上传→插入）；块手柄图片项默认改本地选择（保留 promptImageSrc 覆盖机制）。
+  - `core/DocumentManager.ts`：多文档管理器（localStorage 持久化、索引倒序列表、创建/重命名/删除、attachEditor 防抖自动保存、flush 立即落盘、storage 可注入）。
+  - `apps/playground/src/scenes/pages/DocumentsScenePage.vue`：文档管理场景（左文档树：新建/单击切换/双击重命名/删除确认；右侧编辑器；自动保存）。
+  - `router.ts` 注册 documents 场景；`index.ts` 导出 DocumentManager 与 utils/image。
+  - 新增单测：DocumentManager 5 例。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：45/45 通过；tsc 0 错误。
+  - 浏览器实测：文档场景首建引导文档、新建激活、编辑 1.5s 后切换文档再切回内容持久化（自动保存 PASS）；slash 菜单含「图片」「目录」条目。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. 文档管理场景与协同（Yjs）互斥（单机 localStorage 场景）；后续可做 storage adapter 抽象接远端。
+  2. 文档树 UI 是 playground 演示实现，core 仅提供逻辑层，接入方自建 UI。

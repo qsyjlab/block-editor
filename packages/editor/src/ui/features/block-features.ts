@@ -5,6 +5,7 @@ import type { EditorI18n } from '../../i18n'
 import type { SlashCommandItem } from '../../extensions/SlashCommand'
 import type { ToolbarItemType } from '../toolbar/ToolbarRegistry'
 import { icons } from '../toolbar/icons'
+import { pickImageSource } from '../../utils/image'
 
 export type FeatureSurface = 'toolbar' | 'selection-toolbar' | 'slash' | 'block-handle' | 'insert-menu'
 export type FeatureGroup = 'block-style' | 'list' | 'insert'
@@ -250,6 +251,21 @@ export function createBlockFeatures(
       },
     },
     {
+      id: 'image',
+      group: 'insert',
+      surfaces: ['slash', 'insert-menu'],
+      label: i18n.blockHandle.insertImage,
+      description: '上传本地图片或粘贴图片 URL',
+      icon: icons.image,
+      keywords: ['image', '图片', '上传', '截图', 'photo', 'picture'],
+      run: ({ editor }) => {
+        void pickImageSource().then((src) => {
+          if (!src) return
+          editor.chain().focus().setImage({ src }).run()
+        })
+      },
+    },
+    {
       id: 'tocBlock',
       group: 'insert',
       surfaces: ['slash', 'insert-menu'],
@@ -388,8 +404,15 @@ export function createImageInsertHandleItem(ctx: BlockHandleFeatureContext): Blo
     label: ctx.labelOverrides?.image || resolveEditorI18n(ctx.i18nInput).blockHandle.insertImage,
     icon: icons.image,
     action: () => {
-      const src = (ctx.promptImageSrc || (() => window.prompt('请输入图片 URL')))()
-      if (src) ctx.replaceCurrentBlockWith({ type: 'image', attrs: { src } })
+      // 未提供自定义取图器时默认本地文件优先（对齐飞书），取消后可回退 URL
+      if (ctx.promptImageSrc) {
+        const src = ctx.promptImageSrc()
+        if (src) ctx.replaceCurrentBlockWith({ type: 'image', attrs: { src } })
+        return
+      }
+      void pickImageSource().then((src) => {
+        if (src) ctx.replaceCurrentBlockWith({ type: 'image', attrs: { src } })
+      })
     },
   }
 }
