@@ -34,6 +34,7 @@ import { SlashCommand } from '../extensions/SlashCommand'
 import { Callout } from '../extensions/Callout'
 import { SmartPaste } from '../extensions/SmartPaste'
 import { ClipboardMarkdown } from '../extensions/ClipboardMarkdown'
+import { TocBlock } from '../extensions/TocBlock'
 import { BlockMultiSelect } from '../extensions/BlockMultiSelect'
 import { BlockAnchor } from '../extensions/BlockAnchor'
 import { VersionHistoryManager } from './VersionHistory'
@@ -207,6 +208,7 @@ export class EditorCore {
       }),
       SmartPaste,
       ClipboardMarkdown,
+      TocBlock,
       BlockMultiSelect,
       BlockAnchor,
       BlockHandle.configure({

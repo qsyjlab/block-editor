@@ -197,6 +197,7 @@ export const zhCN: EditorI18n = {
     insertImage: '图片',
     insertTable: '表格',
     insertCallout: '高亮块',
+    insertToc: '目录',
     insertButton: '按钮',
     insertParagraphBelow: '在下方添加',
     addToMultiSelect: '添加到多选',
@@ -253,6 +254,8 @@ export const zhCN: EditorI18n = {
     tableDescription: '插入表格',
     calloutTitle: 'Callout',
     calloutDescription: '高亮信息块',
+    tocTitle: '目录',
+    tocDescription: '自动收集文档标题生成目录',
   },
   colorPicker: {
     presetColors: '预设颜色',

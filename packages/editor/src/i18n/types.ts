@@ -204,6 +204,7 @@ export interface BlockHandleI18n {
   insertImage: string
   insertTable: string
   insertCallout: string
+  insertToc: string
   insertButton: string
   insertParagraphBelow: string
   addToMultiSelect: string
@@ -262,6 +263,8 @@ export interface SlashCommandI18n {
   tableDescription: string
   calloutTitle: string
   calloutDescription: string
+  tocTitle: string
+  tocDescription: string
 }
 
 export interface ColorPickerI18n {

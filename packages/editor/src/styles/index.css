@@ -779,6 +779,25 @@ ul[data-type='taskList'] li > div {
   flex: 1 1 auto;
 }
 
+/* 待办完成态（对齐飞书）：勾选后文本划线置灰，hover 恢复可读 */
+ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--text-muted, #9ca3af);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted, #9ca3af) 60%, transparent);
+}
+
+ul[data-type='taskList'] li[data-checked='true'] > div a {
+  color: inherit;
+}
+
+ul[data-type='taskList'] li[data-checked='true'] > div code {
+  text-decoration: line-through;
+}
+
+ul[data-type='taskList'] li[data-checked='true'] input[type='checkbox'] {
+  accent-color: var(--text-muted, #9ca3af);
+}
+
 /* Image */
 .ProseMirror img {
   max-width: 100%;
@@ -2647,4 +2666,67 @@ html[data-be-marquee-selecting='1'] .ProseMirror {
   top: -1.4em;
   user-select: none;
   white-space: nowrap;
+}
+
+/* 目录块（TOC，对齐飞书文档目录） */
+.be-toc-block {
+  margin: 0.75rem 0;
+  padding: 14px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--paper-bg) 60%, var(--bg-color));
+}
+
+.be-toc-block.ProseMirror-selectednode {
+  outline: 2px solid var(--primary-color);
+}
+
+.be-toc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.be-toc-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-color);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.be-toc-item:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  color: var(--primary-color);
+}
+
+.be-toc-item--h1 {
+  font-weight: 600;
+}
+
+.be-toc-item--h2 {
+  padding-left: 24px;
+  font-weight: 500;
+}
+
+.be-toc-item--h3 {
+  padding-left: 40px;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.be-toc-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.be-toc-empty {
+  font-size: 13px;
+  color: var(--text-muted, #9ca3af);
 }

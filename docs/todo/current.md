@@ -370,3 +370,23 @@
 - 风险与待办：
   1. D1/D3（复制 HTML 样式清洗对齐）与 D4（外部平台手工验收）未动，属后续批次。
   2. 粘贴到飞书/语雀的行为依赖对方 text/plain 解析，建议按 D4 清单做一次人工验收。
+
+### 2026-10-24 功能拓展：待办完成态样式 + 目录块 TOC
+
+- 任务ID：功能拓展（对齐飞书文档）
+- 状态变更：doing -> review
+- 功能点分析：
+  1. 待办完成态：飞书勾选后文本划线置灰，此前本项目无任何视觉反馈。
+  2. 目录块：飞书「目录」块自动收集标题、点击定位；本项目仅有右侧大纲栏，缺文档内目录块。
+- 代码改动：
+  - `styles/index.css`：任务列表 `li[data-checked='true']` 完成态样式（划线置灰、链接/行内代码联动、checkbox 变灰）。
+  - `extensions/TocBlock.ts`：新增目录块节点（atomic、可拖拽），NodeView 收集 H1–H3 标题（300ms 节流随文档更新重建），点击条目同步选区 + DOM 滚动定位（沿 overflow 容器链查找）。
+  - `block-features.ts`：注册 tocBlock feature（slash 菜单 + insert-menu 可插入）。
+  - i18n：zh/en 增补 tocTitle/tocDescription/insertToc。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：37/37 通过；tsc 0 错误。
+  - 浏览器实测：TOC 正确收集 H1–H3（层级缩进）、点击条目可定位到对应标题（H2 顶部偏移 289px 在视口内）；待办勾选后 `line-through` + 置灰生效。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. TOC 的斜杠菜单插入路径已注册，e2e 未覆盖（后续补）。
+  2. 导出链路：tocBlock 在 Markdown/DOCX 导出中当前输出为空（目录本质是动态视图），后续可在 serializer 中渲染为纯文本列表。

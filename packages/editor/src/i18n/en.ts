@@ -197,6 +197,7 @@ export const enUS: EditorI18n = {
     insertImage: 'Image',
     insertTable: 'Table',
     insertCallout: 'Callout',
+    insertToc: 'Table of Contents',
     insertButton: 'Button',
     insertParagraphBelow: 'Add Below',
     addToMultiSelect: 'Add to Multi-select',
@@ -253,6 +254,8 @@ export const enUS: EditorI18n = {
     tableDescription: 'Insert a table',
     calloutTitle: 'Callout',
     calloutDescription: 'Highlighted info block',
+    tocTitle: 'Table of Contents',
+    tocDescription: 'Auto-collect headings into a TOC',
   },
   colorPicker: {
     presetColors: 'Preset Colors',

@@ -249,6 +249,18 @@ export function createBlockFeatures(
         ;(editor.commands as any).insertCallout('info')
       },
     },
+    {
+      id: 'tocBlock',
+      group: 'insert',
+      surfaces: ['slash', 'insert-menu'],
+      label: (i18n as any).blockHandle?.insertToc || slash.tocTitle,
+      description: slash.tocDescription,
+      icon: icons.list,
+      keywords: ['toc', '目录', 'table of contents', 'outline', slash.tocTitle],
+      run: ({ editor }) => {
+        editor.chain().focus().insertContent({ type: 'tocBlock' }).run()
+      },
+    },
   ]
 }
 
