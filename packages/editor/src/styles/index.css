@@ -1059,6 +1059,13 @@ ul[data-type='taskList'] li[data-checked='true'] input[type='checkbox'] {
   z-index: 5;
 }
 
+/* 6px 圆点实际很难点中，扩大命中热区（不改变视觉尺寸） */
+.be-table-insert-dot::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+}
+
 .be-table-insert-dot:hover {
   background: var(--primary-color);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
@@ -1818,11 +1825,10 @@ ul[data-type='taskList'] li[data-checked='true'] input[type='checkbox'] {
   align-items: center;
 }
 
-/* 表级块 handle：高于列/行热区层，扩大点击热区避免右下角点不到。
-   注意必须高于激活态热区层的 240100（.is-table-chrome-active），
-   否则手柄锚点角落会被透明热区层覆盖，无法点击。 */
+/* 表级块 handle：必须高于通用块手柄(240091)才能被点击（H3.11），
+   但必须低于热区/插入点层(240100)，否则列插入点被手柄遮挡点不到。 */
 .be-block-handle--table-block {
-  z-index: 240110 !important;
+  z-index: 240095 !important;
   pointer-events: auto;
 }
 

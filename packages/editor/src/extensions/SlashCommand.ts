@@ -1,5 +1,5 @@
 import { Extension, Editor } from '@tiptap/core'
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { resolveEditorI18n } from '../i18n'
 import type { SlashCommandI18n } from '../i18n/types'
@@ -189,13 +189,35 @@ class SlashMenuView {
     const item = this.items[index]
     if (!item) return
 
-    // Delete the "/" + query text
+    // 删除 "/" + 查询文本；若光标位于块容器（引用/高亮块/分栏）内，
+    // 同一事务内把光标提升到容器后的顶层空段——保证表格/目录/分栏等
+    // 块级插入物落在文档顶层而不是塞进容器（对齐飞书：引用里 /表格
+    // → 表格插在引用之后）。
     if (this.slashPos !== null) {
       const queryLen = this.query.length
       const deleteFrom = this.slashPos - 1 // include the "/"
       const deleteTo = this.slashPos + queryLen
 
-      this.editor.chain().focus().deleteRange({ from: deleteFrom, to: deleteTo }).run()
+      const view = this.editor.view
+      const { state } = view
+      let tr = state.tr.delete(deleteFrom, deleteTo)
+
+      const BLOCK_CONTAINERS = new Set(['blockquote', 'callout', 'column', 'columns'])
+      const $from = tr.selection.$from
+      for (let depth = $from.depth; depth >= 1; depth -= 1) {
+        if (BLOCK_CONTAINERS.has($from.node(depth).type.name)) {
+          const containerEnd = $from.after(depth)
+          const paragraphType = state.schema.nodes.paragraph
+          if (paragraphType) {
+            tr = tr.insert(containerEnd, paragraphType.create())
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(containerEnd + 1)))
+          }
+          break
+        }
+      }
+
+      view.dispatch(tr)
+      view.focus()
     }
 
     this.hide()

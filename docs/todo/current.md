@@ -463,3 +463,25 @@
   1. 分栏内跨栏删除/Backspace 边界行为未深度打磨（ProseMirror 默认行为）。
   2. 栏宽拖拽调节、栏数增减按钮未做（后续迭代）。
   3. Markdown 导出走 HTML→turndown 天然线性化；如需保留分栏语义可扩展 [!columns] 约定。
+
+### 2026-10-24 表格/图片真实交互专项（用户反馈驱动）
+
+- 任务ID：真实交互验证专项（用户指出此前验证多用 commands API，未走真实点击路径）
+- 状态变更：doing -> review
+- 功能点分析（真实操作暴露的 3 个真 bug，全部修复）：
+  1. 表格内按 Tab 触发 `RangeError: Applying a mismatched transaction`（Indent 扩展的 Tab 快捷键抢占 goToNextCell 且链式命令派发过期 state），连锁导致工具栏不出/插入列无效等假象。
+  2. 斜杠菜单在块容器（引用等）内触发时，表格等块级插入物被塞进容器内部而非文档顶层；且顶层无尾随段落系断言对象写错（tableWrapper）——实际有段落。
+  3. 表级手柄 z-index 240110 压过插入点层 240100（H3.11 修复时调反了优先级链），列插入点被手柄遮挡；正确值 240095（>通用手柄 240091，<插入层 240100）。
+- 代码改动：
+  - `Indent.ts`：Tab/Shift-Tab 在表格/代码块上下文放行（goToNextCell/软缩进）；indent/outdent 重写为注入 state.tr.setNodeMarkup 原生命令，根治 mismatched transaction。
+  - `SlashCommand.executeAtIndex`：删除查询文本的同一事务内做"容器提升"——光标在 blockquote/callout/column(s) 内时移到容器后顶层新段，块级插入物永远落顶层（对齐飞书）。
+  - `index.css`：表级手柄 z 240095；插入点 dot 增大命中热区（::before inset -9px）。
+- 验证命令与结果（全部真实交互路径，无 commands API）：
+  - 真实键盘/点击扫描：slash 真实点击插表格、顶层插入+尾随段、Tab 链 A1→B1→C1、双击文字选中→表格工具栏→加粗、插入点命中（onTop=DOT）、段落缩进/取消、0 页面错误。
+  - 图片真实路径：slash→系统文件选择器→真实 PNG 上传插入（loaded:true）、点击出对齐工具栏、对齐切换、点击→NodeSelection→Backspace 删除。
+  - 权威回归：`tests/e2e/regression.spec.ts` 全量 **41/41 通过**（含全部表格/手柄/图片/拖拽用例）。
+  - 单测 47/47；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`、`docs/todo/roadmap-next.md`。
+- 风险与待办：
+  1. BHI-011（新登记）：hover 表格边缘激活插入意图后移回表格内部，块手柄偶发不恢复（Esc 可恢复）；e2e 未复现，需真实鼠标路径细化。
+  2. 验证方法论改进已落实：交互类验证一律走真实点击/键盘/file-chooser，commands API 仅用于构造初始文档。
