@@ -86,10 +86,11 @@ export class ToolbarDropdown {
 
   private resolveOverlayHost(): HTMLElement {
     const editorRoot = this.editorCore.editor.options.element as HTMLElement
-    const host =
-      (editorRoot.closest('[data-be-overlay-container="true"]') as HTMLElement | null) ||
-      (editorRoot.closest('[data-be-ui-root="true"]') as HTMLElement | null)
-    return host || resolveUILayerHost('dropdown', editorRoot)
+    // 必须挂到全局 UI 层根（z 240300，高于表格 chrome 的 240100/240110）：
+    // 旧的 overlay-container 优先策略会把菜单困在编辑器布局的低堆叠上下文里，
+    // 从表格工具栏展开的下拉会被透明热区层遮挡无法点击。layer root 会复制
+    // data-be-theme，暗黑主题继承不受影响。
+    return resolveUILayerHost('dropdown', editorRoot)
   }
 
   public getElement(): HTMLElement {

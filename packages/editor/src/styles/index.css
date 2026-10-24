@@ -1425,6 +1425,8 @@ ul[data-type='taskList'] li > div {
   overflow-y: auto;
   display: none; /* toggled by JS */
   z-index: 10000;
+  /* 挂到 UI 层根时父级是 pointer-events:none，必须显式恢复，否则点击穿透 */
+  pointer-events: auto;
   /* transform-origin set from top to match the slide-down animation */
   transform-origin: top left;
   will-change: opacity, transform;

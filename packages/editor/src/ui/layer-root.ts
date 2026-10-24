@@ -20,7 +20,9 @@ function ensureRoot(source?: HTMLElement | null): HTMLElement {
   }
   root.style.position = 'fixed'
   root.style.inset = '0'
-  root.style.zIndex = '240000'
+  // 必须高于表格 chrome 层（trigger layer 240100 / 表级 handle 240110），
+  // 否则从表格工具栏打开的下拉菜单会被透明热区遮挡、无法点击。
+  root.style.zIndex = '240300'
   root.style.pointerEvents = 'none'
 
   const themeSource = getThemeSource(source)

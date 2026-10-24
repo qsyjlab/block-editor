@@ -428,6 +428,7 @@ class BlockHandleView {
     document.addEventListener('dragover', this.handleDragOver, true)
     document.addEventListener('drop', this.handleDrop, true)
     document.addEventListener('mousedown', this.handleGlobalPointerDown, true)
+    document.addEventListener('keydown', this.handleKeyDown)
     document.addEventListener('mousedown', this.handleSuppressEditorPointer, true)
     document.addEventListener('click', this.handleSuppressEditorPointer, true)
     document.addEventListener('mouseup', this.handleSuppressEditorPointer, true)
@@ -1029,6 +1030,41 @@ class BlockHandleView {
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
+  }
+
+  /** Esc：关闭块菜单；若表格处于整表/单元格选中态则同时取消选中（对齐飞书 Esc 行为）。 */
+  handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return
+    const menuOpen = this.menu.style.display !== 'none'
+    const { state } = this.editorView
+    const tableSelected = this.isTableBlockSelected() || isCellSelection(state.selection)
+    if (!menuOpen && !tableSelected) return
+    if (menuOpen) this.hideMenu()
+    if (tableSelected) {
+      if (this.isTableBlockSelected()) {
+        this.clearTableBlockSelection()
+      } else {
+        // CellSelection（点击表级手柄/框选单元格产生）：跳出表格，光标落表格后
+        const tableInfo = this.editorView.state.selection.$from
+        let exitPos = -1
+        for (let d = tableInfo.depth; d >= 0; d -= 1) {
+          if (tableInfo.node(d).type.name === 'table') {
+            exitPos = tableInfo.after(d)
+            break
+          }
+        }
+        if (exitPos >= 0 && exitPos <= state.doc.content.size) {
+          const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(exitPos), 1))
+          this.editorView.dispatch(tr)
+        }
+      }
+      this.hideTableBlockHandle()
+      this.hoveredTableDom = null
+      this.lastTablePointer = null
+      this.hideTableChromeLayers()
+      this.hideTableInsertAffordance()
+      this.editor.commands.setInteractionMode?.('edit')
+    }
   }
 
   handleGlobalPointerDown = (e: MouseEvent) => {
@@ -3005,6 +3041,21 @@ class BlockHandleView {
     const fromHit = hit?.closest('table') as HTMLTableElement | null
     if (fromHit && this.isPointerOverTableBounds(fromHit, clientX, clientY)) return fromHit
 
+    // 命中点是编辑器内的具体内容块（段落/标题等非表格元素）时，不允许
+    // "最近表格"兜底抢走 hover——否则紧邻表格的段落永远拿不到块手柄。
+    // 命中编辑器根节点（块间空隙）或表格 chrome 层时仍走兜底，保证从
+    // 表格移向其手柄/热区的过渡区不闪断。
+    if (
+      hit &&
+      hit !== this.editorView.dom &&
+      this.editorView.dom.contains(hit) &&
+      !hit.closest(
+        '.be-table-trigger-layer, .be-table-axis-zone, .be-table-insert-dot, .be-table-column-selection-bar, .be-table-row-selection-bar, .be-table-insert-control, .be-table-insert-indicator, .be-table-insert-tooltip',
+      )
+    ) {
+      return null
+    }
+
     const editorDom = this.editorView.dom as HTMLElement
     const tables = Array.from(editorDom.querySelectorAll('table')) as HTMLTableElement[]
 
@@ -3356,6 +3407,17 @@ class BlockHandleView {
     const { clientX, clientY } = event
     const target = event.target as HTMLElement | null
 
+    // 指针已经停在任一块手柄上时必须最先短路：表级手柄锚在表格边界外侧，
+    // 若先走 resolveHoveredTable 判定"离开表格"会立刻 hideTableBlockHandle，
+    // 导致用户/自动化把鼠标移到手柄上的瞬间手柄消失、无法点击。
+    if (
+      this.element.contains(event.target as Node) ||
+      this.tableBlockHandleEl.contains(event.target as Node)
+    ) {
+      this.cancelHide()
+      return
+    }
+
     // Check if mouse is near the editor (including gutter)
     const buffer = 50
     if (
@@ -3395,7 +3457,10 @@ class BlockHandleView {
       return
     }
 
-    if (this.isTableBlockSelected()) {
+    // 表格处于块选中态时：指针仍在表格上则保持表格接管；
+    // 指针已移到表格外其他块上时，通用块手柄需要正常回归（表格选中态
+    // 由点击其他位置清除，这里只让出 hover 层，不清选区）。
+    if (this.isTableBlockSelected() && this.hoveredTableDom) {
       return
     }
 
@@ -4054,6 +4119,7 @@ class BlockHandleView {
     document.removeEventListener('dragover', this.handleDragOver, true)
     document.removeEventListener('drop', this.handleDrop, true)
     document.removeEventListener('mousedown', this.handleGlobalPointerDown, true)
+    document.removeEventListener('keydown', this.handleKeyDown)
     document.removeEventListener('mousedown', this.handleSuppressEditorPointer, true)
     document.removeEventListener('click', this.handleSuppressEditorPointer, true)
     document.removeEventListener('mouseup', this.handleSuppressEditorPointer, true)

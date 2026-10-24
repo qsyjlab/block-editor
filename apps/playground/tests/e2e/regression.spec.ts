@@ -325,12 +325,34 @@ async function openBlockHandleMenuForParagraph(page: Page, paragraphText: string
   return menu
 }
 
+// F7/F8：单击单元格只进入编辑态；选中单元格文本后才显示表格工具栏。
+// 点击位置取单元格文字中部（宽度 60%），避开覆盖在格子左侧的 in-cell 块手柄。
+async function selectCellText(page: Page, cellText: string) {
+  const cell = page.locator('.ProseMirror table td', { hasText: cellText }).first()
+  await cell.scrollIntoViewIfNeeded()
+  const box = await cell.boundingBox()
+  if (!box) throw new Error(`Cannot get cell box for text: ${cellText}`)
+  await page.mouse.click(box.x + box.width * 0.6, box.y + box.height / 2)
+  await page.keyboard.down('Shift')
+  for (let i = 0; i < 2; i += 1) {
+    await page.keyboard.press('ArrowRight')
+  }
+  await page.keyboard.up('Shift')
+  await page.waitForTimeout(300)
+}
+
 async function clickBlockHandleMenuItem(menu: ReturnType<Page['locator']>, label: RegExp) {
   await waitForVisible(menu)
   const clicked = await menu.evaluate(
     (root, matcher) => {
       const re = new RegExp(matcher.source, matcher.flags)
-      const items = Array.from(root.querySelectorAll<HTMLElement>('.menu-item, .dropdown-item'))
+      // 5月重构后菜单项为飞书风格按钮（be-block-handle-insert-*-btn），
+      // 旧 .menu-item/.dropdown-item 类名已不存在
+      const items = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          '.be-block-handle-insert-list-btn, .be-block-handle-insert-grid-btn, .menu-item, .dropdown-item',
+        ),
+      )
       const target = items.find((item) => re.test(item.textContent || ''))
       if (!target) return false
       target.click()
@@ -886,7 +908,8 @@ describe('regression e2e (H2)', () => {
     await waitForVisible(table)
     const rowCountBefore = await page.locator('.ProseMirror table tr').count()
 
-    await page.locator('.ProseMirror table td', { hasText: '张三' }).first().click()
+    // F7/F8：单击单元格只进入编辑态；选中单元格文本后才显示表格工具栏
+    await selectCellText(page, '张三')
     const tableMenu = page.locator('.table-bubble-menu')
     await waitForVisible(tableMenu)
     await expect((await tableMenu.getAttribute('aria-label')) || '').toMatch(
@@ -1462,7 +1485,8 @@ describe('regression e2e (H2)', () => {
 
     const cell = page.locator('.ProseMirror table td', { hasText: '张三' }).first()
     await waitForVisible(cell)
-    await cell.click()
+    // F8：选中文本后表格工具栏出现
+    await selectCellText(page, '张三')
     await page.waitForTimeout(120)
     const tableMenu = page.locator('.table-bubble-menu')
     await waitForVisible(tableMenu)
@@ -1619,7 +1643,11 @@ describe('regression e2e (H2)', () => {
     await trigger.focus()
     await page.keyboard.press('Enter')
 
-    const menu = page.locator('.toolbar-dropdown-menu').first()
+    // DOM 中常驻多个 display:none 的 .toolbar-dropdown-menu（块菜单/已关闭下拉），
+    // 必须按打开态的内联 display 定位，否则 .first() 会抓到关闭菜单
+    const menu = page.locator(
+      '.toolbar-dropdown-menu[style*="display: block"], .toolbar-dropdown-menu[style*="display: flex"]',
+    )
     await waitForVisible(menu)
     await expect(await trigger.getAttribute('aria-expanded')).toBe('true')
 
@@ -1668,7 +1696,9 @@ describe('regression e2e (H2)', () => {
       .locator('.toolbar .toolbar-dropdown-wrapper .toolbar-dropdown-trigger')
       .first()
     await dropdownTrigger.click()
-    const dropdownMenu = page.locator('.toolbar-dropdown-menu').first()
+    const dropdownMenu = page.locator(
+      '.toolbar-dropdown-menu[style*="display: block"], .toolbar-dropdown-menu[style*="display: flex"]',
+    )
     await waitForVisible(dropdownMenu)
     const dropdownStyles = await dropdownMenu.evaluate((el) => {
       const style = getComputedStyle(el as HTMLElement)
@@ -2132,6 +2162,8 @@ describe('regression e2e (H2)', () => {
     const quoteBox = await quoteSource.boundingBox()
     if (!quoteBox) throw new Error('Cannot resolve quote source box')
     await page.mouse.move(quoteBox.x + 14, quoteBox.y + quoteBox.height / 2)
+    // 悬停驱动 currentBlockPos 的更新是节流的（16ms），立即拖拽存在竞态，等一拍再拖
+    await page.waitForTimeout(150)
     await waitForVisible(page.locator(BLOCK_HANDLE_SELECTOR))
     const quoteDrag = await dragCurrentBlockHandleToTargetParagraph(
       page,
@@ -2147,6 +2179,7 @@ describe('regression e2e (H2)', () => {
     const codeBox = await codeSource.boundingBox()
     if (!codeBox) throw new Error('Cannot resolve code source box')
     await page.mouse.move(codeBox.x + 14, codeBox.y + codeBox.height / 2)
+    await page.waitForTimeout(150)
     await waitForVisible(page.locator(BLOCK_HANDLE_SELECTOR))
     const codeDrag = await dragCurrentBlockHandleToTargetParagraph(
       page,
@@ -2266,6 +2299,11 @@ describe('regression e2e (H2)', () => {
 
     await blockHandle.click()
     await expect(await page.locator('.table-bubble-menu').isVisible()).toBe(false)
+
+    // 点击表级手柄会打开块菜单（对齐飞书表格菜单行为）；菜单开启期间
+    // mousemove 被短路，块手柄不回归。先关闭菜单再验证悬停回归。
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(200)
 
     const paragraph = page
       .locator('.ProseMirror p', {

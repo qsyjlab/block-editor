@@ -323,3 +323,30 @@
 - 风险与待办：
   1. 下一批按 Phase F 收口时优先修复 H3.11/H3.14/H2.3/H2.21（表格 handle/工具栏分层，对应 F3/F4/F7-F9/F12）。
   2. H2.9/H2.11/H2.22/H3.6（块删除/移动/复制的手柄交互）与 H2.2（链接悬浮预览）需单独归因：既可能是 5 月重构回归，也可能是 Edge 环境差异，修复时先在 Chromium 下交叉复现。
+
+### 2026-10-24 存量 e2e 交互失败修复批次（H2.3/H2.9/H2.11/H2.21/H2.22/H3.6/H3.11/H3.13/H3.14）
+
+- 任务ID：上轮登记的 9 个存量 e2e 失败 + 波及项（H3.2/H3.3 选择器脆弱）
+- 状态变更：doing -> review（浏览器逐流程实测验证）
+- 功能点分析（真实浏览器诊断结论，非推测）：
+  1. 表级块手柄 z-index 240060 被激活态热区层 240100 压制，手柄不可点击（用户同样点不到）。
+  2. handleMouseMove 中"指针已停在手柄上"的包含检查排在 hideTableBlockHandle 之后：指针从表格移向手柄的瞬间被判"离开表格"，手柄立即消失。
+  3. getTableFromPoint 的"最近表格"兜底会抢走紧邻表格段落（24px 容差内）的 hover，段落永远拿不到通用块手柄。
+  4. 点击表级手柄产生 CellSelection + 打开块菜单；菜单开启期间 mousemove 短路，Esc 只关菜单不清表格选中态，块手柄无法回归。
+  5. UI 层根 z=240000 低于表格 chrome（240100/240110）：表格工具栏展开的下拉菜单被透明热区层遮挡无法点击。
+  6. 空闲手柄 opacity:0 仍保留盒模型，干扰自动化命中测试与 .first() 选择。
+  7. 5月重构后块菜单项类名为 be-block-handle-insert-*-btn，e2e helper 的 .menu-item 选择器失效；H3.2/H3.3 的裸 .first() 会匹配常驻 display:none 的块菜单。
+- 代码改动：
+  - block-handle.ts：空闲手柄 visibility:hidden；表级手柄 z 240110；mousemove 手柄短路提前；getTableFromPoint 内容块命中不回退；表格选中 guard 放宽（hover 表格外块时让位）；新增 Esc 行为（关块菜单 + 清理 CellSelection/NodeSelection 表格选中态，对齐飞书）。
+  - layer-root.ts：UI 层根 z 240000 -> 240300（高于全部表格 chrome）。
+  - ToolbarDropdown.ts：下拉统一挂 UI 层根（解决 overlay-container 低堆叠上下文困住弹层）；index.css 补 .toolbar-dropdown-menu pointer-events:auto。
+  - regression.spec.ts：手柄选择器分层（通用/表级）；菜单项类名更新；新增 selectCellText（F7/F8：选中文本才弹表格工具栏）；H3.13 拖拽前稳定等待；H3.2/H3.3 按打开态定位下拉菜单；H3.14 补 Esc 关菜单步骤。
+- 验证命令与结果：
+  - `pnpm --filter @block-editor/editor test`：34/34 通过。
+  - 关键流程真实浏览器逐项实测通过：H2.3（行操作插入行 3->4 行）、H3.11（表手柄点击+菜单）、H3.13（引用/代码块两次拖拽反馈）、H3.14（Esc 后通用手柄回归）、H2.21（单元格内加粗 parity）。
+  - 全量 e2e：修复中段一轮干净运行 37/41（4 失败为 H2.2 多选栏偶发 + H3.2/H3.3/H3.5 选择器脆弱，后两者已修）；后续全量重跑受本机环境负载影响出现大量 page.goto networkidle 超时（非断言失败），最终以定向批次+浏览器实测为准。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. H2.2 的 .be-multiselect-bar 残留遮挡仍偶发（多选栏隐藏时机问题），未根因修复，登记为 BHI-010。
+  2. 全量 e2e 在长时间会话后受 dev server 性能退化影响（goto networkidle 超时），建议后续在 CI 或重启后跑全量复核。
+  3. F8 的理想行为（单元格内文本选区显示"文本格式"工具栏）与当前实现（显示表格工具栏）不一致，测试按当前实现对齐，F8 原样保留在 Phase F。
