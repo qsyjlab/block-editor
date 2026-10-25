@@ -531,3 +531,15 @@
 - 测试同步：H2.3 行操作路径改为真实 CellSelection（点格 + Shift+点邻格）。
 - 验证：真实浏览器双向切换通过（文本选区 5 组结构项隐藏、CellSelection 恢复）；权威 e2e 全量 41/41 全绿；tsc 0 错误。
 - 文档更新：`docs/todo/current.md`。
+
+### 2026-10-24 TOC 目录块导出降级
+
+- 任务ID：路线图 P0-5
+- 状态变更：doing -> done
+- 代码改动：
+  - `utils/serializer.ts`：导出管线新增 `tocBlockToPlainList`——目录块替换为纯文本标题列表（每条一个 p，层级缩进 `·` 前缀，空文档给占位文案）。
+  - `DocxSerializer.parseTocBlock`：遍历 rootJson 收集 H1–H3（尊重 maxLevel），输出缩进文本段落。
+  - `TocBlock.ts`：修复 destroy 经 Tiptap 'destroy' 事件调用时 this 错位（箭头包装）。
+  - 新增导出降级单测 1 例；导出测试夹具补注册 TocBlock。
+- 验证：单测 48/48 全绿；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。

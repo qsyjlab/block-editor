@@ -17,6 +17,7 @@ import Underline from '@tiptap/extension-underline'
 import { CustomCodeBlock } from '../../extensions/CodeBlock'
 import { Indent } from '../../extensions/Indent'
 import { Callout } from '../../extensions/Callout'
+import { TocBlock } from '../../extensions/TocBlock'
 import { Exporter } from '../Exporter'
 import { MarkdownImporter } from '../../import/MarkdownImporter'
 
@@ -40,6 +41,7 @@ function createEditor(content: string) {
       Underline,
       Indent,
       Callout,
+      TocBlock,
     ],
     content,
   })
@@ -138,6 +140,19 @@ describe('Exporter.toMarkdownText（EXP-001 回归）', () => {
     expect(markdown).toMatch(/-\s+\[ \] 未完成事项/)
     expect(markdown).toContain('---')
     expect(markdown).toContain('结束段落')
+    editor.destroy()
+  })
+
+  it('TOC 目录块导出为纯文本标题列表（降级）', async () => {
+    const editor = createEditor(
+      '<h1>第一章</h1><div data-type="toc-block" data-max-level="3"></div><h2>第一节</h2><p>正文</p>',
+    )
+    const markdown = await new Exporter(editor).toMarkdownText()
+
+    expect(markdown).toContain('# 第一章')
+    expect(markdown).toContain('· 第一章')
+    expect(markdown).toContain('· 第一节')
+    expect(markdown).not.toContain('toc-block')
     editor.destroy()
   })
 

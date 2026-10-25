@@ -76,6 +76,32 @@ function calloutToBlockquote(doc: Document) {
 }
 
 /**
+ * 目录块导出为纯文本标题列表（目录是动态视图，导出降级为条目文本）
+ */
+function tocBlockToPlainList(doc: Document) {
+  doc.querySelectorAll('div[data-type="toc-block"]').forEach((toc) => {
+    const maxLevel = Number(toc.getAttribute('data-max-level')) || 3
+    const plain = doc.createElement('div')
+    plain.setAttribute('data-type', 'toc-placeholder')
+    let found = 0
+    doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
+      const level = Number(h.tagName.slice(1))
+      if (level > maxLevel) return
+      const text = (h.textContent || '').trim()
+      if (!text) return
+      found += 1
+      const line = doc.createElement('p')
+      line.textContent = `${'  '.repeat(level - 1)}· ${text}`
+      plain.appendChild(line)
+    })
+    if (found === 0) {
+      plain.textContent = '（目录：文档暂无标题）'
+    }
+    toc.replaceWith(plain)
+  })
+}
+
+/**
  * 表格规范化为 turndown-plugin-gfm 可识别的形状。
  *
  * ProseMirror 输出的表格带 `<colgroup>`、`colspan/rowspan` 属性和单元格内块级 `<p>`，
@@ -186,6 +212,7 @@ export function transformHtmlForMarkdownExport(sourceHtml: string): string {
   const doc = new DOMParser().parseFromString(sourceHtml, 'text/html')
   liftIndentToTextPrefix(doc)
   calloutToBlockquote(doc)
+  tocBlockToPlainList(doc)
   normalizeTablesForGfm(doc)
   normalizeTaskListsForGfm(doc)
   return doc.body.innerHTML

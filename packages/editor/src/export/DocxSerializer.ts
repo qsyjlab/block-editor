@@ -68,10 +68,12 @@ const convertLineHeight = (lh: string): { line: number; rule: any } | undefined 
 }
 
 export class DocxSerializer {
+  private rootJson: any = null
   constructor(private editor: Editor) {}
 
   public async serialize(): Promise<Document> {
     const json = this.editor.getJSON()
+    this.rootJson = json
     const children = await this.parseNodes(json.content || [])
 
     return new Document({
@@ -189,10 +191,46 @@ export class DocxSerializer {
             ...(await this.parseNodes((node.content || []).flatMap((col: any) => col.content || []))),
           )
           break
+        case 'tocBlock':
+          // 目录导出降级：渲染为纯文本标题列表
+          children.push(...this.parseTocBlock(node, this.rootJson))
+          break
       }
     }
 
     return children
+  }
+
+  private parseTocBlock(node: any, docJson: any): Paragraph[] {
+    const maxLevel = Number(node.attrs?.maxLevel) || 3
+    const walk = (nodes: any[]): void => {
+      for (const n of nodes || []) {
+        if (n.type === 'heading') {
+          const level = Number(n.attrs?.level) || 1
+          if (level <= maxLevel) {
+            const text = (n.content || [])
+              .map((c: any) => c.text || '')
+              .join('')
+              .trim()
+            if (text) {
+              const levelLabel = level === 1 ? '' : `${'  '.repeat(level - 1)}`
+              entries.push(`${levelLabel}· ${text}`)
+            }
+          }
+        }
+        if (n.content) walk(n.content)
+      }
+    }
+    const entries: string[] = []
+    walk(docJson?.content || [])
+    const lines = entries.length > 0 ? entries : ['（目录：文档暂无标题）']
+    return lines.map(
+      (text, i) =>
+        new Paragraph({
+          children: [new TextRun({ text, font: 'Microsoft YaHei' })],
+          spacing: i === 0 ? {} : { before: 60 },
+        }),
+    )
   }
 
   private parseParagraph(node: any): Paragraph {

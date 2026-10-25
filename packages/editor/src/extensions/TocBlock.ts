@@ -90,7 +90,7 @@ class TocNodeView {
     this.render()
     this.dom.addEventListener('click', this.handleClick)
     this.editor.on('update', this.scheduleRefresh)
-    this.editor.on('destroy', this.destroy)
+    this.editor.on('destroy', () => this.destroy())
   }
 
   update(node: any) {
@@ -113,8 +113,7 @@ class TocNodeView {
     if (this.destroyed) return
     this.destroyed = true
     this.dom.removeEventListener('click', this.handleClick)
-    this.editor.off('update', this.scheduleRefresh)
-    this.editor.off('destroy', this.destroy)
+    this.editor?.off?.('update', this.scheduleRefresh)
     if (this.refreshTimer) window.clearTimeout(this.refreshTimer)
   }
 
