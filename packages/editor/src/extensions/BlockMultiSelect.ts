@@ -643,6 +643,7 @@ class BlockMultiSelectOverlayView {
     if ((event.target as HTMLElement)?.closest('.be-toolbar')) return
     if ((event.target as HTMLElement)?.closest('.be-table-toolbar')) return
     if ((event.target as HTMLElement)?.closest('.be-selection-tooltip')) return
+    if ((event.target as HTMLElement)?.closest('.be-columns-controls, .be-columns-divider-handle')) return
 
     const bounds = this.getCanvasBounds()
     if (!bounds) return

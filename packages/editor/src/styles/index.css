@@ -2777,3 +2777,87 @@ html[data-be-marquee-selecting='1'] .ProseMirror {
   outline-offset: 4px;
   border-radius: 6px;
 }
+
+/* 分栏 NodeView 控件层 */
+.be-columns-outer {
+  position: relative;
+  margin: 0.75rem 0;
+}
+
+.be-columns-outer .be-columns {
+  margin: 0;
+}
+
+.be-columns-controls {
+  position: absolute;
+  top: -14px;
+  right: 0;
+  z-index: 30;
+  display: none;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--paper-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.be-columns-outer:hover .be-columns-controls {
+  display: flex;
+}
+
+.be-columns-control-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.be-columns-control-btn:hover {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
+}
+
+.be-columns-divider-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  margin-left: -5px;
+  cursor: col-resize;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.be-columns-divider-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 1px;
+  background: transparent;
+}
+
+.be-columns-divider-handle:hover::after,
+.be-columns-divider-handle.is-dragging::after {
+  background: var(--primary-color);
+}
+
+.be-columns-width-indicator {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--primary-color);
+  z-index: 240200;
+  pointer-events: none;
+}

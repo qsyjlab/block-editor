@@ -543,3 +543,20 @@
   - 新增导出降级单测 1 例；导出测试夹具补注册 TocBlock。
 - 验证：单测 48/48 全绿；tsc 0 错误。
 - 文档更新：`docs/todo/current.md`。
+
+### 2026-10-24 分栏三件套：栏数增减 / 栏宽拖拽 / 跨栏 Backspace
+
+- 任务ID：路线图 P0-3
+- 状态变更：doing -> done
+- 代码改动（`ColumnsBlock.ts` 重构为 NodeView 架构）：
+  - Columns NodeView：外层 wrapper（控件层）+ contentDOM（flex 容器）。hover 顶部出现 ＋/－ 控件（2-4 栏边界内增删栏，增删后均分）。
+  - Column 新增 width 属性（%）；renderHTML 输出 flex/max-width；拖动栏间分隔条 → 指示线跟随 → mouseup 一次性提交两侧 width attrs（15%-85% 钳制，1 位小数），JSON 往返保留。
+  - Backspace 在栏内首块块首 → 光标跳上一栏最后文本块末尾（跨栏边界导航，不破坏结构）。
+- 排坑记录（真实交互逐一定位）：
+  1. 分隔条挂 contentDOM 内被 PM 当内容清除 → 移到外层 wrapper；
+  2. 外层 childList 突变未 ignoreMutation → PM 清除 handle → 补 target===dom 分支；
+  3. contentDOM 缺 data-type=columns → CSS flex 选择器不匹配 → 两栏垂直堆叠；
+  4. Fragment.offsets 非公共 API（undefined → 崩）→ 手动累加 childPos；
+  5. 拖拽期间块多选框选误激活（window 捕获先于元素 stopPropagation）→ BlockMultiSelect 排除分栏 chrome；拖拽改为指示线 + mouseup 一次性提交，规避 PM 事务后重建列 DOM 导致的样式丢失。
+- 验证（真实交互）：＋/－ 控件、拖宽 333→412（attrs 61.9/38.1）、JSON 往返保留、栏首 Backspace 跳栏，全过；权威 e2e 全量 41/41 全绿；单测 48/48；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。
