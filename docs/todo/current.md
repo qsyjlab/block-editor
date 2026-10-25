@@ -521,3 +521,13 @@
 - 代码改动：`BlockMultiSelect.handleMouseDown` 移除 mousedown 阶段的 preventDefault；框选激活（移动 ≥4px）与拖动/松开路径的 preventDefault 保留（689/704 行），框选行为不变。
 - 验证命令与结果：5 连跑选区/tooltip 5/5 稳定；权威 e2e 全量 **41/41 首次全绿**；tsc 0 错误。
 - 文档更新：`docs/todo/current.md`。
+
+### 2026-10-24 F8 落地：表格工具栏按选区类型分层
+
+- 任务ID：F8（飞书行为拆解遗留项）
+- 状态变更：doing -> done
+- 功能点分析：单元格内文本选区此前显示完整表格工具栏（含行/列操作、合并、删表）。飞书行为：选文字只出文本格式；CellSelection 才出表格结构操作。
+- 代码改动：`TableBubbleMenu` 渲染时给表格结构类控件（单元格背景/对齐/行列操作/合并拆分/删表，共 5 组）打 `data-be-table-only` 标记；`update` 按选区类型切换可见性（文本选区隐藏、CellSelection 恢复），层切换去重。
+- 测试同步：H2.3 行操作路径改为真实 CellSelection（点格 + Shift+点邻格）。
+- 验证：真实浏览器双向切换通过（文本选区 5 组结构项隐藏、CellSelection 恢复）；权威 e2e 全量 41/41 全绿；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。

@@ -908,8 +908,19 @@ describe('regression e2e (H2)', () => {
     await waitForVisible(table)
     const rowCountBefore = await page.locator('.ProseMirror table tr').count()
 
-    // F7/F8：单击单元格只进入编辑态；选中单元格文本后才显示表格工具栏
-    await selectCellText(page, '张三')
+    // F7/F8 分层：文本选区只出文本格式项，行操作属表格结构项需 CellSelection
+    //（真实路径：点击单元格 + Shift+点击邻格）
+    const firstCell = page.locator('.ProseMirror table td', { hasText: '张三' }).first()
+    await firstCell.scrollIntoViewIfNeeded()
+    const fbox = await firstCell.boundingBox()
+    await page.mouse.click(fbox.x + fbox.width * 0.6, fbox.y + fbox.height / 2)
+    await page.waitForTimeout(150)
+    const nextCell = page.locator('.ProseMirror table td').nth(1)
+    const nbox = await nextCell.boundingBox()
+    await page.keyboard.down('Shift')
+    await page.mouse.click(nbox.x + nbox.width * 0.6, nbox.y + nbox.height / 2)
+    await page.keyboard.up('Shift')
+    await page.waitForTimeout(450)
     const tableMenu = page.locator('.table-bubble-menu')
     await waitForVisible(tableMenu)
     await expect((await tableMenu.getAttribute('aria-label')) || '').toMatch(

@@ -18,6 +18,7 @@ export class TableBubbleMenu {
   private currentTable: HTMLElement | null = null
   private rafId: number | null = null
   private suppressHideUntil = 0
+  private lastSelectionModeLayer: 'text' | 'cell' | null = null
 
   constructor(editorCore: EditorCore, overlayContainer?: HTMLElement) {
     this.editorCore = editorCore
@@ -91,25 +92,65 @@ export class TableBubbleMenu {
 
   private renderItems(container: HTMLElement, items: ToolbarItemType[]) {
     items.forEach((item) => {
+      // F8 分层：单元格内文本选区只显示文本格式项；整表/区域操作仅 CellSelection 显示
+      const tableOnly = this.isTableStructureItem(item)
       if (item.type === 'button') {
         const component = new ToolbarItem(item, this.editorCore)
+        if (tableOnly) component.getElement().dataset.beTableOnly = 'true'
         container.appendChild(component.getElement())
       } else if (item.type === 'dropdown') {
         const component = new ToolbarDropdown(item, this.editorCore)
+        if (tableOnly) component.getElement().dataset.beTableOnly = 'true'
         container.appendChild(component.getElement())
       } else if (item.type === 'color') {
         const component = new ToolbarColorPicker(item.label, this.editorCore)
+        if (tableOnly) component.getElement().dataset.beTableOnly = 'true'
         container.appendChild(component.getElement())
       } else if (item.type === 'divider') {
         const divider = document.createElement('div')
         divider.className = 'divider'
+        if (tableOnly) divider.dataset.beTableOnly = 'true'
         container.appendChild(divider)
       }
     })
   }
 
-  private isToolbarInteracting(): boolean {
-    if (Date.now() < this.suppressHideUntil) return true
+  /** 表格结构类控件（单元格背景/对齐/行列操作/合并删除表）仅在 CellSelection 时显示 */
+  private isTableStructureItem(item: ToolbarItemType): boolean {
+    if (item.type === 'color') return true
+    if (item.type === 'button' && item.command === 'deleteTable') return true
+    if (item.type === 'dropdown') {
+      return item.options?.some(
+        (opt: { command?: string }) =>
+          opt.command &&
+          [
+            'addColumnBefore',
+            'addColumnAfter',
+            'deleteColumn',
+            'addRowBefore',
+            'addRowAfter',
+            'deleteRow',
+            'mergeCells',
+            'splitCell',
+          ].includes(opt.command),
+      )
+    }
+    return false
+  }
+
+  /** F8：文本选区隐藏表格结构控件（对齐飞书：单元格内选文字只出文本格式） */
+  private applySelectionModeLayer() {
+    const selection = this.editorCore.editor.state.selection
+    const textOnly = !isCellSelection(selection)
+    const key = textOnly ? 'text' : 'cell'
+    if (this.lastSelectionModeLayer === key) return
+    this.lastSelectionModeLayer = key
+    this.element.querySelectorAll<HTMLElement>('[data-be-table-only]').forEach((el) => {
+      el.style.display = textOnly ? 'none' : ''
+    })
+  }
+
+  private isToolbarInteracting(): boolean {    if (Date.now() < this.suppressHideUntil) return true
     if (this.element.contains(document.activeElement)) return true
     if (this.element.querySelector('.toolbar-dropdown-wrapper.open')) return true
     if (this.element.querySelector('.color-picker-dropdown')) return true
@@ -186,6 +227,7 @@ export class TableBubbleMenu {
     }
 
     this.setTableMode()
+    this.applySelectionModeLayer()
 
     if (this.currentTable !== tableEl || !this.isOpen) {
       this.currentTable = tableEl
