@@ -512,3 +512,12 @@
 - 代码改动：`block-handle.ts` 重排该函数优先级——posAtCoords 指针下的块优先（校验属于当前格），格内首块降为兜底（悬停格内空白时）。
 - 验证命令与结果（真实 hover）：两段单元格分别 hover 两行，handle 垂直中心 = 各行中心（349/349、378/378）；单测 47/47；e2e 40/41（仅剩 BHI-010 偶发）；tsc 0 错误。
 - 文档更新：`docs/todo/current.md`。
+
+### 2026-10-24 BHI-010 根治：多选栏偶发残留/拦截（H2.2 稳定化）
+
+- 任务ID：BHI-010
+- 状态变更：doing -> done
+- 功能点分析：BlockMultiSelect 的 window 捕获监听对编辑区内每次 mousedown 都 preventDefault（为框选预备），吞掉浏览器默认聚焦——PM 的点击选区放置被时序性打断（hasFocus=false、选区停 doc 起点），后续 Shift+箭头无文字选区、tooltip 不出、偶发路径下多选 storage 未清导致 bar 残留拦截链接点击。5 连跑 100% 复现 NO_SELECTION。
+- 代码改动：`BlockMultiSelect.handleMouseDown` 移除 mousedown 阶段的 preventDefault；框选激活（移动 ≥4px）与拖动/松开路径的 preventDefault 保留（689/704 行），框选行为不变。
+- 验证命令与结果：5 连跑选区/tooltip 5/5 稳定；权威 e2e 全量 **41/41 首次全绿**；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。

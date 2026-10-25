@@ -653,7 +653,9 @@ class BlockMultiSelectOverlayView {
       event.clientY <= bounds.proseRect.bottom
     if (!inMarqueeArea) return
 
-    event.preventDefault()
+    // 不要在 mousedown 阶段 preventDefault：它阻止浏览器默认聚焦，
+    // PM 的点击选区放置会被时序性打断（BHI-010/H2.2 偶发根因）。
+    // 默认行为只在框选真正激活（移动 ≥4px）时才需要抑制，见 handleMouseMove。
     this.marqueePending = true
     this.pendingStartX = event.clientX
     this.pendingStartY = event.clientY
