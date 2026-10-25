@@ -503,3 +503,12 @@
 - 风险与待办：
   1. domObserver.stop 期间若有真实用户输入会丢一轮观察（80ms 窗口内，风险极低）。
   2. 层级分发旧路径（handleTableTriggerMouseDown/Click）保留未删，作为元素级绑定的兜底。
+
+### 2026-10-24 单元格内块手柄行对齐修复（用户截图反馈）
+
+- 任务ID：BHI-014（in-cell handle 垂直偏移）
+- 状态变更：doing -> review
+- 功能点分析：多段单元格中，handle 永远对齐格内第一个块而非悬停行（截图：hover 第二行 asdasd，手柄停在两行之间/第一行位置）。根因：`resolveVisualBlockInHoveredCell` 优先返回 `getVisualBlockForTableCell`（格内首块），指针位置解析永不生效。
+- 代码改动：`block-handle.ts` 重排该函数优先级——posAtCoords 指针下的块优先（校验属于当前格），格内首块降为兜底（悬停格内空白时）。
+- 验证命令与结果（真实 hover）：两段单元格分别 hover 两行，handle 垂直中心 = 各行中心（349/349、378/378）；单测 47/47；e2e 40/41（仅剩 BHI-010 偶发）；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。

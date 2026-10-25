@@ -1702,9 +1702,8 @@ class BlockHandleView {
     clientY: number,
     target: HTMLElement | null,
   ) {
-    const fromCell = this.getVisualBlockForTableCell(cell)
-    if (fromCell?.node) return fromCell
-
+    // 指针下的块优先：多段单元格中 handle 必须对齐悬停的那一行，
+    // 而不是格内第一个块（对齐飞书）。
     const pos = this.editorView.posAtCoords({ left: clientX, top: clientY })
     if (pos) {
       const resolvedPos = this.editorView.state.doc.resolve(pos.pos)
@@ -1719,6 +1718,10 @@ class BlockHandleView {
       const fromDom = this.getVisualBlockFromDomTarget(cell)
       if (fromDom?.node) return fromDom
     }
+
+    // 兜底：格内第一个块（悬停在格内空白处时）
+    const fromCell = this.getVisualBlockForTableCell(cell)
+    if (fromCell?.node) return fromCell
 
     return this.getVisualBlockFromDomTarget(target && cell.contains(target) ? target : cell)
   }
