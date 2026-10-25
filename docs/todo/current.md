@@ -485,3 +485,21 @@
 - 风险与待办：
   1. BHI-011（新登记）：hover 表格边缘激活插入意图后移回表格内部，块手柄偶发不恢复（Esc 可恢复）；e2e 未复现，需真实鼠标路径细化。
   2. 验证方法论改进已落实：交互类验证一律走真实点击/键盘/file-chooser，commands API 仅用于构造初始文档。
+
+### 2026-10-24 表格边条选行/列 + 插入行列修复（用户真实操作反馈第二批）
+
+- 任务ID：BHI-012（边条点选无响应）/ BHI-013（插入行列无效）
+- 状态变更：doing -> review
+- 功能点分析（真实点击逐层定位）：
+  1. BHI-012：点击顶部/左侧边条热区（axis-zone）选不中行/列。链路逐层插桩确认：事件到达 zone、layer 捕获监听触发、activateTableAxisSelection 执行、CellSelection dispatch 成功——但随即被 PM DOMObserver 的 readDOMChange 反向重置（axis chrome 给单元格加的选中类被误判为内容变更）。之前"选中最后一项"的用户观感即此重置后的残留状态。
+  2. BHI-013：点击行列插入点（dot）无效。两个叠加根因：① 同 BHI-012 的 observer 重置链路干扰插入前选区；② 行/列 dot 热区（::before 外扩 9px）在表格四角交叠，点击列 dot 实际命中行 dot（elementsFromPoint 后位胜出）。
+- 代码改动：
+  - `block-handle.ts`：`activateTableAxisSelection` 激活期间暂停 PM domObserver（stop/start 包裹），杜绝 readDOMChange 重置；新增元素级绑定 `attachAxisZoneBehavior`（zone mousedown 直接触发整行/列选择）与 `attachInsertDotBehavior`（dot click 直接触发插入），不再依赖 layer 捕获分发；dot click 用 elementsFromPoint 最近中心 dot 仲裁热区交叠。
+- 验证命令与结果（全部真实点击）：
+  - 顶部边条点第1/4列 → 整列 CellSelection（5 格蒙层）；左侧边条点第4行 → 整行 CellSelection（4 格蒙层）。
+  - 列 dot 点击 4→5 列；行 dot 点击 9→10 行。
+  - 权威 e2e 40/41（仅剩 BHI-010 偶发）；单测 47/47；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。
+- 风险与待办：
+  1. domObserver.stop 期间若有真实用户输入会丢一轮观察（80ms 窗口内，风险极低）。
+  2. 层级分发旧路径（handleTableTriggerMouseDown/Click）保留未删，作为元素级绑定的兜底。

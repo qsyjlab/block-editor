@@ -1003,9 +1003,18 @@ class BlockHandleView {
     this.stripTableBlockSelectionVisual()
     this.hideHandleImmediately()
     this.clearAxisHoverHighlight()
-    this.selectTableAxis(table, axis, index, event.clientX, event.clientY)
-    if (zone) {
-      zone.classList.add('is-axis-active')
+    // 选中类等 chrome 修改是外部 DOM 变更，PM DOMObserver 会把它误判为
+    // 内容编辑并反向重置选区（readDOMChange）。激活期间暂停 observer。
+    const view = this.editorView
+    const observer = (view as unknown as { domObserver?: { stop(): void; start(): void } }).domObserver
+    observer?.stop()
+    try {
+      this.selectTableAxis(table, axis, index, event.clientX, event.clientY)
+      if (zone) {
+        zone.classList.add('is-axis-active')
+      }
+    } finally {
+      observer?.start()
     }
   }
 
@@ -1015,7 +1024,12 @@ class BlockHandleView {
       this.hoveredTableDom ??
       this.getFocusedTableDom() ??
       this.getTableFromPoint(event.clientX, event.clientY, zone)
-    if (!table) return
+    if (!table) {
+      return
+    }
+    if (!this.editorView.dom.contains(table)) {
+      return
+    }
 
     const axis = zone.dataset.axis === 'row' ? 'row' : 'column'
     const index = Number(zone.dataset.index || 0)
@@ -2622,10 +2636,14 @@ class BlockHandleView {
     clientY?: number,
   ) {
     const tablePos = this.getTableDocPos(table)
-    if (tablePos === null) return
+    if (tablePos === null) {
+      return
+    }
 
     const tableNode = this.editorView.state.doc.nodeAt(tablePos)
-    if (!tableNode) return
+    if (!tableNode) {
+      return
+    }
 
     const map = TableMap.get(tableNode)
     const doc = this.editorView.state.doc
@@ -2640,7 +2658,9 @@ class BlockHandleView {
     }
 
     if (axis === 'column') {
-      if (index < 0 || index >= map.width) return
+      if (index < 0 || index >= map.width) {
+        return
+      }
     } else if (index < 0 || index >= map.height) {
       return
     }
@@ -2651,7 +2671,9 @@ class BlockHandleView {
         : { left: 0, top: index, right: map.width, bottom: index + 1 }
 
     const cellOffsets = map.cellsInRect(rect)
-    if (cellOffsets.length === 0) return
+    if (cellOffsets.length === 0) {
+      return
+    }
 
     let selection: CellSelection
     try {
@@ -2667,7 +2689,7 @@ class BlockHandleView {
         axis === 'column'
           ? CellSelection.colSelection($anchor, $head)
           : CellSelection.rowSelection($anchor, $head)
-    } catch {
+    } catch (e) {
       return
     }
 
@@ -2736,7 +2758,7 @@ class BlockHandleView {
 
   private appendColumnInsertDot(
     layer: HTMLElement,
-    _table: HTMLTableElement,
+    table: HTMLTableElement,
     tableRect: DOMRect,
     lineX: number,
     placement: 'before' | 'after',
@@ -2756,12 +2778,13 @@ class BlockHandleView {
       event.preventDefault()
       event.stopPropagation()
     })
+    this.attachInsertDotBehavior(dot, table)
     layer.appendChild(dot)
   }
 
   private appendRowInsertDot(
     layer: HTMLElement,
-    _table: HTMLTableElement,
+    table: HTMLTableElement,
     tableRect: DOMRect,
     lineY: number,
     placement: 'before' | 'after',
@@ -2781,7 +2804,51 @@ class BlockHandleView {
       event.preventDefault()
       event.stopPropagation()
     })
+    this.attachInsertDotBehavior(dot, table)
     layer.appendChild(dot)
+  }
+
+  /**
+   * 元素级绑定：热区/插入点行为直接挂在元素自身。
+   * 曾依赖 trigger layer 的捕获监听分发，但真实点击存在事件到达 layer
+   * 前被更高优先级捕获监听拦截的路径（点击热区无响应），元素级监听
+   * 不依赖祖先传播，必然触发。
+   */
+  private attachAxisZoneBehavior(zone: HTMLElement) {
+    zone.addEventListener('mousedown', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      this.activateTableAxisFromZone(zone, event)
+    })
+  }
+
+  private attachInsertDotBehavior(dot: HTMLElement, table: HTMLTableElement) {
+    dot.addEventListener('mouseenter', () => {
+      const intent = this.buildInsertIntentFromDot(dot, table)
+      if (intent) this.showTableInsertAffordance(intent)
+    })
+    dot.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      // 行/列 dot 热区在表格四角交叠（扩大命中区导致），点击点可能同时
+      // 落在多个 dot 的热区内；选中心距点击点最近的 dot，避免误插行/列。
+      const candidates = Array.from(
+        document.elementsFromPoint(event.clientX, event.clientY),
+      ).filter((el): el is HTMLElement => el.classList?.contains('be-table-insert-dot'))
+      const nearest =
+        candidates
+          .map((el) => {
+            const r = el.getBoundingClientRect()
+            const dx = r.left + r.width / 2 - event.clientX
+            const dy = r.top + r.height / 2 - event.clientY
+            return { el, dist: Math.sqrt(dx * dx + dy * dy) }
+          })
+          .sort((a, b) => a.dist - b.dist)[0]?.el ?? dot
+      const intent = this.buildInsertIntentFromDot(nearest, table)
+      if (!intent) return
+      this.tableInsertIntent = intent
+      this.handleTableInsertClick(event as unknown as MouseEvent)
+    })
   }
 
   private buildInsertIntentFromDot(
@@ -2848,6 +2915,7 @@ class BlockHandleView {
         left: `${rect.left - tableRect.left}px`,
         width: `${rect.width}px`,
       })
+      this.attachAxisZoneBehavior(zone)
       this.tableColumnTriggerLayer.appendChild(zone)
     })
 
@@ -2907,6 +2975,7 @@ class BlockHandleView {
         top: `${rect.top - tableRect.top}px`,
         height: `${rect.height}px`,
       })
+      this.attachAxisZoneBehavior(zone)
       this.tableRowTriggerLayer.appendChild(zone)
     })
 
