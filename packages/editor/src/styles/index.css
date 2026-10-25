@@ -2861,3 +2861,13 @@ html[data-be-marquee-selecting='1'] .ProseMirror {
   z-index: 240200;
   pointer-events: none;
 }
+
+/* 表格行/列拖拽重排指示线 */
+.be-table-axis-drag-indicator {
+  position: fixed;
+  background: var(--primary-color);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  z-index: 240150;
+  pointer-events: none;
+}

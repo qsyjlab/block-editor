@@ -560,3 +560,14 @@
   5. 拖拽期间块多选框选误激活（window 捕获先于元素 stopPropagation）→ BlockMultiSelect 排除分栏 chrome；拖拽改为指示线 + mouseup 一次性提交，规避 PM 事务后重建列 DOM 导致的样式丢失。
 - 验证（真实交互）：＋/－ 控件、拖宽 333→412（attrs 61.9/38.1）、JSON 往返保留、栏首 Backspace 跳栏，全过；权威 e2e 全量 41/41 全绿；单测 48/48；tsc 0 错误。
 - 文档更新：`docs/todo/current.md`。
+
+### 2026-10-24 表格行/列拖拽重排（用户反馈第三批）
+
+- 任务ID：BHI-015（行/列拖拽重排缺失）
+- 状态变更：doing -> done
+- 功能点分析：prosemirror-tables 1.8.5 原生提供 moveTableRow/moveTableColumn，但边条交互从未接线——点击边条只能选中，无法拖动重排（飞书核心交互）。
+- 代码改动（block-handle.ts）：
+  - 新增 `beginAxisZoneFlow`：边条 mousedown → 沿轴移动 ≥5px 进入拖拽（先 selectTableAxis 建立 CellSelection，因 moveTableRow 依赖 selectedRect 定位表格）→ 指示线跟随（中心点计数法算目标位）→ 松开提交 moveTableRow/moveTableColumn({from, to, select:true})；未拖动松开 = 原选中语义。
+  - 关键坑：layer 的 mousemove 冒泡监听（handleTableTriggerMove）首行 stopPropagation，window 冒泡阶段监听收不到真实拖动事件——拖拽监听改挂 window 捕获阶段；handleTableTriggerClick 的 zone 立即激活分支移除（避免拖后重选）；元素级绑定删除（layer 捕获 stopPropagation 会阻断 descent，元素监听永远不触发）。
+- 验证（真实拖拽）：行2→行4 后（项目 1→4）、列2→列4（值 1→3）均正确重排，指示线出现；点击边条选中语义保留；权威 e2e 全量 41/41 全绿；单测 48/48；tsc 0 错误。
+- 文档更新：`docs/todo/current.md`。

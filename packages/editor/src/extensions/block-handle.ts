@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core'
 import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from 'prosemirror-state'
-import { CellSelection, TableMap, cellAround } from 'prosemirror-tables'
+import { CellSelection, TableMap, cellAround, moveTableRow, moveTableColumn } from 'prosemirror-tables'
 import { isCellSelection } from '../ui/menus/table-selection'
 import { EditorView } from 'prosemirror-view'
 import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom'
@@ -1862,7 +1862,7 @@ class BlockHandleView {
     if (zone && this.isAxisZoneElement(zone)) {
       event.preventDefault()
       event.stopPropagation()
-      this.activateTableAxisFromZone(zone, event)
+      this.beginAxisZoneFlow(zone, event)
       return
     }
 
@@ -1879,14 +1879,6 @@ class BlockHandleView {
 
   private handleTableTriggerClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement | null
-    const axisZone = target?.closest('.be-table-axis-zone') as HTMLElement | null
-    if (axisZone && this.isAxisZoneElement(axisZone)) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.activateTableAxisFromZone(axisZone, event)
-      return
-    }
-
     if (target?.closest('.be-table-insert-dot')) {
       return
     }
@@ -2817,12 +2809,110 @@ class BlockHandleView {
    * 前被更高优先级捕获监听拦截的路径（点击热区无响应），元素级监听
    * 不依赖祖先传播，必然触发。
    */
-  private attachAxisZoneBehavior(zone: HTMLElement) {
-    zone.addEventListener('mousedown', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
+  /**
+   * 边条热区交互（对齐飞书）：松开即点击 = 选中整行/列；按住沿轴向拖动 ≥5px = 重排
+   * 该行/列，拖动时显示落点指示线，松开提交 moveTableRow/moveTableColumn。
+   * 由 trigger layer 的捕获 mousedown 调用——zone 元素级监听会被该捕获的
+   * stopPropagation 阻断，不能挂在 zone 上。
+   */
+  private beginAxisZoneFlow(zone: HTMLElement, event: MouseEvent) {
+    const table =
+      this.activeTriggerTable ??
+      this.hoveredTableDom ??
+      this.getFocusedTableDom() ??
+      this.getTableFromPoint(event.clientX, event.clientY, zone)
+    if (!table || !this.editorView.dom.contains(table)) {
       this.activateTableAxisFromZone(zone, event)
-    })
+      return
+    }
+
+    const axis = zone.dataset.axis === 'row' ? 'row' : 'column'
+    const fromIndex = Number(zone.dataset.index || 0)
+    const startX = event.clientX
+    const startY = event.clientY
+    let dragging = false
+    let toIndex = fromIndex
+    let indicator: HTMLElement | null = null
+
+    const computeTarget = (clientX: number, clientY: number): number => {
+      if (axis === 'row') {
+        const centers = Array.from(table.rows).map(
+          (r) => r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2,
+        )
+        const count = centers.filter((c) => c < clientY).length
+        return Math.max(0, Math.min(centers.length - 1, count))
+      }
+      const firstRowCells = Array.from(table.rows[0]?.cells ?? [])
+      const centers = firstRowCells.map(
+        (c) => c.getBoundingClientRect().left + c.getBoundingClientRect().width / 2,
+      )
+      const count = centers.filter((c) => c < clientX).length
+      return Math.max(0, Math.min(centers.length - 1, count))
+    }
+
+    const positionIndicator = () => {
+      if (!indicator) return
+      if (axis === 'row') {
+        const rows = Array.from(table.rows)
+        const y =
+          toIndex <= fromIndex
+            ? rows[Math.min(toIndex, rows.length - 1)].getBoundingClientRect().top
+            : rows[Math.min(toIndex - 1, rows.length - 1)].getBoundingClientRect().bottom
+        indicator.style.left = `${table.getBoundingClientRect().left}px`
+        indicator.style.top = `${y}px`
+        indicator.style.width = `${table.getBoundingClientRect().width}px`
+        indicator.style.height = '3px'
+      } else {
+        const cells = Array.from(table.rows[0]?.cells ?? [])
+        const x =
+          toIndex <= fromIndex
+            ? cells[Math.min(toIndex, cells.length - 1)].getBoundingClientRect().left
+            : cells[Math.min(toIndex - 1, cells.length - 1)].getBoundingClientRect().right
+        indicator.style.left = `${x}px`
+        indicator.style.top = `${table.getBoundingClientRect().top}px`
+        indicator.style.width = '3px'
+        indicator.style.height = `${table.getBoundingClientRect().height}px`
+      }
+    }
+
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) {
+        const dist = axis === 'row' ? Math.abs(e.clientY - startY) : Math.abs(e.clientX - startX)
+        if (dist < 5) return
+        dragging = true
+        // moveTableRow/moveTableColumn 依赖 selectedRect 定位表格，先把选区设为被拖行/列
+        this.selectTableAxis(table, axis, fromIndex)
+        indicator = document.createElement('div')
+        indicator.className = 'be-table-axis-drag-indicator'
+        document.body.appendChild(indicator)
+      }
+      e.preventDefault()
+      toIndex = computeTarget(e.clientX, e.clientY)
+      positionIndicator()
+    }
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      indicator?.remove()
+      indicator = null
+      if (dragging) {
+        if (toIndex === fromIndex) return
+        const { state } = this.editorView
+        const command =
+          axis === 'row'
+            ? moveTableRow({ from: fromIndex, to: toIndex, select: true })
+            : moveTableColumn({ from: fromIndex, to: toIndex, select: true })
+        command(state, (tr: any) => this.editorView.dispatch(tr))
+      } else {
+        this.activateTableAxisFromZone(zone, event)
+      }
+    }
+
+    // 用 window 捕获阶段：layer 的 mousemove 冒泡监听会 stopPropagation，
+    // 冒泡阶段注册的监听收不到真实拖动事件（合成事件直发 window 不受影响）。
+    window.addEventListener('mousemove', onMove, true)
+    window.addEventListener('mouseup', onUp, true)
   }
 
   private attachInsertDotBehavior(dot: HTMLElement, table: HTMLTableElement) {
@@ -2918,7 +3008,6 @@ class BlockHandleView {
         left: `${rect.left - tableRect.left}px`,
         width: `${rect.width}px`,
       })
-      this.attachAxisZoneBehavior(zone)
       this.tableColumnTriggerLayer.appendChild(zone)
     })
 
@@ -2978,7 +3067,6 @@ class BlockHandleView {
         top: `${rect.top - tableRect.top}px`,
         height: `${rect.height}px`,
       })
-      this.attachAxisZoneBehavior(zone)
       this.tableRowTriggerLayer.appendChild(zone)
     })
 
